@@ -1,4 +1,5 @@
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
+import { classifyLink } from './links';
 import type {
   Course,
   CourseLink,
@@ -38,6 +39,8 @@ function buildCourses(input: DashboardInput) {
   const byId = new Map<string, Course>();
   /** "<source>:<sourceCourseId>" → Course.id it was folded into */
   const alias = new Map<string, string>();
+  /** Course.id → that course's page on Gradescope */
+  const gsUrl = new Map<string, string>();
   const codeOf = (c: RawCourse) => c.code ?? extractCourseCode(c.name);
 
   for (const c of snapshots.brightspace?.courses ?? []) {
@@ -58,7 +61,9 @@ function buildCourses(input: DashboardInput) {
       target.sources.gradescope = c.sourceCourseId;
       target.partial ||= partial;
       alias.set(key, target.id);
+      gsUrl.set(target.id, c.url);
     } else {
+      gsUrl.set(key, c.url);
       byId.set(key, { id: key, code: code ?? c.name, name: c.name, sources: { gradescope: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial });
       alias.set(key, key);
     }
@@ -69,7 +74,7 @@ function buildCourses(input: DashboardInput) {
     c.color = userState.colors[c.id] ?? PALETTE[i % PALETTE.length]!;
     c.hidden = Boolean(userState.hidden[c.id]);
   });
-  return { all: byId, alias };
+  return { all: byId, alias, gsUrl };
 }
 
 function titlesMatch(a: string, b: string): boolean {
@@ -119,9 +124,31 @@ function fromRaw(r: RawItem, cid: string): Item {
   };
 }
 
+function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string, string>, gsUrl: Map<string, string>): CourseLink[] {
+  const perCourse = new Map<string, CourseLink[]>(courses.map((c) => [c.id, []]));
+  const add = (l: CourseLink) => {
+    const list = perCourse.get(l.courseId);
+    if (!list) return;
+    const dup = list.some((x) => x.url === l.url || (l.category !== 'website' && x.category !== 'website' && x.label === l.label));
+    if (!dup) list.push(l);
+  };
+  for (const c of courses) {
+    if (c.sources.brightspace) add({ courseId: c.id, label: 'Brightspace', url: c.url, category: 'lms', source: 'brightspace' });
+    const gs = gsUrl.get(c.id);
+    if (gs) add({ courseId: c.id, label: 'Gradescope', url: gs, category: 'homework', source: 'brightspace' });
+  }
+  for (const r of input.snapshots.brightspace?.links ?? []) {
+    const cid = alias.get(courseId('brightspace', r.sourceCourseId));
+    const kind = classifyLink(r.title, r.url);
+    if (cid && kind) add({ courseId: cid, label: kind.label, url: new URL(r.url, 'https://purdue.brightspace.com').href, category: kind.category, source: 'brightspace' });
+  }
+  for (const l of input.manualLinks) add(l);
+  return courses.flatMap((c) => perCourse.get(c.id) ?? []);
+}
+
 /** Combines per-platform snapshots, manual entries and user state into what the UI shows. Pure. */
 export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
-  const { all, alias } = buildCourses(input);
+  const { all, alias, gsUrl } = buildCourses(input);
   const visible = new Set([...all.values()].filter((c) => !c.hidden).map((c) => c.id));
   const minDue = now.getTime() - WINDOW_MS;
   const inWindow = (i: { dueAt: string | null }) => !i.dueAt || Date.parse(i.dueAt) >= minDue;
@@ -164,7 +191,7 @@ export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
         a.code.localeCompare(b.code),
     );
 
-  const links = input.manualLinks.filter((l) => visible.has(l.courseId));
+  const links = buildLinks(input, courses, alias, gsUrl);
   const nextDue = items.find((i) => pending(i) && i.dueAt && dueMs(i) > now.getTime()) ?? null;
   return { courses, items, links, nextDue };
 }

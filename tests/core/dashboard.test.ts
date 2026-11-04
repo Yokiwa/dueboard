@@ -302,3 +302,40 @@ describe('buildDashboard — items', () => {
     expect(buildDashboard(input({}), now).nextDue).toBeNull();
   });
 });
+
+describe('buildDashboard — links', () => {
+  const withLinks = () =>
+    input({
+      snapshots: {
+        brightspace: {
+          ...snap([bsCourse('42', 'PHYS 17200', 'PHYS 17200')]),
+          links: [
+            { source: 'brightspace', sourceCourseId: '42', title: 'Mastering Ch1', url: 'https://purdue.brightspace.com/d2l/le/lti/1/toolLaunch/1' },
+            { source: 'brightspace', sourceCourseId: '42', title: 'Mastering Ch2', url: 'https://purdue.brightspace.com/d2l/le/lti/1/toolLaunch/2' },
+            { source: 'brightspace', sourceCourseId: '42', title: 'Week 1', url: 'https://purdue.brightspace.com/d2l/le/content/42/viewContent/9' },
+            { source: 'brightspace', sourceCourseId: '42', title: 'Course site', url: 'https://www.physics.purdue.edu/phys172' },
+            { source: 'brightspace', sourceCourseId: '42', title: 'Course site again', url: 'https://www.physics.purdue.edu/phys172' },
+          ],
+        },
+        gradescope: snap([gsCourse('9', 'PHYS 172', 'PHYS 17200')]),
+      },
+      manualLinks: [{ courseId: 'brightspace:42', label: 'Piazza', url: 'https://piazza.com/class/x', category: 'discussion', source: 'manual' }],
+    });
+
+  it('every course starts with its Brightspace and Gradescope links, then classified, then manual', () => {
+    const labels = buildDashboard(withLinks(), now).links.map((l) => l.label);
+    expect(labels).toEqual(['Brightspace', 'Gradescope', 'Pearson', 'Course site', 'Piazza']);
+  });
+
+  it('platform links keep one per label; website links dedupe by url', () => {
+    const links = buildDashboard(withLinks(), now).links;
+    expect(links.filter((l) => l.label === 'Pearson')).toHaveLength(1);
+    expect(links.filter((l) => l.category === 'website')).toHaveLength(1);
+  });
+
+  it('course links point at each platform course page', () => {
+    const links = buildDashboard(withLinks(), now).links;
+    expect(links[0]).toMatchObject({ courseId: 'brightspace:42', url: 'https://purdue.brightspace.com/d2l/home/42', category: 'lms', source: 'brightspace' });
+    expect(links[1]).toMatchObject({ url: 'https://www.gradescope.com/courses/9', category: 'homework' });
+  });
+});
