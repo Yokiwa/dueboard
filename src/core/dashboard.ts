@@ -1,0 +1,170 @@
+import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
+import type {
+  Course,
+  CourseLink,
+  Item,
+  ItemType,
+  ManualItem,
+  RawCourse,
+  RawItem,
+  SourceId,
+  StoreShape,
+  UserState,
+} from './types';
+
+export const PALETTE = ['#2563EB', '#EA580C', '#059669', '#7C3AED', '#0891B2', '#CA8A04', '#DB2777', '#4F46E5'];
+const WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const MERGE_MS = 60 * 60 * 1000;
+const TYPE_RANK: Record<ItemType, number> = { assignment: 4, quiz: 3, exam: 2, event: 1, manual: 0 };
+
+export interface DashboardInput {
+  snapshots: StoreShape['snapshots'];
+  manualItems: ManualItem[];
+  manualLinks: CourseLink[];
+  userState: UserState;
+}
+export interface Dashboard {
+  courses: Course[];
+  items: Item[];
+  links: CourseLink[];
+  nextDue: Item | null;
+}
+
+const courseId = (source: SourceId, id: string) => `${source}:${id}`;
+const dueMs = (i: { dueAt: string | null }) => (i.dueAt ? Date.parse(i.dueAt) : Number.POSITIVE_INFINITY);
+
+function buildCourses(input: DashboardInput) {
+  const { snapshots, userState } = input;
+  const byId = new Map<string, Course>();
+  /** "<source>:<sourceCourseId>" → Course.id it was folded into */
+  const alias = new Map<string, string>();
+  const codeOf = (c: RawCourse) => c.code ?? extractCourseCode(c.name);
+
+  for (const c of snapshots.brightspace?.courses ?? []) {
+    const id = courseId('brightspace', c.sourceCourseId);
+    const partial = snapshots.brightspace?.partial.includes(c.sourceCourseId) ?? false;
+    byId.set(id, { id, code: codeOf(c) ?? c.name, name: c.name, sources: { brightspace: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial });
+    alias.set(id, id);
+  }
+  for (const c of snapshots.gradescope?.courses ?? []) {
+    const key = courseId('gradescope', c.sourceCourseId);
+    const code = codeOf(c);
+    const forced = userState.merges[key];
+    const target =
+      (forced && byId.get(forced)) ||
+      (code ? [...byId.values()].find((b) => b.sources.brightspace && b.code === code) : undefined);
+    const partial = snapshots.gradescope?.partial.includes(c.sourceCourseId) ?? false;
+    if (target) {
+      target.sources.gradescope = c.sourceCourseId;
+      target.partial ||= partial;
+      alias.set(key, target.id);
+    } else {
+      byId.set(key, { id: key, code: code ?? c.name, name: c.name, sources: { gradescope: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial });
+      alias.set(key, key);
+    }
+  }
+
+  const stable = [...byId.values()].sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
+  stable.forEach((c, i) => {
+    c.color = userState.colors[c.id] ?? PALETTE[i % PALETTE.length]!;
+    c.hidden = Boolean(userState.hidden[c.id]);
+  });
+  return { all: byId, alias };
+}
+
+function titlesMatch(a: string, b: string): boolean {
+  const na = normalizeTitle(a);
+  const nb = normalizeTitle(b);
+  if (na === nb) return true;
+  return Math.min(na.length, nb.length) >= 4 && (na.includes(nb) || nb.includes(na));
+}
+
+function isSameWork(a: Item, b: Item): boolean {
+  if (a.courseId !== b.courseId) return false;
+  if (a.dueAt && b.dueAt) return titlesMatch(a.title, b.title) && Math.abs(dueMs(a) - dueMs(b)) <= MERGE_MS;
+  if (!a.dueAt && !b.dueAt) return normalizeTitle(a.title) === normalizeTitle(b.title);
+  return false;
+}
+
+function mergeInto(target: Item, incoming: Item): void {
+  const incomingWins =
+    incoming.sources.includes('gradescope') ||
+    (!target.sources.includes('gradescope') && TYPE_RANK[incoming.type] > TYPE_RANK[target.type]);
+  if (incomingWins) {
+    target.url = incoming.url;
+    target.dueAt = incoming.dueAt;
+  }
+  if (TYPE_RANK[incoming.type] > TYPE_RANK[target.type]) target.type = incoming.type;
+  const t1 = stripDueSuffix(target.title);
+  const t2 = stripDueSuffix(incoming.title);
+  target.title = t2.length > t1.length ? t2 : t1;
+  target.sources = [...new Set([...target.sources, ...incoming.sources])];
+  target.sourceKeys = [...new Set([...target.sourceKeys, ...incoming.sourceKeys])].sort();
+  target.submitted ||= incoming.submitted;
+}
+
+function fromRaw(r: RawItem, cid: string): Item {
+  const key = `${r.source}:${r.sourceItemId}`;
+  return {
+    id: key,
+    courseId: cid,
+    title: r.title,
+    type: r.type,
+    dueAt: r.dueAt,
+    url: r.url,
+    sources: [r.source],
+    sourceKeys: [key],
+    submitted: r.submitted,
+    doneByUser: false,
+  };
+}
+
+/** Combines per-platform snapshots, manual entries and user state into what the UI shows. Pure. */
+export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
+  const { all, alias } = buildCourses(input);
+  const visible = new Set([...all.values()].filter((c) => !c.hidden).map((c) => c.id));
+  const minDue = now.getTime() - WINDOW_MS;
+  const inWindow = (i: { dueAt: string | null }) => !i.dueAt || Date.parse(i.dueAt) >= minDue;
+
+  const raw: Item[] = [];
+  for (const source of ['brightspace', 'gradescope'] as const) {
+    for (const r of input.snapshots[source]?.items ?? []) {
+      const cid = alias.get(courseId(source, r.sourceCourseId));
+      if (cid && visible.has(cid) && inWindow(r)) raw.push(fromRaw(r, cid));
+    }
+  }
+  raw.sort((a, b) => dueMs(a) - dueMs(b));
+
+  const merged: Item[] = [];
+  for (const it of raw) {
+    const twin = merged.find((m) => isSameWork(m, it));
+    if (twin) mergeInto(twin, it);
+    else merged.push(it);
+  }
+  for (const m of merged) m.id = m.sourceKeys[0]!;
+
+  for (const m of input.manualItems) {
+    if (!visible.has(m.courseId) || !inWindow(m)) continue;
+    merged.push({ id: m.id, courseId: m.courseId, title: m.title, type: 'manual', dueAt: m.dueAt, url: m.url, sources: ['manual'], sourceKeys: [m.id], submitted: false, doneByUser: false });
+  }
+  for (const m of merged) m.doneByUser = m.sourceKeys.some((k) => input.userState.done[k]);
+
+  const items = merged.sort((a, b) => dueMs(a) - dueMs(b) || a.title.localeCompare(b.title));
+  const pending = (i: Item) => !i.doneByUser && !i.submitted;
+
+  const nearest = new Map<string, number>();
+  for (const i of items) {
+    if (pending(i) && i.dueAt && !nearest.has(i.courseId)) nearest.set(i.courseId, dueMs(i));
+  }
+  const courses = [...all.values()]
+    .filter((c) => !c.hidden)
+    .sort(
+      (a, b) =>
+        (nearest.get(a.id) ?? Number.POSITIVE_INFINITY) - (nearest.get(b.id) ?? Number.POSITIVE_INFINITY) ||
+        a.code.localeCompare(b.code),
+    );
+
+  const links = input.manualLinks.filter((l) => visible.has(l.courseId));
+  const nextDue = items.find((i) => pending(i) && i.dueAt && dueMs(i) > now.getTime()) ?? null;
+  return { courses, items, links, nextDue };
+}
