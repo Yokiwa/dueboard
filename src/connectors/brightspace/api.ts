@@ -1,0 +1,35 @@
+// Response shapes of the Brightspace (D2L Valence) endpoints we read. Only fields we use.
+export interface VersionInfo { ProductCode: string; LatestVersion: string }
+export interface Enrollment {
+  OrgUnit: { Id: number; Name: string; Code: string | null };
+  Access: { IsActive: boolean; CanAccess: boolean; StartDate: string | null; EndDate: string | null };
+}
+export interface EnrollmentPage { PagingInfo: { Bookmark: string; HasMoreItems: boolean }; Items: Enrollment[] }
+export interface DropboxFolder { Id: number; Name: string; DueDate: string | null; IsHidden: boolean }
+export interface MySubmission { Submissions: unknown[]; CompletionDate?: string | null }
+export interface Quiz { QuizId: number; Name: string; IsActive: boolean; DueDate: string | null }
+export interface CalendarEvent {
+  CalendarEventId: number;
+  OrgUnitId: number;
+  Title: string;
+  StartDateTime: string | null;
+  EndDateTime: string | null;
+  AssociatedEntity: { AssociatedEntityType: string; AssociatedEntityId: number } | null;
+}
+export interface ObjectListPage<T> { Objects: T[]; Next: string | null }
+export interface TocTopic { Title: string; Url: string | null }
+export interface TocModule { Title: string; Modules: TocModule[]; Topics: TocTopic[] }
+export interface Toc { Modules: TocModule[] }
+
+export function urls(base: string, lp: string, le: string) {
+  return {
+    enrollments: (bookmark?: string) =>
+      `${base}/d2l/api/lp/${lp}/enrollments/myenrollments/?orgUnitTypeId=3${bookmark ? `&bookmark=${encodeURIComponent(bookmark)}` : ''}`,
+    dropbox: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/dropbox/folders/`,
+    mySubmissions: (ou: string, folder: number) => `${base}/d2l/api/le/${le}/${ou}/dropbox/folders/${folder}/submissions/mysubmissions/`,
+    quizzes: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/quizzes/`,
+    toc: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/content/toc`,
+    calendar: (ous: string[], start: string, end: string) =>
+      `${base}/d2l/api/le/${le}/calendar/events/myEvents/?orgUnitIdsCSV=${ous.join(',')}&startDateTime=${start}&endDateTime=${end}`,
+  };
+}

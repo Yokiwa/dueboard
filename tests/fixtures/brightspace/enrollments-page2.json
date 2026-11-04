@@ -1,0 +1,9 @@
+{
+  "PagingInfo": { "Bookmark": "BM2", "HasMoreItems": false },
+  "Items": [
+    { "OrgUnit": { "Id": 90, "Type": { "Id": 3, "Code": "Course Offering", "Name": "Course Offering" }, "Name": "ENGL 10600 Spring 2026", "Code": "202620-ENGL-10600", "HomeUrl": null },
+      "Access": { "IsActive": true, "StartDate": "2026-01-10T05:00:00.000Z", "EndDate": "2026-05-10T04:00:00.000Z", "CanAccess": true, "ClasslistRoleName": "Student" } },
+    { "OrgUnit": { "Id": 91, "Type": { "Id": 3, "Code": "Course Offering", "Name": "Course Offering" }, "Name": "Library Orientation", "Code": "LIB-ORIENT", "HomeUrl": null },
+      "Access": { "IsActive": true, "StartDate": null, "EndDate": null, "CanAccess": false, "ClasslistRoleName": "Student" } }
+  ]
+}

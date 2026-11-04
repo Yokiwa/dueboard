@@ -1,0 +1,7 @@
+{ "Objects": [
+  { "CalendarEventId": 501, "OrgUnitId": 102, "Title": "WebAssign 14.3 due", "StartDateTime": "2026-11-06T04:59:00.000Z", "EndDateTime": "2026-11-06T04:59:00.000Z", "IsAllDayEvent": false, "AssociatedEntity": null },
+  { "CalendarEventId": 502, "OrgUnitId": 101, "Title": "Project 3 - Due", "StartDateTime": "2026-11-05T04:59:00.000Z", "EndDateTime": "2026-11-05T04:59:00.000Z", "IsAllDayEvent": false, "AssociatedEntity": { "AssociatedEntityType": "D2L.LE.Dropbox.Dropbox", "AssociatedEntityId": 7, "Link": null } },
+  { "CalendarEventId": 503, "OrgUnitId": 102, "Title": "Lecture", "StartDateTime": "2026-11-05T14:30:00.000Z", "EndDateTime": "2026-11-05T15:20:00.000Z", "IsAllDayEvent": false, "AssociatedEntity": null },
+  { "CalendarEventId": 504, "OrgUnitId": 102, "Title": "Midterm Exam 2", "StartDateTime": "2026-11-12T23:00:00.000Z", "EndDateTime": null, "IsAllDayEvent": false, "AssociatedEntity": null },
+  { "CalendarEventId": 505, "OrgUnitId": 90, "Title": "Old course HW due", "StartDateTime": "2026-11-06T04:59:00.000Z", "EndDateTime": null, "IsAllDayEvent": false, "AssociatedEntity": null }
+], "Next": null }

@@ -1,0 +1,5 @@
+[
+  { "Entity": { "DisplayName": "[REDACTED]", "EntityId": 1, "EntityType": "User", "Active": true }, "Status": 1, "Feedback": null,
+    "Submissions": [ { "Id": 555, "SubmittedBy": { "Identifier": "[REDACTED]", "DisplayName": "[REDACTED]" }, "SubmissionDate": "2026-11-04T15:00:00.000Z", "Comment": { "Text": "", "Html": "" }, "Files": [] } ],
+    "CompletionDate": "2026-11-04T15:00:00.000Z" }
+]

@@ -1,0 +1,11 @@
+{ "Modules": [
+  { "ModuleId": 1, "Title": "Start here", "Modules": [
+      { "ModuleId": 2, "Title": "Tools", "Modules": [], "Topics": [
+        { "TopicId": 11, "Title": "Ed Discussion", "Url": "https://edstem.org/us/courses/12345", "TypeIdentifier": "Link", "Identifier": "11" }
+      ] }
+    ],
+    "Topics": [
+      { "TopicId": 10, "Title": "Syllabus", "Url": "/content/enforced/101-CS18000/syllabus.pdf", "TypeIdentifier": "File", "Identifier": "10" },
+      { "TopicId": 12, "Title": "zyBooks", "Url": "https://learn.zybooks.com/zybook/PURDUECS18000Fall2026", "TypeIdentifier": "Link", "Identifier": "12" }
+    ] }
+] }

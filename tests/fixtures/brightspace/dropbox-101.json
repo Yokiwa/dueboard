@@ -1,0 +1,6 @@
+[
+  { "Id": 7, "CategoryId": null, "Name": "Project 3", "DueDate": "2026-11-05T04:59:00.000Z", "IsHidden": false, "Availability": { "StartDate": null, "EndDate": "2026-11-08T04:59:00.000Z" } },
+  { "Id": 8, "CategoryId": null, "Name": "Lab 09", "DueDate": "2026-12-20T04:59:00.000Z", "IsHidden": false, "Availability": null },
+  { "Id": 9, "CategoryId": null, "Name": "Reflection (optional)", "DueDate": null, "IsHidden": false, "Availability": null },
+  { "Id": 10, "CategoryId": null, "Name": "Hidden draft", "DueDate": "2026-11-06T04:59:00.000Z", "IsHidden": true, "Availability": null }
+]
