@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProbeReport, ProbeResult, FixtureBundle } from '../../diagnostics/probe';
+import { loadStore } from '../../storage/store';
 
 const box: React.CSSProperties = {
   fontFamily: 'system-ui, sans-serif',
@@ -32,6 +33,21 @@ function App() {
     setBusy(false);
   };
 
+  const [syncNote, setSyncNote] = useState('');
+  const runSyncNow = async () => {
+    setBusy(true);
+    setSyncNote('正在同步……');
+    const report = (await browser.runtime.sendMessage({ type: 'sync' })) as Record<string, string>;
+    const s = await loadStore();
+    const lines = (['brightspace', 'gradescope'] as const).map((src) => {
+      const snap = s.snapshots[src];
+      const status = report[src] === 'ok' ? '✅' : `❌ ${report[src] ?? '未运行'}`;
+      return `${src}: ${status}，${snap?.courses.length ?? 0} 门课，${snap?.items.length ?? 0} 项作业/事件，${snap?.links.length ?? 0} 个链接${snap?.partial.length ? `，${snap.partial.length} 门课部分失败` : ''}`;
+    });
+    setSyncNote(lines.join('\n'));
+    setBusy(false);
+  };
+
   const runExport = async () => {
     setBusy(true);
     setExportNote('正在收集，大约需要 10 秒……');
@@ -59,6 +75,9 @@ function App() {
         </button>{' '}
         <button type="button" onClick={runExport} disabled={busy}>
           2. 导出示例数据
+        </button>{' '}
+        <button type="button" onClick={runSyncNow} disabled={busy}>
+          3. 立即同步
         </button>
       </p>
       {report && (
@@ -68,6 +87,7 @@ function App() {
         </ul>
       )}
       {exportNote && <pre style={{ whiteSpace: 'pre-wrap' }}>{exportNote}</pre>}
+      {syncNote && <pre style={{ whiteSpace: 'pre-wrap' }}>{syncNote}</pre>}
     </main>
   );
 }

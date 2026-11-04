@@ -1,8 +1,36 @@
 import { createRouter } from '../background/router';
+import { createBrightspaceConnector } from '../connectors/brightspace';
+import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
+import { loadStore } from '../storage/store';
+import { isStale, runSync } from '../sync/runSync';
+import { offscreenParser } from '../sync/offscreenParser';
+
+const ALARM = 'dueboard-sync';
+
+const connectors = () => [createBrightspaceConnector(), createGradescopeConnector({ parser: offscreenParser })];
+const syncNow = () => runSync(connectors());
 
 export default defineBackground(() => {
+  const ensureAlarm = async () => {
+    if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
+  };
+
+  browser.runtime.onInstalled.addListener(() => {
+    void ensureAlarm();
+    void syncNow();
+  });
+  browser.runtime.onStartup.addListener(() => void ensureAlarm());
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === ALARM) void syncNow();
+  });
+
   const route = createRouter({
+    sync: () => syncNow(),
+    syncIfStale: async () => {
+      const { syncMeta } = await loadStore();
+      return isStale(syncMeta, new Date()) ? syncNow() : null;
+    },
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
   });
