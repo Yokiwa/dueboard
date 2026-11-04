@@ -7,5 +7,6 @@ export default defineConfig({
     environment: 'happy-dom',
     env: { TZ: 'America/Indiana/Indianapolis' },
     include: ['tests/**/*.test.{ts,tsx}'],
+    globals: true,
   },
 });

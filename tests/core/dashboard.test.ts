@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDashboard, PALETTE, type DashboardInput } from '../../src/core/dashboard';
+import { buildDashboard, dueCounts, PALETTE, type DashboardInput } from '../../src/core/dashboard';
 import type { RawCourse, RawItem, Snapshot, UserState } from '../../src/core/types';
 
 const now = new Date('2026-11-04T12:00:00-05:00');
@@ -337,5 +337,25 @@ describe('buildDashboard — links', () => {
     const links = buildDashboard(withLinks(), now).links;
     expect(links[0]).toMatchObject({ courseId: 'brightspace:42', url: 'https://purdue.brightspace.com/d2l/home/42', category: 'lms', source: 'brightspace' });
     expect(links[1]).toMatchObject({ url: 'https://www.gradescope.com/courses/9', category: 'homework' });
+  });
+});
+
+describe('dueCounts', () => {
+  const mk = (id: string, due: string | null, extra: Partial<import('../../src/core/types').Item> = {}) => ({
+    id, courseId: 'c', title: id, type: 'assignment' as const, dueAt: due ? iso(due) : null, url: '', sources: ['brightspace' as const],
+    sourceKeys: [id], submitted: false, doneByUser: false, ...extra,
+  });
+  it('counts pending items due within 48h and within 7 days; ignores overdue, done, submitted, undated', () => {
+    const items = [
+      mk('a', '2026-11-04T20:00:00-05:00'),
+      mk('b', '2026-11-06T11:00:00-05:00'),
+      mk('c', '2026-11-08T12:00:00-05:00'),
+      mk('d', '2026-11-12T12:00:00-05:00'),
+      mk('e', '2026-11-03T12:00:00-05:00'),
+      mk('f', '2026-11-05T12:00:00-05:00', { doneByUser: true }),
+      mk('g', '2026-11-05T12:00:00-05:00', { submitted: true }),
+      mk('h', null),
+    ];
+    expect(dueCounts(items, now)).toEqual({ within48: 2, week: 3 });
   });
 });

@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+/* DueBoard design tokens. Components use these via Tailwind classes (bg-db-surface, text-db-muted…), never raw hex values. */
+@theme {
+  --font-sans: 'Inter Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-db-bg: #f7f8fa;
+  --color-db-surface: #ffffff;
+  --color-db-subtle: #f9fafb;
+  --color-db-border: #e5e7eb;
+  --color-db-border-soft: #f0f1f3;
+  --color-db-track: #eceef2;
+  --color-db-text: #111827;
+  --color-db-text-2: #374151;
+  --color-db-muted: #4b5563;
+  --color-db-faint: #6b7280;
+  --color-db-accent: #2563eb;
+  --color-db-ink: #111827;
+  --color-db-on-ink: #ffffff;
+
+  --color-db-urgent-bg: #fee2e2;
+  --color-db-urgent-fg: #b91c1c;
+  --color-db-soon-bg: #fef3c7;
+  --color-db-soon-fg: #92400e;
+  --color-db-normal-bg: #f3f4f6;
+  --color-db-normal-fg: #374151;
+
+  --color-db-banner-bg: #fff8eb;
+  --color-db-banner-border: #f3d9a4;
+  --color-db-banner-label: #92400e;
+  --color-db-banner-sub: #6b5a3a;
+  --color-db-countdown: #b45309;
+
+  --color-db-alert-bg: #fef2f2;
+  --color-db-alert-border: #fecaca;
+}
+
+html,
+body {
+  background: var(--color-db-bg);
+  color: var(--color-db-text);
+  font-family: var(--font-sans);
+  margin: 0;
+}

@@ -195,3 +195,17 @@ export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
   const nextDue = items.find((i) => pending(i) && i.dueAt && dueMs(i) > now.getTime()) ?? null;
   return { courses, items, links, nextDue };
 }
+
+/** Pending (not done, not submitted) items due in the next 48 hours / next 7 days. Overdue items are not counted. */
+export function dueCounts(items: Item[], now: Date): { within48: number; week: number } {
+  let within48 = 0;
+  let week = 0;
+  for (const i of items) {
+    if (i.doneByUser || i.submitted || !i.dueAt) continue;
+    const diff = Date.parse(i.dueAt) - now.getTime();
+    if (diff <= 0) continue;
+    if (diff <= 48 * 3600_000) within48++;
+    if (diff <= 7 * 86400_000) week++;
+  }
+  return { within48, week };
+}
