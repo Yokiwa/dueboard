@@ -1,0 +1,81 @@
+import { browser } from 'wxt/browser';
+import type { SourceId, Snapshot, StoreShape } from '../core/types';
+
+const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta'] as const;
+
+function obj(v: unknown): Record<string, unknown> {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+}
+function arr<T>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : [];
+}
+
+/** Turns whatever is in storage (possibly old or partial) into a complete StoreShape. */
+export function migrate(raw: unknown): StoreShape {
+  const r = obj(raw);
+  const us = obj(r.userState);
+  const st = obj(r.settings);
+  return {
+    schemaVersion: 1,
+    snapshots: obj(r.snapshots) as StoreShape['snapshots'],
+    manualItems: arr(r.manualItems),
+    manualLinks: arr(r.manualLinks),
+    userState: {
+      done: obj(us.done) as Record<string, true>,
+      colors: obj(us.colors) as Record<string, string>,
+      hidden: obj(us.hidden) as Record<string, true>,
+      merges: obj(us.merges) as Record<string, string>,
+    },
+    settings: {
+      language: st.language === 'zh' || st.language === 'en' ? st.language : 'auto',
+      newtabMode: st.newtabMode === 'blank' ? 'blank' : 'dashboard',
+    },
+    syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
+  };
+}
+
+export async function loadStore(): Promise<StoreShape> {
+  const raw = await browser.storage.local.get([...KEYS]);
+  return migrate(raw);
+}
+
+export async function patchStore(patch: Partial<StoreShape>): Promise<void> {
+  await browser.storage.local.set({ ...patch, schemaVersion: 1 });
+}
+
+export async function saveSnapshot(source: SourceId, snapshot: Snapshot): Promise<void> {
+  const { snapshots } = await loadStore();
+  await patchStore({ snapshots: { ...snapshots, [source]: snapshot } });
+}
+
+export async function recordSyncSuccess(source: SourceId, at: string): Promise<void> {
+  const { syncMeta } = await loadStore();
+  await patchStore({ syncMeta: { ...syncMeta, [source]: { lastSuccess: at } } });
+}
+
+export async function recordSyncError(source: SourceId, reason: string, detail?: string): Promise<void> {
+  const { syncMeta } = await loadStore();
+  const prev = syncMeta[source] ?? {};
+  await patchStore({
+    syncMeta: { ...syncMeta, [source]: { ...prev, lastError: { at: new Date().toISOString(), reason, detail } } },
+  });
+}
+
+export async function toggleDone(sourceKeys: string[], done: boolean): Promise<void> {
+  const { userState } = await loadStore();
+  const next = { ...userState.done };
+  for (const k of sourceKeys) {
+    if (done) next[k] = true;
+    else delete next[k];
+  }
+  await patchStore({ userState: { ...userState, done: next } });
+}
+
+/** Calls cb whenever any DueBoard data in local storage changes. Returns an unsubscribe function. */
+export function onStoreChange(cb: () => void): () => void {
+  const listener = (_changes: unknown, area: string) => {
+    if (area === 'local') cb();
+  };
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
+}
