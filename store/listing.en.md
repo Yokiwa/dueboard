@@ -47,4 +47,4 @@ No remote code. All code ships inside the extension package.
 ### Data usage
 - Data type: "Website content" (the user's own course and assignment information, used only locally).
 - Certify: not sold to third parties; not used for unrelated purposes; not used for creditworthiness.
-- Privacy policy URL: https://YOUR_GITHUB_USERNAME.github.io/dueboard/privacy.html
+- Privacy policy URL: https://yokiwa.github.io/dueboard/privacy.html

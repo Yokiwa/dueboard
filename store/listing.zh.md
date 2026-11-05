@@ -52,4 +52,4 @@ store/screenshots/zh-1-courses.png、zh-2-calendar.png、zh-3-todo.png
 ### 数据使用
 - 勾选收集的数据类型：“网站内容”（读取用户自己的课程和作业信息，仅在本地使用）。
 - 勾选声明：不出售给第三方；不用于与单一用途无关的目的；不用于评估信用。
-- 隐私权政策网址：https://YOUR_GITHUB_USERNAME.github.io/dueboard/privacy.html
+- 隐私权政策网址：https://yokiwa.github.io/dueboard/privacy.html
