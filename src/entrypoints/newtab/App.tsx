@@ -8,6 +8,7 @@ import { ViewTabs, type View } from '../../ui/components/ViewTabs';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
 import { useView } from '../../ui/hooks/useView';
+import { CoursesView } from '../../ui/views/CoursesView';
 import { LangProvider, resolveLang } from '../../ui/i18n';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
@@ -21,8 +22,8 @@ export function lastSynced(store: StoreShape): string | null {
   return times[0] ?? null;
 }
 
-function ViewBody({ view }: { view: View; dashboard: Dashboard; now: Date }) {
-  // Filled in by the courses / calendar / todo view tasks.
+function ViewBody({ view, dashboard, now }: { view: View; dashboard: Dashboard; now: Date }) {
+  if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} />;
   return <div data-view={view} />;
 }
 

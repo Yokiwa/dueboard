@@ -1,0 +1,64 @@
+import type { Course, CourseLink, Item } from '../../core/types';
+import { useT } from '../i18n';
+import { ItemRow } from '../components/ItemRow';
+import { LinkPill } from '../components/LinkPill';
+
+const SHOWN = 3;
+
+export interface CourseCardProps {
+  course: Course;
+  items: Item[];
+  links: CourseLink[];
+  now: Date;
+  onOpen(): void;
+}
+
+export function CourseCard({ course, items, links, now, onOpen }: CourseCardProps) {
+  const t = useT();
+  const pending = items.filter((i) => !i.doneByUser && !i.submitted);
+  const shown = pending.slice(0, SHOWN);
+  return (
+    <article aria-label={course.code} className="flex flex-col gap-3.5 rounded-[14px] border border-db-border bg-db-surface p-5">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={t('course.open', { code: course.code })}
+        className="flex cursor-pointer flex-col gap-1 border-0 bg-transparent p-0 text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
+          <span className="text-[13px] font-semibold tracking-[0.02em] text-db-muted">{course.code}</span>
+        </span>
+        <span className="text-lg font-semibold text-db-text">{course.name}</span>
+      </button>
+
+      <div className="flex grow flex-col">
+        {shown.length > 0 ? (
+          <ul className="m-0 list-none p-0">
+            {shown.map((i) => (
+              <li key={i.id} className="border-t border-db-border-soft py-2.5">
+                <ItemRow item={i} now={now} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="m-0 border-t border-db-border-soft py-[18px] text-sm text-db-faint">{t('course.empty')}</p>
+        )}
+        {pending.length > SHOWN && (
+          <button type="button" onClick={onOpen} className="cursor-pointer self-start border-0 bg-transparent p-0 pt-1 text-[13px] font-medium text-db-accent">
+            {t('course.more', { n: pending.length - SHOWN })}
+          </button>
+        )}
+        {course.partial && <p className="m-0 pt-2 text-xs text-db-soon-fg">{t('course.partial')}</p>}
+      </div>
+
+      {links.length > 0 && (
+        <div role="group" aria-label={t('course.links')} className="flex flex-wrap gap-2">
+          {links.map((l) => (
+            <LinkPill key={l.url} link={l} />
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
