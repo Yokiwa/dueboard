@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildDashboard, type Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
-import { loadStore, onStoreChange } from '../../storage/store';
 import { sendToBackground } from '../messaging';
 import { useNow } from './useNow';
+import { useStore } from './useStore';
 
 export interface DashboardState {
   dashboard: Dashboard | null;
@@ -14,18 +14,12 @@ export interface DashboardState {
 
 /** Shows cached data immediately, asks the background to sync when stale, and re-renders on every storage change. */
 export function useDashboard(): DashboardState {
-  const [store, setStore] = useState<StoreShape | null>(null);
+  const store = useStore();
   const [syncing, setSyncing] = useState(true);
   const now = useNow(60_000);
 
   useEffect(() => {
     let alive = true;
-    const load = () =>
-      loadStore().then((s) => {
-        if (alive) setStore(s);
-      });
-    void load();
-    const off = onStoreChange(() => void load());
     sendToBackground({ type: 'syncIfStale' })
       .catch(() => undefined)
       .finally(() => {
@@ -33,7 +27,6 @@ export function useDashboard(): DashboardState {
       });
     return () => {
       alive = false;
-      off();
     };
   }, []);
 

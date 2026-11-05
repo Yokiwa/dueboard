@@ -1,0 +1,46 @@
+import { browser } from 'wxt/browser';
+import { NextDueBanner } from '../../ui/components/NextDueBanner';
+import { ItemRow } from '../../ui/components/ItemRow';
+import { useDashboard } from '../../ui/hooks/useDashboard';
+import { useNow } from '../../ui/hooks/useNow';
+import { LangProvider, resolveLang, useT } from '../../ui/i18n';
+import { primaryBtn } from '../../ui/forms';
+import type { Dashboard } from '../../core/dashboard';
+
+const LIMIT = 5;
+
+function Body({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
+  const t = useT();
+  const next = dashboard.nextDue;
+  const upcoming = dashboard.items.filter((i) => !i.doneByUser && !i.submitted && i.dueAt && i.id !== next?.id && Date.parse(i.dueAt) > now.getTime()).slice(0, LIMIT);
+  return (
+    <div className="flex w-[380px] flex-col gap-4 bg-db-bg p-4">
+      <NextDueBanner item={next} course={dashboard.courses.find((c) => c.id === next?.courseId)} now={now} />
+      {upcoming.length > 0 ? (
+        <ul className="m-0 list-none rounded-xl border border-db-border bg-db-surface px-4 py-1">
+          {upcoming.map((i) => (
+            <li key={i.id} data-testid="popup-item" className="border-t border-db-border-soft py-2.5 first:border-t-0">
+              <ItemRow item={i} now={now} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        !next && <p className="m-0 text-center text-sm text-db-muted">{t('todo.empty')}</p>
+      )}
+      <button type="button" className={primaryBtn} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/newtab.html') })}>
+        {t('popup.open')}
+      </button>
+    </div>
+  );
+}
+
+export function PopupApp() {
+  const { dashboard, store } = useDashboard();
+  const now = useNow(1000);
+  if (!store || !dashboard) return null;
+  return (
+    <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
+      <Body dashboard={dashboard} now={now} />
+    </LangProvider>
+  );
+}

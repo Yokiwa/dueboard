@@ -31,21 +31,20 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
   const titleId = `detail-${course.id}`;
   const [adding, setAdding] = useState<'item' | 'link' | null>(null);
 
+  // Open as a real modal (backdrop, focus trap, Esc). Fall back to a plain open dialog where showModal is missing.
   useEffect(() => {
     const dlg = ref.current;
-    if (dlg && typeof dlg.showModal === 'function' && !dlg.open) {
-      try {
-        dlg.showModal();
-      } catch {
-        dlg.setAttribute('open', '');
-      }
+    if (!dlg || dlg.open) return;
+    try {
+      dlg.showModal();
+    } catch {
+      dlg.setAttribute('open', '');
     }
   }, []);
 
   return (
     <dialog
       ref={ref}
-      open
       aria-modal="true"
       aria-labelledby={titleId}
       onCancel={(e) => {

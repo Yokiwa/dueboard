@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { dueCounts } from '../../core/dashboard';
+import { BlankTab } from '../../ui/components/BlankTab';
+import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
@@ -34,8 +37,23 @@ export function App() {
   const { dashboard, store, syncing, refresh } = useDashboard();
   const now = useNow(1000);
   const [view, setView] = useView();
+  const [openedFromBlank, setOpenedFromBlank] = useState(false);
   const lang = resolveLang(store?.settings.language ?? 'auto', navigator.language);
   if (!store || !dashboard) return null;
+  if (store.settings.newtabMode === 'blank' && !openedFromBlank) {
+    return (
+      <LangProvider lang={lang}>
+        <BlankTab onOpen={() => setOpenedFromBlank(true)} />
+      </LangProvider>
+    );
+  }
+  if (Object.keys(store.snapshots).length === 0) {
+    return (
+      <LangProvider lang={lang}>
+        <Onboarding />
+      </LangProvider>
+    );
+  }
 
   const counts = dueCounts(dashboard.items, now);
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);

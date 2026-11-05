@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import type { CourseLink, ManualItem, SourceId, Snapshot, StoreShape } from '../core/types';
+import type { CourseLink, ManualItem, Settings, SourceId, Snapshot, StoreShape } from '../core/types';
 
 const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta'] as const;
 
@@ -103,4 +103,31 @@ export async function addManualLink(l: CourseLink): Promise<void> {
 export async function removeManualLink(courseId: string, url: string): Promise<void> {
   const { manualLinks } = await loadStore();
   await patchStore({ manualLinks: manualLinks.filter((x) => !(x.courseId === courseId && x.url === url)) });
+}
+
+export async function updateSettings(patch: Partial<Settings>): Promise<void> {
+  const { settings } = await loadStore();
+  await patchStore({ settings: { ...settings, ...patch } });
+}
+
+export async function setCourseHidden(courseId: string, hidden: boolean): Promise<void> {
+  const { userState } = await loadStore();
+  const next = { ...userState.hidden };
+  if (hidden) next[courseId] = true;
+  else delete next[courseId];
+  await patchStore({ userState: { ...userState, hidden: next } });
+}
+
+export async function setCourseColor(courseId: string, color: string): Promise<void> {
+  const { userState } = await loadStore();
+  await patchStore({ userState: { ...userState, colors: { ...userState.colors, [courseId]: color } } });
+}
+
+/** target null removes the manual merge rule for this Gradescope course. */
+export async function setMerge(gradescopeKey: string, target: string | null): Promise<void> {
+  const { userState } = await loadStore();
+  const next = { ...userState.merges };
+  if (target) next[gradescopeKey] = target;
+  else delete next[gradescopeKey];
+  await patchStore({ userState: { ...userState, merges: next } });
 }
