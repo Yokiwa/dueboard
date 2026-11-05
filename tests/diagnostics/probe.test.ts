@@ -13,6 +13,7 @@ describe('probe', () => {
   it('reports ok when both platforms answer while logged in', async () => {
     const { impl } = fakeFetch({
       [`${BS}/d2l/api/versions/`]: { body: versions },
+      [`${BS}/d2l/api/lp/1.47/users/whoami`]: { body: { Identifier: '1', FirstName: 'A', LastName: 'B' } },
       [`${GS}/account`]: { body: '<div class="courseList"><a class="courseBox" href="/courses/1"></a></div>' },
     });
     const r = await probe(impl);
@@ -20,9 +21,22 @@ describe('probe', () => {
     expect(r.gradescope.ok).toBe(true);
   });
 
+  it('checks login with whoami, not the public versions endpoint (I5)', async () => {
+    const { impl, calls } = fakeFetch({
+      [`${BS}/d2l/api/versions/`]: { body: versions },
+      [`${BS}/d2l/api/lp/1.47/users/whoami`]: { status: 403, body: '' },
+      [`${GS}/account`]: { body: '<a class="courseBox"></a>' },
+    });
+    const r = await probe(impl);
+    expect(calls.some((c) => c.includes('/users/whoami'))).toBe(true);
+    expect(r.brightspace.ok).toBe(false);
+    expect(r.brightspace.status).toBe(403);
+  });
+
   it('reports not ok with redirect target when sent to a login page', async () => {
     const { impl } = fakeFetch({
-      [`${BS}/d2l/api/versions/`]: { body: '<html>login</html>', redirectedTo: `${BS}/d2l/login` },
+      [`${BS}/d2l/api/versions/`]: { body: versions },
+      [`${BS}/d2l/api/lp/1.47/users/whoami`]: { body: '<html>login</html>', redirectedTo: `${BS}/d2l/login` },
       [`${GS}/account`]: { body: '<html>Log In</html>', redirectedTo: `${GS}/login` },
     });
     const r = await probe(impl);
@@ -57,7 +71,7 @@ describe('collectFixtures', () => {
       [`${BS}/d2l/api/le/1.80/42/quizzes/`]: { body: { Objects: [], Next: null } },
       [`${BS}/d2l/api/le/1.80/calendar/events/myEvents/`]: { body: { Objects: [], Next: null } },
       [`${BS}/d2l/api/le/1.80/42/content/toc`]: { body: { Modules: [] } },
-      [`${GS}/account`]: { body: '<a class="courseBox" href="/courses/5">Alex Doe</a>' },
+      [`${GS}/account`]: { body: '<meta name="csrf-token" content="SECRETTOKEN123"><input type="hidden" name="authenticity_token" value="SECRETTOKEN456"><a class="courseBox" href="/courses/5">Alex Doe</a>' },
       [`${GS}/courses/5`]: { body: '<table id="assignments-student-table"></table>' },
     });
     const out = await collectFixtures(impl);
@@ -67,6 +81,7 @@ describe('collectFixtures', () => {
     expect(Object.keys(out.gradescope).sort()).toEqual(['account', 'course']);
     expect(JSON.stringify(out)).not.toContain('Alex Doe');
     expect(JSON.stringify(out)).not.toContain('adoe');
+    expect(JSON.stringify(out)).not.toContain('SECRETTOKEN');
     expect(out.errors).toEqual([]);
     expect(calls.some((c) => c.includes('orgUnitIdsCSV=42'))).toBe(true);
   });

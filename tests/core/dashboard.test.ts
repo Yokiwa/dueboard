@@ -359,3 +359,50 @@ describe('dueCounts', () => {
     expect(dueCounts(items, now)).toEqual({ within48: 2, week: 3 });
   });
 });
+
+describe('final review regressions', () => {
+  it('never merges two items from the same platform (C1)', () => {
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          gradescope: snap([gsCourse('9', 'CS 180', 'CS 18000')], [
+            item({ source: 'gradescope', sourceItemId: 'a', sourceCourseId: '9', title: 'Homework 3', submitted: true }),
+            item({ source: 'gradescope', sourceItemId: 'b', sourceCourseId: '9', title: 'Homework 3 - Programming' }),
+          ]),
+        },
+      }),
+      now,
+    );
+    expect(d.items).toHaveLength(2);
+    expect(d.items.find((i) => i.title === 'Homework 3 - Programming')!.submitted).toBe(false);
+  });
+
+  it('manual items, manual links, colors and hidden follow a course after it merges (I4)', () => {
+    const userState = { ...emptyUser(), colors: { 'gradescope:9': '#000000' } };
+    const d = buildDashboard(
+      input({
+        userState,
+        snapshots: {
+          brightspace: snap([bsCourse('42', 'MA 26100', 'MA 26100')]),
+          gradescope: snap([gsCourse('9', 'MA 261', 'MA 26100')]),
+        },
+        manualItems: [{ id: 'manual:1', courseId: 'gradescope:9', title: 'WebAssign 1', dueAt: iso('2026-11-06T23:59:00-05:00'), url: 'https://www.webassign.net/' }],
+        manualLinks: [{ courseId: 'gradescope:9', label: 'WebAssign', url: 'https://www.webassign.net/', category: 'homework', source: 'manual' }],
+      }),
+      now,
+    );
+    expect(d.courses).toHaveLength(1);
+    expect(d.courses[0]!.color).toBe('#000000');
+    expect(d.items[0]).toMatchObject({ id: 'manual:1', courseId: 'brightspace:42' });
+    expect(d.links.some((l) => l.label === 'WebAssign' && l.courseId === 'brightspace:42')).toBe(true);
+
+    const hidden = buildDashboard(
+      input({
+        userState: { ...emptyUser(), hidden: { 'gradescope:9': true } },
+        snapshots: { brightspace: snap([bsCourse('42', 'MA 26100', 'MA 26100')]), gradescope: snap([gsCourse('9', 'MA 261', 'MA 26100')]) },
+      }),
+      now,
+    );
+    expect(hidden.courses).toEqual([]);
+  });
+});

@@ -30,13 +30,35 @@ async function probeOne(
   }
 }
 
+/** /versions/ is public, so the login check uses whoami, which only answers when the browser's session is sent. */
+async function probeBrightspace(fetchImpl: typeof fetch): Promise<ProbeResult> {
+  let lp: string | undefined;
+  try {
+    const res = await fetchImpl(`${BS_BASE}/d2l/api/versions/`, { credentials: 'include' });
+    const versions = (await res.json()) as VersionInfo[];
+    lp = versions.find((v) => v.ProductCode === 'lp')?.LatestVersion;
+  } catch (e) {
+    return { ok: false, status: 0, note: `versions: ${String(e)}` };
+  }
+  if (!lp) return { ok: false, status: 0, note: 'versions: no lp product' };
+  return probeOne(fetchImpl, `${BS_BASE}/d2l/api/lp/${lp}/users/whoami`, (b) => b.includes('"Identifier"'));
+}
+
 /** Checks whether the extension can read each platform with the browser's existing login. */
 export async function probe(fetchImpl: typeof fetch = fetch): Promise<ProbeReport> {
   const [brightspace, gradescope] = await Promise.all([
-    probeOne(fetchImpl, `${BS_BASE}/d2l/api/versions/`, (b) => b.trimStart().startsWith('[')),
+    probeBrightspace(fetchImpl),
     probeOne(fetchImpl, `${GS_BASE}/account`, (b) => b.includes('courseBox')),
   ]);
   return { brightspace, gradescope };
+}
+
+/** Removes session-bound CSRF tokens so fixtures can be committed to a public repo. */
+function stripTokens(html: string): string {
+  return html
+    .replace(/(<meta[^>]+name="csrf-token"[^>]+content=")[^"]*(")/gi, '$1[REDACTED]$2')
+    .replace(/(name="authenticity_token"[^>]*value=")[^"]*(")/gi, '$1[REDACTED]$2')
+    .replace(/(value=")[^"]*("[^>]*name="authenticity_token")/gi, '$1[REDACTED]$2');
 }
 
 export interface FixtureBundle {
@@ -136,6 +158,6 @@ export async function collectFixtures(fetchImpl: typeof fetch = fetch): Promise<
       .filter(([, v]) => v !== undefined)
       .map(([k, v]) => [k, scrubJson(v, live)]),
   );
-  const gradescope = Object.fromEntries(Object.entries(gsRaw).map(([k, v]) => [k, scrubHtml(v, live)]));
+  const gradescope = Object.fromEntries(Object.entries(gsRaw).map(([k, v]) => [k, scrubHtml(stripTokens(v), live)]));
   return { collectedAt: new Date().toISOString(), brightspace, gradescope, errors };
 }

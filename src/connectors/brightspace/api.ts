@@ -5,9 +5,9 @@ export interface Enrollment {
   Access: { IsActive: boolean; CanAccess: boolean; StartDate: string | null; EndDate: string | null };
 }
 export interface EnrollmentPage { PagingInfo: { Bookmark: string; HasMoreItems: boolean }; Items: Enrollment[] }
-export interface DropboxFolder { Id: number; Name: string; DueDate: string | null; IsHidden: boolean }
+export interface DropboxFolder { Id: number; Name: string; DueDate: string | null; IsHidden: boolean; Availability?: { StartDate: string | null; EndDate: string | null } | null }
 export interface MySubmission { Submissions: unknown[]; CompletionDate?: string | null }
-export interface Quiz { QuizId: number; Name: string; IsActive: boolean; DueDate: string | null }
+export interface Quiz { QuizId: number; Name: string; IsActive: boolean; DueDate: string | null; EndDate?: string | null }
 export interface CalendarEvent {
   CalendarEventId: number;
   OrgUnitId: number;

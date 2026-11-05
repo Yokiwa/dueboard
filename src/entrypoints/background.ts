@@ -5,11 +5,12 @@ import { collectFixtures, probe } from '../diagnostics/probe';
 import { loadStore } from '../storage/store';
 import { isStale, runSync } from '../sync/runSync';
 import { offscreenParser } from '../sync/offscreenParser';
+import { withKeepAlive } from '../sync/keepAlive';
 
 const ALARM = 'dueboard-sync';
 
 const connectors = () => [createBrightspaceConnector(), createGradescopeConnector({ parser: offscreenParser })];
-const syncNow = () => runSync(connectors());
+const syncNow = () => withKeepAlive(runSync(connectors()), () => browser.runtime.getPlatformInfo());
 
 export default defineBackground(() => {
   const ensureAlarm = async () => {

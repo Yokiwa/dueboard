@@ -12,7 +12,7 @@ import {
   type Toc,
   type VersionInfo,
 } from './api';
-import { isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocLinks } from './map';
+import { folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocLinks } from './map';
 
 const DAY = 86_400_000;
 
@@ -62,34 +62,45 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       const links: RawLink[] = [];
       const partial: string[] = [];
 
+      // Each endpoint fails on its own: a broken content page or one 403 must not hide the course's deadlines.
       const perCourse = ous.map(async (ou) => {
-        try {
-          const [folders, quizzes, toc] = await Promise.all([
-            get<DropboxFolder[]>(u.dropbox(ou)),
-            allPages<Quiz>(u.quizzes(ou)),
-            get<Toc>(u.toc(ou)),
-          ]);
-          const visible = folders.filter((f) => !f.IsHidden);
-          // Only ask "did I submit?" for folders due between 7 days ago and 30 days ahead.
-          const checkWindow = (f: DropboxFolder) => {
-            if (!f.DueDate) return false;
-            const due = Date.parse(f.DueDate);
-            return due >= t.getTime() - 7 * DAY && due <= t.getTime() + 30 * DAY;
-          };
-          const submitted = await Promise.all(
-            visible.map(async (f) => {
-              if (!checkWindow(f)) return false;
+        let failed = false;
+        const attempt = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+          try {
+            return await fn();
+          } catch {
+            failed = true;
+            return fallback;
+          }
+        };
+        const [folders, quizzes, toc] = await Promise.all([
+          attempt(() => get<DropboxFolder[]>(u.dropbox(ou)), [] as DropboxFolder[]),
+          attempt(() => allPages<Quiz>(u.quizzes(ou)), [] as Quiz[]),
+          attempt(() => get<Toc>(u.toc(ou)), { Modules: [] } as Toc),
+        ]);
+        const visible = folders.filter((f) => !f.IsHidden);
+        // Only ask "did I submit?" for folders due between 7 days ago and 30 days ahead.
+        const checkWindow = (f: DropboxFolder) => {
+          const due = folderDue(f);
+          if (!due) return false;
+          const ms = Date.parse(due);
+          return ms >= t.getTime() - 7 * DAY && ms <= t.getTime() + 30 * DAY;
+        };
+        const submitted = await Promise.all(
+          visible.map(async (f) => {
+            if (!checkWindow(f)) return false;
+            try {
               const subs = await get<MySubmission[]>(u.mySubmissions(ou, f.Id));
-              return subs.some((s) => s.Submissions.length > 0 || Boolean(s.CompletionDate));
-            }),
-          );
-          visible.forEach((f, i) => items.push(toDropboxItem(f, ou, base, submitted[i]!)));
-          quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
-          links.push(...tocLinks(toc, ou));
-        } catch (e) {
-          if (e instanceof AuthError) throw e;
-          partial.push(ou);
-        }
+              return subs.some((x) => x.Submissions.length > 0 || Boolean(x.CompletionDate));
+            } catch {
+              return false; // e.g. group folders: unknown just means "not marked submitted"
+            }
+          }),
+        );
+        visible.forEach((f, i) => items.push(toDropboxItem(f, ou, base, submitted[i]!)));
+        quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
+        links.push(...tocLinks(toc, ou));
+        if (failed) partial.push(ou);
       });
 
       const calendar = (async () => {
@@ -103,8 +114,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
             const it = toEventItem(ev, base);
             if (it) items.push(it);
           }
-        } catch (e) {
-          if (e instanceof AuthError) throw e;
+        } catch {
           // Calendar is a bonus source; dropbox and quizzes already cover most deadlines.
         }
       })();

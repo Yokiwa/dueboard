@@ -194,3 +194,50 @@ describe('createLimiter', () => {
     await expect(limit(async () => 'ok')).resolves.toBe('ok');
   });
 });
+
+describe('final review regressions (brightspace)', () => {
+  it('one failing endpoint keeps the rest of that course (I1)', async () => {
+    const { result } = await run(routes({ [`${LE}/101/content/toc`]: { status: 500, body: '' } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.some((i) => i.sourceItemId === 'dropbox:7')).toBe(true);
+    expect(result.items.some((i) => i.sourceItemId === 'quiz:31')).toBe(true);
+    expect(result.partial).toEqual(['101']);
+  });
+
+  it('a failing submissions check just means not submitted (I1)', async () => {
+    const { result } = await run(routes({ [`${LE}/101/dropbox/folders/7/submissions/mysubmissions/`]: { status: 404, body: '' } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:7')?.submitted).toBe(false);
+    expect(result.partial).toEqual([]);
+  });
+
+  it('a 403 on one course marks it partial instead of asking to log in (I2)', async () => {
+    const { result } = await run(routes({ [`${LE}/102/quizzes/`]: { status: 403, body: '' } }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.partial).toEqual(['102']);
+  });
+
+  it('a 403 on enrollments still means not logged in (I2)', async () => {
+    const { result } = await run(routes({ [`${B}/d2l/api/lp/1.47/enrollments/myenrollments/?orgUnitTypeId=3`]: { status: 403, body: '' } }));
+    expect(result).toMatchObject({ ok: false, reason: 'not_logged_in' });
+  });
+
+  it('falls back to the end date when no due date is set (I3)', async () => {
+    const { result } = await run(
+      routes({
+        [`${LE}/102/dropbox/folders/`]: { body: [{ Id: 70, Name: 'Essay', DueDate: null, IsHidden: false, Availability: { StartDate: null, EndDate: '2026-11-10T04:59:00.000Z' } }] },
+        [`${LE}/102/quizzes/`]: { body: { Objects: [{ QuizId: 80, Name: 'Quiz 7', IsActive: true, DueDate: null, StartDate: null, EndDate: '2026-11-11T04:59:00.000Z' }], Next: null } },
+      }),
+    );
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:70')?.dueAt).toBe('2026-11-10T04:59:00.000Z');
+    expect(result.items.find((i) => i.sourceItemId === 'quiz:80')?.dueAt).toBe('2026-11-11T04:59:00.000Z');
+  });
+});
+
+describe('calendar errors', () => {
+  it('a 403 on the calendar does not fail the sync (I2)', async () => {
+    const { result } = await run(routes({ [`${LE}/calendar/events/myEvents/`]: { status: 403, body: '' } }));
+    expect(result.ok).toBe(true);
+  });
+});

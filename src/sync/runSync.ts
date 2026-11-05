@@ -1,5 +1,5 @@
 import { SOURCES, type Connector, type ConnectorFailureReason, type ConnectorResult, type SourceId, type StoreShape } from '../core/types';
-import { recordSyncError, recordSyncSuccess, saveSnapshot } from '../storage/store';
+import { loadStore, recordSyncError, recordSyncSuccess, saveSnapshot } from '../storage/store';
 
 export type SyncReport = Partial<Record<SourceId, 'ok' | ConnectorFailureReason>>;
 
@@ -23,9 +23,15 @@ export function runSync(connectors: Connector[], now: () => Date = () => new Dat
     );
     const report: SyncReport = {};
     const at = now().toISOString();
+    const { snapshots: previous } = await loadStore();
     for (const [id, r] of results) {
       if (r.ok) {
-        await saveSnapshot(id, { syncedAt: at, courses: r.courses, items: r.items, links: r.links, partial: r.partial });
+        // Courses that failed this time keep what the last good sync knew about them.
+        const prev = previous[id];
+        const keep = new Set(r.partial);
+        const items = [...r.items, ...(prev?.items ?? []).filter((i) => keep.has(i.sourceCourseId) && !r.items.some((n) => n.sourceItemId === i.sourceItemId))];
+        const links = [...r.links, ...(prev?.links ?? []).filter((l) => keep.has(l.sourceCourseId) && !r.links.some((n) => n.url === l.url && n.sourceCourseId === l.sourceCourseId))];
+        await saveSnapshot(id, { syncedAt: at, courses: r.courses, items, links, partial: r.partial });
         await recordSyncSuccess(id, at);
         report[id] = 'ok';
       } else {

@@ -24,6 +24,11 @@ export function toCourse(e: Enrollment, base: string): RawCourse {
   };
 }
 
+/** Due date, or the close date when the instructor set only that. */
+export function folderDue(f: DropboxFolder): string | null {
+  return f.DueDate ?? f.Availability?.EndDate ?? null;
+}
+
 export function toDropboxItem(f: DropboxFolder, ou: string, base: string, submitted: boolean): RawItem {
   return {
     source: 'brightspace',
@@ -31,7 +36,7 @@ export function toDropboxItem(f: DropboxFolder, ou: string, base: string, submit
     sourceCourseId: ou,
     title: f.Name,
     type: 'assignment',
-    dueAt: f.DueDate ?? null,
+    dueAt: folderDue(f),
     url: `${base}/d2l/lms/dropbox/user/folder_submit_files.d2l?ou=${ou}&db=${f.Id}`,
     submitted,
   };
@@ -44,14 +49,15 @@ export function toQuizItem(q: Quiz, ou: string, base: string): RawItem {
     sourceCourseId: ou,
     title: q.Name,
     type: 'quiz',
-    dueAt: q.DueDate ?? null,
+    dueAt: q.DueDate ?? q.EndDate ?? null,
     url: `${base}/d2l/lms/quizzing/user/quiz_summary.d2l?ou=${ou}&qi=${q.QuizId}`,
     submitted: false,
   };
 }
 
-const DEADLINE_WORDS = /due|hw\b|homework|assignment|quiz|exam|midterm|final|project|lab|essay|report|paper|webassign|connect|mastering|mylab|zybook/i;
-const EXAM_WORDS = /exam|midterm|final/i;
+// Whole words only: "lab" must not match "Syllabus"/"Collaborate", "exam" must not match "Example".
+const DEADLINE_WORDS = /\b(due|hw\d*|homework|assignment|quiz|exam|midterm|final|project|essay|report|paper|webassign|connect|mastering|mylab|zybooks?)\b/i;
+const EXAM_WORDS = /\b(exam|midterm|final)\b/i;
 const DUPLICATE_ENTITY = /dropbox|quiz/i;
 
 /**

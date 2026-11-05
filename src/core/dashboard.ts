@@ -69,10 +69,13 @@ function buildCourses(input: DashboardInput) {
     }
   }
 
+  // Settings saved under an id that has since been folded into another course still apply to it.
+  const keysOf = (id: string) => [id, ...[...alias].filter(([from, to]) => to === id && from !== id).map(([from]) => from)];
   const stable = [...byId.values()].sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
   stable.forEach((c, i) => {
-    c.color = userState.colors[c.id] ?? PALETTE[i % PALETTE.length]!;
-    c.hidden = Boolean(userState.hidden[c.id]);
+    const keys = keysOf(c.id);
+    c.color = keys.map((k) => userState.colors[k]).find(Boolean) ?? PALETTE[i % PALETTE.length]!;
+    c.hidden = keys.some((k) => userState.hidden[k]);
   });
   return { all: byId, alias, gsUrl };
 }
@@ -84,8 +87,13 @@ function titlesMatch(a: string, b: string): boolean {
   return Math.min(na.length, nb.length) >= 4 && (na.includes(nb) || nb.includes(na));
 }
 
+const isCalendarOnly = (i: Item) => i.sourceKeys.every((k) => k.startsWith('brightspace:event:'));
+
 function isSameWork(a: Item, b: Item): boolean {
   if (a.courseId !== b.courseId) return false;
+  // Two items from the same platform are different work (e.g. "Homework 3" vs "Homework 3 - Programming"),
+  // except a Brightspace calendar event shadowing a real assignment/quiz.
+  if (a.sources.some((s) => b.sources.includes(s)) && isCalendarOnly(a) === isCalendarOnly(b)) return false;
   if (a.dueAt && b.dueAt) return titlesMatch(a.title, b.title) && Math.abs(dueMs(a) - dueMs(b)) <= MERGE_MS;
   if (!a.dueAt && !b.dueAt) return normalizeTitle(a.title) === normalizeTitle(b.title);
   return false;
@@ -142,7 +150,7 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
     const kind = classifyLink(r.title, r.url);
     if (cid && kind) add({ courseId: cid, label: kind.label, url: new URL(r.url, 'https://purdue.brightspace.com').href, category: kind.category, source: 'brightspace' });
   }
-  for (const l of input.manualLinks) add(l);
+  for (const l of input.manualLinks) add({ ...l, courseId: alias.get(l.courseId) ?? l.courseId });
   return courses.flatMap((c) => perCourse.get(c.id) ?? []);
 }
 
@@ -171,8 +179,9 @@ export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
   for (const m of merged) m.id = m.sourceKeys[0]!;
 
   for (const m of input.manualItems) {
-    if (!visible.has(m.courseId) || !inWindow(m)) continue;
-    merged.push({ id: m.id, courseId: m.courseId, title: m.title, type: 'manual', dueAt: m.dueAt, url: m.url, sources: ['manual'], sourceKeys: [m.id], submitted: false, doneByUser: false });
+    const cid = alias.get(m.courseId) ?? m.courseId;
+    if (!visible.has(cid) || !inWindow(m)) continue;
+    merged.push({ id: m.id, courseId: cid, title: m.title, type: 'manual', dueAt: m.dueAt, url: m.url, sources: ['manual'], sourceKeys: [m.id], submitted: false, doneByUser: false });
   }
   for (const m of merged) m.doneByUser = m.sourceKeys.some((k) => input.userState.done[k]);
 
