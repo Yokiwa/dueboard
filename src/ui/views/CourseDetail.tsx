@@ -3,6 +3,7 @@ import { removeManualLink } from '../../storage/store';
 import { ManualItemForm } from '../components/ManualItemForm';
 import { ManualLinkForm } from '../components/ManualLinkForm';
 import { secondaryBtn } from '../forms';
+import { displayName } from '../../core/courseName';
 import type { Course, CourseLink, Item, LinkCategory } from '../../core/types';
 import { useT, type MessageKey } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
@@ -62,7 +63,7 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
       <div className="flex flex-col gap-6 p-6">
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="m-0 text-xl font-bold">
-            {`${course.code} · ${course.name}`}
+            {displayName(course) ? `${course.code} · ${displayName(course)}` : course.code}
           </h2>
           <button
             type="button"

@@ -124,4 +124,28 @@ describe('CoursesView', () => {
     fireEvent.click(screen.getByRole('button', { name: '删除链接 Piazza' }));
     await waitFor(async () => expect((await loadStore()).manualLinks).toEqual([]));
   });
+
+  it('a course whose name is only term/code/section shows just the code as its title', () => {
+    const chm = course('b:9', 'CHM 11510', { name: 'Fall 2026 CHM 11510 - Merge' });
+    renderIn('zh', <CoursesView dashboard={dash({ courses: [chm] })} now={NOW} />);
+    const c = within(card('CHM 11510'));
+    expect(c.queryByText('Fall 2026 CHM 11510 - Merge')).toBeNull();
+    expect(c.getByRole('button', { name: '查看 CHM 11510 详情' }).textContent).toBe('CHM 11510');
+    fireEvent.click(c.getByRole('button', { name: '查看 CHM 11510 详情' }));
+    expect(screen.getByRole('dialog', { name: 'CHM 11510' })).toBeTruthy();
+  });
+
+  it('course-content website links stay off the card but appear in the detail; manual ones stay on the card', () => {
+    const links = [
+      link('b:1', 'Brightspace', 'lms'),
+      link('b:1', 'Lecture 1 JOVE Playlist', 'website'),
+      link('b:1', 'Lecture 2 JOVE Playlist', 'website'),
+      { courseId: 'b:1', label: 'Course site', url: 'https://cs.purdue.edu/cs180', category: 'website' as const, source: 'manual' as const },
+    ];
+    renderIn('zh', <CoursesView dashboard={{ ...d, links }} now={NOW} />);
+    const pills = within(within(card('CS 18000')).getByRole('group', { name: '快捷入口' })).getAllByRole('link').map((a) => a.textContent);
+    expect(pills).toEqual(['Brightspace', 'Course site']);
+    fireEvent.click(within(card('CS 18000')).getByRole('button', { name: '查看 CS 18000 详情' }));
+    expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Lecture 2 JOVE Playlist' })).toBeTruthy();
+  });
 });

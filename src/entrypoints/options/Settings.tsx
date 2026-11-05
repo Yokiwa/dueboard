@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react';
 import { browser } from 'wxt/browser';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
+import { displayName } from '../../core/courseName';
 import type { Settings as SettingsShape } from '../../core/types';
 import { setCourseColor, setCourseHidden, setMerge, updateSettings } from '../../storage/store';
 import { FEEDBACK_URL } from '../../ui/config';
@@ -75,7 +76,7 @@ function Body({ store }: { store: StoreShape }) {
                     className="size-4 accent-db-accent"
                   />
                   <span className="font-semibold">{c.code}</span>
-                  <span className="truncate text-db-faint">{c.name}</span>
+                  <span className="truncate text-db-faint">{displayName(c)}</span>
                 </label>
                 <div className="flex gap-1.5">
                   {PALETTE.map((color, i) => (
@@ -108,7 +109,7 @@ function Body({ store }: { store: StoreShape }) {
                   <option value="">{t('settings.noMerge')}</option>
                   {bsCourses.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {`${b.code} · ${b.name}`}
+                      {displayName(b) ? `${b.code} · ${displayName(b)}` : b.code}
                     </option>
                   ))}
                 </select>

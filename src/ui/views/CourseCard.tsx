@@ -1,3 +1,4 @@
+import { displayName } from '../../core/courseName';
 import type { Course, CourseLink, Item } from '../../core/types';
 import { useT } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
@@ -17,6 +18,9 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
   const t = useT();
   const pending = items.filter((i) => !i.doneByUser && !i.submitted);
   const shown = pending.slice(0, SHOWN);
+  const name = displayName(course);
+  // Lecture videos etc. found in course content only appear in the detail view; the card keeps platform shortcuts.
+  const shortcuts = links.filter((l) => l.category !== 'website' || l.source === 'manual');
   return (
     <article aria-label={course.code} className="flex flex-col gap-3.5 rounded-[14px] border border-db-border bg-db-surface p-5">
       <button
@@ -25,11 +29,20 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
         aria-label={t('course.open', { code: course.code })}
         className="flex cursor-pointer flex-col gap-1 border-0 bg-transparent p-0 text-left"
       >
-        <span className="flex items-center gap-2">
-          <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
-          <span className="text-[13px] font-semibold tracking-[0.02em] text-db-muted">{course.code}</span>
-        </span>
-        <span className="text-lg font-semibold text-db-text">{course.name}</span>
+        {name ? (
+          <>
+            <span className="flex items-center gap-2">
+              <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
+              <span className="text-[13px] font-semibold tracking-[0.02em] text-db-muted">{course.code}</span>
+            </span>
+            <span className="text-lg font-semibold text-db-text">{name}</span>
+          </>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
+            <span className="text-lg font-semibold text-db-text">{course.code}</span>
+          </span>
+        )}
       </button>
 
       <div className="flex grow flex-col">
@@ -52,9 +65,9 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
         {course.partial && <p className="m-0 pt-2 text-xs text-db-soon-fg">{t('course.partial')}</p>}
       </div>
 
-      {links.length > 0 && (
+      {shortcuts.length > 0 && (
         <div role="group" aria-label={t('course.links')} className="flex flex-wrap gap-2">
-          {links.map((l) => (
+          {shortcuts.map((l) => (
             <LinkPill key={l.url} link={l} />
           ))}
         </div>
