@@ -1,4 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { removeManualLink } from '../../storage/store';
+import { ManualItemForm } from '../components/ManualItemForm';
+import { ManualLinkForm } from '../components/ManualLinkForm';
+import { secondaryBtn } from '../forms';
 import type { Course, CourseLink, Item, LinkCategory } from '../../core/types';
 import { useT, type MessageKey } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
@@ -25,6 +29,7 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
   const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = `detail-${course.id}`;
+  const [adding, setAdding] = useState<'item' | 'link' | null>(null);
 
   useEffect(() => {
     const dlg = ref.current;
@@ -69,6 +74,17 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
           </button>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={secondaryBtn} onClick={() => setAdding('item')}>
+            {t('todo.add')}
+          </button>
+          <button type="button" className={secondaryBtn} onClick={() => setAdding('link')}>
+            {t('link.add')}
+          </button>
+        </div>
+        {adding === 'item' && <ManualItemForm courses={[course]} courseId={course.id} onDone={() => setAdding(null)} />}
+        {adding === 'link' && <ManualLinkForm courseId={course.id} onDone={() => setAdding(null)} />}
+
         <section className="flex flex-col gap-2">
           <h3 className="m-0 text-sm font-semibold text-db-muted">{t('detail.items')}</h3>
           {items.length === 0 ? (
@@ -95,7 +111,19 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
                   <h4 className="m-0 text-xs font-semibold text-db-faint">{t(key)}</h4>
                   <div className="flex flex-wrap gap-2">
                     {group.map((l) => (
-                      <LinkPill key={l.url} link={l} />
+                      <span key={l.url} className="inline-flex items-center gap-1">
+                        <LinkPill link={l} />
+                        {l.source === 'manual' && (
+                          <button
+                            type="button"
+                            aria-label={t('link.delete', { label: l.label })}
+                            onClick={() => void removeManualLink(l.courseId, l.url)}
+                            className="min-h-8 cursor-pointer rounded-md border-0 bg-transparent px-1.5 text-db-faint hover:text-db-urgent-fg"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
                     ))}
                   </div>
                 </div>

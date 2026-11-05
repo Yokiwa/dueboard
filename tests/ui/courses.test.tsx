@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { screen, fireEvent, within } from '@testing-library/react';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
+import { addManualLink, loadStore } from '../../src/storage/store';
+import { screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { renderIn } from './render';
 import { CoursesView } from '../../src/ui/views/CoursesView';
 import { NOW, course, item, link, dash } from './fixtures';
@@ -100,5 +102,26 @@ describe('CoursesView', () => {
   it('empty dashboard shows a hint', () => {
     renderIn('zh', <CoursesView dashboard={dash({})} now={NOW} />);
     expect(screen.getByText('还没有课程。同步完成后，你的课程会出现在这里。')).toBeTruthy();
+  });
+
+  it('detail has 添加作业 and 添加链接 buttons that open forms for this course', () => {
+    renderIn('zh', <CoursesView dashboard={d} now={NOW} />);
+    fireEvent.click(within(card('CS 18000')).getByRole('button', { name: '查看 CS 18000 详情' }));
+    const dlg = within(screen.getByRole('dialog'));
+    fireEvent.click(dlg.getByRole('button', { name: '添加作业' }));
+    expect(dlg.getByRole('form', { name: '添加作业' })).toBeTruthy();
+    expect(dlg.queryByLabelText('课程')).toBeNull();
+    fireEvent.click(dlg.getByRole('button', { name: '添加链接' }));
+    expect(dlg.getByRole('form', { name: '添加链接' })).toBeTruthy();
+  });
+
+  it('manual links in the detail can be deleted', async () => {
+    fakeBrowser.reset();
+    const l = { courseId: 'b:1', label: 'Piazza', url: 'https://piazza.com/x', category: 'discussion' as const, source: 'manual' as const };
+    await addManualLink(l);
+    renderIn('zh', <CoursesView dashboard={{ ...d, links: [...d.links, l] }} now={NOW} />);
+    fireEvent.click(within(card('CS 18000')).getByRole('button', { name: '查看 CS 18000 详情' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除链接 Piazza' }));
+    await waitFor(async () => expect((await loadStore()).manualLinks).toEqual([]));
   });
 });

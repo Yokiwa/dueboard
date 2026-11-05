@@ -10,6 +10,7 @@ import { useNow } from '../../ui/hooks/useNow';
 import { useView } from '../../ui/hooks/useView';
 import { CoursesView } from '../../ui/views/CoursesView';
 import { CalendarView } from '../../ui/views/CalendarView';
+import { TodoView } from '../../ui/views/TodoView';
 import { LangProvider, resolveLang } from '../../ui/i18n';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
@@ -26,7 +27,7 @@ export function lastSynced(store: StoreShape): string | null {
 function ViewBody({ view, dashboard, now }: { view: View; dashboard: Dashboard; now: Date }) {
   if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
-  return <div data-view={view} />;
+  return <TodoView dashboard={dashboard} now={now} />;
 }
 
 export function App() {

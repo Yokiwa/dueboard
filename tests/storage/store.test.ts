@@ -10,6 +10,10 @@ import {
   recordSyncSuccess,
   toggleDone,
   onStoreChange,
+  addManualItem,
+  removeManualItem,
+  addManualLink,
+  removeManualLink,
 } from '../../src/storage/store';
 import type { Snapshot } from '../../src/core/types';
 
@@ -83,5 +87,25 @@ describe('store', () => {
     off();
     await browser.storage.local.set({ manualItems: [] });
     expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('addManualItem assigns a manual: id and removeManualItem deletes it with its done flag', async () => {
+    const id = await addManualItem({ courseId: 'brightspace:1', title: 'WebAssign 14.3', dueAt: null, url: 'https://www.webassign.net/' });
+    expect(id).toMatch(/^manual:[0-9a-f-]{36}$/);
+    await toggleDone([id], true);
+    expect((await loadStore()).manualItems).toHaveLength(1);
+    await removeManualItem(id);
+    const s = await loadStore();
+    expect(s.manualItems).toEqual([]);
+    expect(s.userState.done).toEqual({});
+  });
+
+  it('addManualLink ignores an exact duplicate; removeManualLink removes by course and url', async () => {
+    const l = { courseId: 'brightspace:1', label: 'Piazza', url: 'https://piazza.com/x', category: 'discussion' as const, source: 'manual' as const };
+    await addManualLink(l);
+    await addManualLink(l);
+    expect((await loadStore()).manualLinks).toHaveLength(1);
+    await removeManualLink('brightspace:1', 'https://piazza.com/x');
+    expect((await loadStore()).manualLinks).toEqual([]);
   });
 });

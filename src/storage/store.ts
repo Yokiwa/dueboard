@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import type { SourceId, Snapshot, StoreShape } from '../core/types';
+import type { CourseLink, ManualItem, SourceId, Snapshot, StoreShape } from '../core/types';
 
 const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta'] as const;
 
@@ -78,4 +78,29 @@ export function onStoreChange(cb: () => void): () => void {
   };
   browser.storage.onChanged.addListener(listener);
   return () => browser.storage.onChanged.removeListener(listener);
+}
+
+export async function addManualItem(i: Omit<ManualItem, 'id'>): Promise<string> {
+  const id = `manual:${crypto.randomUUID()}`;
+  const { manualItems } = await loadStore();
+  await patchStore({ manualItems: [...manualItems, { ...i, id }] });
+  return id;
+}
+
+export async function removeManualItem(id: string): Promise<void> {
+  const { manualItems, userState } = await loadStore();
+  const done = { ...userState.done };
+  delete done[id];
+  await patchStore({ manualItems: manualItems.filter((m) => m.id !== id), userState: { ...userState, done } });
+}
+
+export async function addManualLink(l: CourseLink): Promise<void> {
+  const { manualLinks } = await loadStore();
+  if (manualLinks.some((x) => x.courseId === l.courseId && x.url === l.url)) return;
+  await patchStore({ manualLinks: [...manualLinks, l] });
+}
+
+export async function removeManualLink(courseId: string, url: string): Promise<void> {
+  const { manualLinks } = await loadStore();
+  await patchStore({ manualLinks: manualLinks.filter((x) => !(x.courseId === courseId && x.url === url)) });
 }
