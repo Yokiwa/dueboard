@@ -2,7 +2,7 @@
   "name": "dueboard",
   "description": "All your Brightspace and Gradescope deadlines in one new tab.",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
