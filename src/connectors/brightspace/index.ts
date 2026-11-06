@@ -12,7 +12,7 @@ import {
   type Toc,
   type VersionInfo,
 } from './api';
-import { folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocLinks } from './map';
+import { folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocItems, tocLinks } from './map';
 
 const DAY = 86_400_000;
 
@@ -100,6 +100,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
         visible.forEach((f, i) => items.push(toDropboxItem(f, ou, base, submitted[i]!)));
         quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
         links.push(...tocLinks(toc, ou, base));
+        items.push(...tocItems(toc, ou, base));
         if (failed) partial.push(ou);
       });
 

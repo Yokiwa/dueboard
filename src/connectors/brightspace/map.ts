@@ -113,3 +113,35 @@ export function tocLinks(toc: Toc, ou: string, base = 'https://purdue.brightspac
   for (const m of toc.Modules ?? []) walk(m);
   return out;
 }
+
+const HOMEWORK_TITLE = /\b(hw|homework)\s*_?\d+/i;
+const NOT_WORK = /^copy of\b|study purposes|practice|solutions?\b|answer key/i;
+const LAUNCH = /\/lti\/|quickLink.*[?&]type=lti/i;
+
+/**
+ * Content topics that launch a homework platform (e.g. "PHYS 172H - HW11 - FA26" opening WileyPLUS) become items,
+ * so homework that lives outside Brightspace still shows up. They open through their content page; the date is the
+ * topic's due date when Brightspace has one (otherwise a calendar event with the same title supplies it).
+ */
+export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
+  const out: RawItem[] = [];
+  const walk = (m: TocModule) => {
+    for (const t of m.Topics ?? []) {
+      if (t.TopicId === undefined || !t.Url || !LAUNCH.test(t.Url)) continue;
+      if (!HOMEWORK_TITLE.test(t.Title) || NOT_WORK.test(t.Title)) continue;
+      out.push({
+        source: 'brightspace',
+        sourceItemId: `topic:${t.TopicId}`,
+        sourceCourseId: ou,
+        title: t.Title,
+        type: 'assignment',
+        dueAt: t.DueDate ?? t.EndDateTime ?? null,
+        url: `${base}/d2l/le/content/${ou}/viewContent/${t.TopicId}/View`,
+        submitted: false,
+      });
+    }
+    for (const child of m.Modules ?? []) walk(child);
+  };
+  for (const m of toc.Modules ?? []) walk(m);
+  return out;
+}

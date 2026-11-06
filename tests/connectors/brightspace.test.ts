@@ -280,3 +280,28 @@ describe('content topics without a url', () => {
     expect(result.links.find((l) => l.title === 'WileyPLUS')).toEqual({ source: 'brightspace', sourceCourseId: '102', title: 'WileyPLUS', url: `${B}/d2l/le/content/102/viewContent/77/View` });
   });
 });
+
+describe('homework launches in course content become items', () => {
+  const toc = {
+    Modules: [{ Title: 'MODULE 3', Modules: [{ Title: 'HOMEWORK 11', Modules: [], Topics: [
+      { TopicId: 501, Title: 'PHYS 172H - HW11 - FA26', Url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rCode=ABC-130', TypeIdentifier: 'Link' },
+    ] }], Topics: [
+      { TopicId: 502, Title: 'Physics 172H - HW10 - FA 26', Url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rCode=ABC-130', TypeIdentifier: 'Link', DueDate: '2026-11-04T04:59:00.000Z' },
+      { TopicId: 503, Title: 'Copy of HW01 for study purposes', Url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rCode=ABC-1', TypeIdentifier: 'Link' },
+      { TopicId: 504, Title: 'HW 4 solutions', Url: '/content/enforced/102/hw4-solutions.pdf', TypeIdentifier: 'File' },
+      { TopicId: 505, Title: 'Wiley Course Resources - LTI 1.3', Url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rcode=ABC-9', TypeIdentifier: 'Link' },
+    ] }],
+  };
+
+  it('LTI launches titled like homework (HW + number) become assignments that open their content page', async () => {
+    const { result } = await run(routes({ [`${LE}/102/content/toc`]: { body: toc } }));
+    if (!result.ok) throw new Error('expected ok');
+    const topics = result.items.filter((i) => i.sourceItemId.startsWith('topic:'));
+    expect(topics.map((i) => i.title).sort()).toEqual(['PHYS 172H - HW11 - FA26', 'Physics 172H - HW10 - FA 26']);
+    expect(topics.find((i) => i.sourceItemId === 'topic:501')).toEqual({
+      source: 'brightspace', sourceItemId: 'topic:501', sourceCourseId: '102', title: 'PHYS 172H - HW11 - FA26',
+      type: 'assignment', dueAt: null, url: `${B}/d2l/le/content/102/viewContent/501/View`, submitted: false,
+    });
+    expect(topics.find((i) => i.sourceItemId === 'topic:502')!.dueAt).toBe('2026-11-04T04:59:00.000Z');
+  });
+});
