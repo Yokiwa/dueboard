@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { removeManualLink } from '../../storage/store';
+import { removeManualLink, toggleDone } from '../../storage/store';
+import { useMarkDone } from '../components/DoneToast';
 import { ManualItemForm } from '../components/ManualItemForm';
 import { ManualLinkForm } from '../components/ManualLinkForm';
 import { secondaryBtn } from '../forms';
@@ -31,6 +32,7 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = `detail-${course.id}`;
   const [adding, setAdding] = useState<'item' | 'link' | null>(null);
+  const markDone = useMarkDone();
 
   // Open as a real modal (backdrop, focus trap, Esc). Fall back to a plain open dialog where showModal is missing.
   useEffect(() => {
@@ -92,8 +94,18 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
           ) : (
             <ul className="m-0 list-none p-0">
               {items.map((i) => (
-                <li key={i.id} data-testid="detail-item" className="border-t border-db-border-soft py-2.5">
-                  <ItemRow item={i} now={now} />
+                <li key={i.id} data-testid="detail-item" className="flex items-center gap-3 border-t border-db-border-soft py-2.5">
+                  <input
+                    type="checkbox"
+                    aria-label={t('done.mark', { title: i.title })}
+                    checked={i.doneByUser || i.submitted}
+                    disabled={i.submitted}
+                    onChange={(e) => void (e.target.checked ? markDone(i) : toggleDone(i.sourceKeys, false))}
+                    className="size-[18px] shrink-0 cursor-pointer accent-db-accent"
+                  />
+                  <div className="min-w-0 grow">
+                    <ItemRow item={i} now={now} />
+                  </div>
                 </li>
               ))}
             </ul>

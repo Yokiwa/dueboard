@@ -6,6 +6,7 @@ import { removeManualItem, toggleDone } from '../../storage/store';
 import { useT, type MessageKey } from '../i18n';
 import { DueBadge } from '../components/DueBadge';
 import { ManualItemForm } from '../components/ManualItemForm';
+import { useMarkDone } from '../components/DoneToast';
 import { primaryBtn } from '../forms';
 
 type Group = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'noDue';
@@ -31,6 +32,7 @@ function groupOf(i: Item, now: Date): Group {
 
 function Row({ item, course, now }: { item: Item; course: Course | undefined; now: Date }) {
   const t = useT();
+  const markDone = useMarkDone();
   const done = item.doneByUser || item.submitted;
   return (
     <li className="flex items-center gap-3 border-t border-db-border-soft py-2.5 first:border-t-0">
@@ -39,7 +41,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         aria-label={item.title}
         checked={done}
         disabled={item.submitted}
-        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked)}
+        onChange={(e) => void (e.target.checked ? markDone(item) : toggleDone(item.sourceKeys, false))}
         className="size-5 shrink-0 cursor-pointer accent-db-accent"
       />
       <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: course?.color }} />

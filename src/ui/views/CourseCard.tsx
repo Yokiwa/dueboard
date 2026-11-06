@@ -3,6 +3,7 @@ import type { Course, CourseLink, Item } from '../../core/types';
 import { useT } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
+import { useMarkDone } from '../components/DoneToast';
 
 const SHOWN = 3;
 
@@ -16,6 +17,7 @@ export interface CourseCardProps {
 
 export function CourseCard({ course, items, links, now, onOpen }: CourseCardProps) {
   const t = useT();
+  const markDone = useMarkDone();
   const pending = items.filter((i) => !i.doneByUser && !i.submitted);
   const shown = pending.slice(0, SHOWN);
   const name = displayName(course);
@@ -49,8 +51,17 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
         {shown.length > 0 ? (
           <ul className="m-0 list-none p-0">
             {shown.map((i) => (
-              <li key={i.id} className="border-t border-db-border-soft py-2.5">
-                <ItemRow item={i} now={now} />
+              <li key={i.id} className="flex items-center gap-3 border-t border-db-border-soft py-2.5">
+                <input
+                  type="checkbox"
+                  aria-label={t('done.mark', { title: i.title })}
+                  checked={false}
+                  onChange={() => void markDone(i)}
+                  className="size-[18px] shrink-0 cursor-pointer accent-db-accent"
+                />
+                <div className="min-w-0 grow">
+                  <ItemRow item={i} now={now} />
+                </div>
               </li>
             ))}
           </ul>

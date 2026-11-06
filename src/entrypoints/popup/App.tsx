@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
 import { ItemRow } from '../../ui/components/ItemRow';
+import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
 import { LangProvider, resolveLang, useT } from '../../ui/i18n';
@@ -40,7 +41,9 @@ export function PopupApp() {
   if (!store || !dashboard) return null;
   return (
     <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
-      <Body dashboard={dashboard} now={now} />
+      <DoneToastProvider>
+        <Body dashboard={dashboard} now={now} />
+      </DoneToastProvider>
     </LangProvider>
   );
 }

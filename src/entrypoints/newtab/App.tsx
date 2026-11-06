@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { dueCounts } from '../../core/dashboard';
 import { BlankTab } from '../../ui/components/BlankTab';
+import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
@@ -59,16 +60,18 @@ export function App() {
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);
   return (
     <LangProvider lang={lang}>
-      <AppShell>
-        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh} />
-        <SourceBanners store={store} now={now} />
-        <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <ViewTabs view={view} onChange={setView} />
-          <StatChips within48={counts.within48} week={counts.week} />
-        </div>
-        <ViewBody view={view} dashboard={dashboard} now={now} />
-      </AppShell>
+      <DoneToastProvider>
+        <AppShell>
+          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh} />
+          <SourceBanners store={store} now={now} />
+          <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <ViewTabs view={view} onChange={setView} />
+            <StatChips within48={counts.within48} week={counts.week} />
+          </div>
+          <ViewBody view={view} dashboard={dashboard} now={now} />
+        </AppShell>
+      </DoneToastProvider>
     </LangProvider>
   );
 }
