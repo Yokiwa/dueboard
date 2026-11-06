@@ -13,6 +13,7 @@ interface Platform {
 const PLATFORMS: Platform[] = [
   { label: 'Gradescope', category: 'homework', host: /(^|\.)gradescope\.com$/, title: /gradescope/i },
   { label: 'WebAssign', category: 'homework', host: /(^|\.)webassign\.net$/, title: /webassign/i },
+  { label: 'Achieve', category: 'homework', host: /(^|\.)macmillanlearning\.com$/, title: /\bachieve\b|macmillan/i },
   { label: 'Pearson', category: 'homework', host: /pearson|mylab|mastering/, title: /pearson|mylab|mastering/i },
   { label: 'McGraw-Hill Connect', category: 'homework', host: /(^|\.)mheducation\.com$/, title: /mcgraw|connect\b/i },
   { label: 'Cengage', category: 'textbook', host: /(^|\.)cengage\.com$/, title: /cengage|mindtap/i },

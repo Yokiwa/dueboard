@@ -45,3 +45,10 @@ describe('classifyLink other cases', () => {
     expect(classifyLink('Week 1 notes', '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti')).toBeNull();
   });
 });
+
+describe('Macmillan Achieve', () => {
+  it('is recognized by host and by title on a launch', () => {
+    expect(classifyLink('x', 'https://achieve.macmillanlearning.com/courses/1')).toEqual({ label: 'Achieve', category: 'homework' });
+    expect(classifyLink('Achieve Home', '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rCode=Y')).toEqual({ label: 'Achieve', category: 'homework' });
+  });
+});

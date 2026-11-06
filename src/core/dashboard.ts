@@ -43,8 +43,21 @@ function buildCourses(input: DashboardInput) {
   const gsUrl = new Map<string, string>();
   const codeOf = (c: RawCourse) => c.code ?? extractCourseCode(c.name);
 
-  for (const c of snapshots.brightspace?.courses ?? []) {
+  // Lecture + recitation offerings share a course code: one card, keyed by the LEC offering when there is one.
+  const bsCourses = [...(snapshots.brightspace?.courses ?? [])].sort(
+    (a, b) => Number(/\bLEC\b/.test(b.name)) - Number(/\bLEC\b/.test(a.name)),
+  );
+  const primaryByCode = new Map<string, string>();
+  for (const c of bsCourses) {
     const id = courseId('brightspace', c.sourceCourseId);
+    const code = codeOf(c);
+    const primary = code ? primaryByCode.get(code) : undefined;
+    if (primary) {
+      alias.set(id, primary);
+      byId.get(primary)!.partial ||= snapshots.brightspace?.partial.includes(c.sourceCourseId) ?? false;
+      continue;
+    }
+    if (code) primaryByCode.set(code, id);
     const partial = snapshots.brightspace?.partial.includes(c.sourceCourseId) ?? false;
     byId.set(id, { id, code: codeOf(c) ?? c.name, name: c.name, sources: { brightspace: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial, isCourse: codeOf(c) !== null });
     alias.set(id, id);
@@ -96,8 +109,8 @@ function isSameWork(a: Item, b: Item): boolean {
   // except a Brightspace calendar event shadowing a real assignment/quiz.
   if (a.sources.some((s) => b.sources.includes(s)) && isCalendarOnly(a) === isCalendarOnly(b)) return false;
   if (a.dueAt && b.dueAt) return titlesMatch(a.title, b.title) && Math.abs(dueMs(a) - dueMs(b)) <= MERGE_MS;
-  if (!a.dueAt && !b.dueAt) return normalizeTitle(a.title) === normalizeTitle(b.title);
-  return false;
+  // One dated, one not (e.g. a content topic and its calendar event): only an exact title match counts.
+  return normalizeTitle(a.title) === normalizeTitle(b.title);
 }
 
 function mergeInto(target: Item, incoming: Item): void {
@@ -106,6 +119,8 @@ function mergeInto(target: Item, incoming: Item): void {
     (!target.sources.includes('gradescope') && TYPE_RANK[incoming.type] > TYPE_RANK[target.type]);
   if (incomingWins) {
     target.url = incoming.url;
+    target.dueAt = incoming.dueAt ?? target.dueAt;
+  } else if (!target.dueAt) {
     target.dueAt = incoming.dueAt;
   }
   if (TYPE_RANK[incoming.type] > TYPE_RANK[target.type]) target.type = incoming.type;

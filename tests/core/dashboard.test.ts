@@ -434,3 +434,43 @@ describe('non-course entries', () => {
     expect(d.courses.find((c) => c.id === 'brightspace:42')!.isCourse).toBe(true);
   });
 });
+
+describe('same-code Brightspace offerings (lecture + recitation)', () => {
+  it('fold into one card, preferring the LEC offering; their items and links come along', () => {
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          brightspace: {
+            ...snap(
+              [bsCourse('98', 'Fall 2026 MA 261 331 332 333 REC - Merge', 'MA 26100'), bsCourse('14', 'Fall 2026 MA 26100-300 LEC', 'MA 26100')],
+              [item({ source: 'brightspace', sourceItemId: 'q', sourceCourseId: '98', title: 'Quiz 7' })],
+            ),
+            links: [{ source: 'brightspace', sourceCourseId: '98', title: 'Access Pearson', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti&rcode=X' }],
+          },
+        },
+      }),
+      now,
+    );
+    expect(d.courses.map((c) => c.id)).toEqual(['brightspace:14']);
+    expect(d.items[0]!.courseId).toBe('brightspace:14');
+    expect(d.links.filter((l) => l.courseId === 'brightspace:14').map((l) => l.label)).toEqual(['Brightspace', 'Pearson']);
+  });
+});
+
+describe('undated content item vs dated calendar event', () => {
+  it('merge when titles match exactly, keeping the date', () => {
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          brightspace: snap([bsCourse('42', 'CHM 11510', 'CHM 11510')], [
+            item({ source: 'brightspace', sourceItemId: 'topic:5', sourceCourseId: '42', title: 'HW11 (10.3, 12.1)_due_Nov 11', dueAt: null, url: 'https://b/topic' }),
+            item({ source: 'brightspace', sourceItemId: 'event:9', sourceCourseId: '42', title: 'HW11 (10.3, 12.1)_due_Nov 11', type: 'event', dueAt: iso('2026-11-11T23:59:00-05:00'), url: 'https://b/event' }),
+          ]),
+        },
+      }),
+      now,
+    );
+    expect(d.items).toHaveLength(1);
+    expect(d.items[0]).toMatchObject({ dueAt: iso('2026-11-11T23:59:00-05:00'), type: 'assignment', url: 'https://b/topic' });
+  });
+});
