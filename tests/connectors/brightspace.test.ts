@@ -103,7 +103,7 @@ describe('brightspace connector', () => {
       sourceCourseId: '102',
       type: 'event',
       dueAt: '2026-11-06T04:59:00.000Z',
-      url: `${B}/d2l/le/calendar/102/event/501/detailsview`,
+      url: `${B}/d2l/le/calendar/102`,
     });
     expect(events.find((e) => e.sourceItemId === 'event:504')).toMatchObject({ type: 'exam', dueAt: '2026-11-12T23:00:00.000Z' });
     expect(calls.find((c) => c.includes('myEvents'))).toContain('orgUnitIdsCSV=101,102');
@@ -239,5 +239,34 @@ describe('calendar errors', () => {
   it('a 403 on the calendar does not fail the sync (I2)', async () => {
     const { result } = await run(routes({ [`${LE}/calendar/events/myEvents/`]: { status: 403, body: '' } }));
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('calendar event links (Open → 500 bug)', () => {
+  const calendarWith = (ev: Record<string, unknown>) =>
+    routes({ [`${LE}/calendar/events/myEvents/`]: { body: { Objects: [{ CalendarEventId: 900, OrgUnitId: 102, Title: 'Reflection after Exam 2 (1 pt EC)', StartDateTime: '2026-11-07T04:59:00.000Z', EndDateTime: '2026-11-07T04:59:00.000Z', IsAllDayEvent: false, ...ev }], Next: null } } });
+
+  it('uses the linked content page when the event belongs to a content topic', async () => {
+    const { result } = await run(
+      calendarWith({ AssociatedEntity: { AssociatedEntityType: 'D2L.LE.Content.ContentObject.TopicCO', AssociatedEntityId: 22268352, Link: '/d2l/le/content/102/viewContent/22268352/View' } }),
+    );
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'event:900')?.url).toBe(`${B}/d2l/le/content/102/viewContent/22268352/View`);
+  });
+
+  it("falls back to the event's own view url, then to the course calendar — never a hand-built detailsview url", async () => {
+    const withView = await run(calendarWith({ AssociatedEntity: null, CalendarEventViewUrl: `${B}/d2l/le/calendar/102/event/900/detailsview#900` }));
+    if (!withView.result.ok) throw new Error('expected ok');
+    expect(withView.result.items.find((i) => i.sourceItemId === 'event:900')?.url).toBe(`${B}/d2l/le/calendar/102/event/900/detailsview#900`);
+
+    const bare = await run(calendarWith({ AssociatedEntity: null }));
+    if (!bare.result.ok) throw new Error('expected ok');
+    expect(bare.result.items.find((i) => i.sourceItemId === 'event:900')?.url).toBe(`${B}/d2l/le/calendar/102`);
+  });
+
+  it('ignores a non-http link from the API', async () => {
+    const { result } = await run(calendarWith({ AssociatedEntity: { AssociatedEntityType: 'X', AssociatedEntityId: 1, Link: 'javascript:alert(1)' } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'event:900')?.url).toBe(`${B}/d2l/le/calendar/102`);
   });
 });

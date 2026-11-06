@@ -60,6 +60,26 @@ const DEADLINE_WORDS = /\b(due|hw\d*|homework|assignment|quiz|exam|midterm|final
 const EXAM_WORDS = /\b(exam|midterm|final)\b/i;
 const DUPLICATE_ENTITY = /dropbox|quiz/i;
 
+/** Absolute http(s) URL, or null for anything else (relative paths resolve against Brightspace). */
+function webUrl(raw: string | null | undefined, base: string): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw, base);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where "Open" goes for a calendar event: the linked activity (e.g. a content topic with a due date),
+ * else the event's own page as Brightspace reports it, else the course calendar. Never a hand-built
+ * event URL — Purdue's Brightspace answers those with HTTP 500.
+ */
+function eventUrl(ev: CalendarEvent, ou: string, base: string): string {
+  return webUrl(ev.AssociatedEntity?.Link, base) ?? webUrl(ev.CalendarEventViewUrl, base) ?? `${base}/d2l/le/calendar/${ou}`;
+}
+
 /**
  * Calendar events become items only when they look like a deadline: events tied to an assignment or
  * quiz are skipped (we already read those), and plain events need a deadline-like word in the title.
@@ -75,7 +95,7 @@ export function toEventItem(ev: CalendarEvent, base: string): RawItem | null {
     title: ev.Title,
     type: EXAM_WORDS.test(ev.Title) ? 'exam' : 'event',
     dueAt: ev.EndDateTime ?? ev.StartDateTime ?? null,
-    url: `${base}/d2l/le/calendar/${ou}/event/${ev.CalendarEventId}/detailsview`,
+    url: eventUrl(ev, ou, base),
     submitted: false,
   };
 }

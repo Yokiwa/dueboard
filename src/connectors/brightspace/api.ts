@@ -14,7 +14,8 @@ export interface CalendarEvent {
   Title: string;
   StartDateTime: string | null;
   EndDateTime: string | null;
-  AssociatedEntity: { AssociatedEntityType: string; AssociatedEntityId: number } | null;
+  AssociatedEntity: { AssociatedEntityType: string; AssociatedEntityId: number; Link?: string | null } | null;
+  CalendarEventViewUrl?: string | null;
 }
 export interface ObjectListPage<T> { Objects: T[]; Next: string | null }
 export interface TocTopic { Title: string; Url: string | null }
