@@ -90,7 +90,6 @@ export interface UserState {
 }
 export interface Settings {
   language: 'auto' | 'zh' | 'en';
-  newtabMode: 'dashboard' | 'blank';
 }
 export interface SyncMeta {
   lastSuccess?: string;

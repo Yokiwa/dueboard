@@ -28,7 +28,6 @@ export function migrate(raw: unknown): StoreShape {
     },
     settings: {
       language: st.language === 'zh' || st.language === 'en' ? st.language : 'auto',
-      newtabMode: st.newtabMode === 'blank' ? 'blank' : 'dashboard',
     },
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
   };

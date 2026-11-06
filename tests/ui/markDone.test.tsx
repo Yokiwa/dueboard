@@ -9,7 +9,7 @@ import { loadStore, toggleDone, patchStore, saveSnapshot } from '../../src/stora
 import { NOW, course, item, dash } from './fixtures';
 
 vi.mock('../../src/ui/messaging', () => ({ sendToBackground: vi.fn(async () => null) }));
-import { App } from '../../src/entrypoints/newtab/App';
+import { App } from '../../src/entrypoints/dashboard/App';
 
 const cs = course('b:1', 'CS 18000', { name: 'Java 编程入门' });
 const p3 = item('gradescope:3', 'b:1', 'Project 3', '2026-11-04T18:00:00-05:00', { sourceKeys: ['brightspace:7', 'gradescope:3'] });
@@ -92,7 +92,7 @@ describe('newtab: marking the next deadline done moves the banner on', () => {
 
   it('shows the following deadline after ✓ 完成', async () => {
     const at = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
-    await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' }, syncMeta: { brightspace: { lastSuccess: new Date().toISOString() }, gradescope: { lastSuccess: new Date().toISOString() } } });
+    await patchStore({ settings: { language: 'zh' }, syncMeta: { brightspace: { lastSuccess: new Date().toISOString() }, gradescope: { lastSuccess: new Date().toISOString() } } });
     await saveSnapshot('brightspace', {
       syncedAt: new Date().toISOString(), partial: [], links: [],
       courses: [{ source: 'brightspace', sourceCourseId: '1', name: 'CS 18000', code: 'CS 18000', url: 'u' }],

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 
 vi.mock('../../src/ui/messaging', () => ({ sendToBackground: vi.fn(async () => null) }));
-import { App } from '../../src/entrypoints/newtab/App';
+import { App } from '../../src/entrypoints/dashboard/App';
 import { sendToBackground } from '../../src/ui/messaging';
 import { patchStore, saveSnapshot } from '../../src/storage/store';
 
@@ -20,7 +20,7 @@ async function seed() {
   await patchStore({ syncMeta: { brightspace: { lastSuccess: new Date().toISOString() }, gradescope: { lastSuccess: new Date().toISOString() } } });
 }
 
-describe('newtab App', () => {
+describe('dashboard App', () => {
   beforeEach(() => {
     fakeBrowser.reset();
     localStorage.clear();
@@ -28,7 +28,7 @@ describe('newtab App', () => {
 
   it('renders header, next-due banner, tabs and stat chips from storage', async () => {
     await seed();
-    await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' } });
+    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
     await waitFor(() => expect(screen.getByText('CS 18000 · Project 3')).toBeTruthy());
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('本周还有 1 项待交');
@@ -38,14 +38,14 @@ describe('newtab App', () => {
 
   it('uses English when the setting says so', async () => {
     await seed();
-    await patchStore({ settings: { language: 'en', newtabMode: 'dashboard' } });
+    await patchStore({ settings: { language: 'en' } });
     render(<App />);
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy());
   });
 
   it('remembers the chosen view in localStorage', async () => {
     await seed();
-    await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' } });
+    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
     await waitFor(() => screen.getByRole('tab', { name: '日历' }));
     fireEvent.click(screen.getByRole('tab', { name: '日历' }));
@@ -53,18 +53,8 @@ describe('newtab App', () => {
     expect(screen.getByRole('tab', { name: '日历' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('blank mode renders BlankTab with 打开 DueBoard button that switches to dashboard for this tab', async () => {
-    await seed();
-    await patchStore({ settings: { language: 'zh', newtabMode: 'blank' } });
-    render(<App />);
-    await waitFor(() => screen.getByRole('button', { name: '打开 DueBoard' }));
-    expect(screen.queryByRole('tab', { name: '课程' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '打开 DueBoard' }));
-    expect(screen.getByRole('tab', { name: '课程' })).toBeTruthy();
-  });
-
   it('onboarding shown when no snapshots yet; 开始同步 sends sync', async () => {
-    await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' } });
+    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: '欢迎使用 DueBoard' }));
     expect((screen.getByRole('link', { name: '打开 Brightspace' }) as HTMLAnchorElement).href).toBe('https://purdue.brightspace.com/d2l/home');
@@ -76,7 +66,7 @@ describe('newtab App', () => {
   });
 
   it('onboarding disappears once a snapshot arrives', async () => {
-    await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' } });
+    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: '欢迎使用 DueBoard' }));
     await seed();

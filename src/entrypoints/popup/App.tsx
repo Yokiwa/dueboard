@@ -28,7 +28,7 @@ function Body({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
       ) : (
         !next && <p className="m-0 text-center text-sm text-db-muted">{t('todo.empty')}</p>
       )}
-      <button type="button" className={primaryBtn} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/newtab.html') })}>
+      <button type="button" className={primaryBtn} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })}>
         {t('popup.open')}
       </button>
     </div>

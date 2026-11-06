@@ -25,7 +25,7 @@ describe('store', () => {
   it('loadStore on empty storage returns defaults', async () => {
     const s = await loadStore();
     expect(s.schemaVersion).toBe(1);
-    expect(s.settings).toEqual({ language: 'auto', newtabMode: 'dashboard' });
+    expect(s.settings).toEqual({ language: 'auto' });
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
@@ -60,16 +60,16 @@ describe('store', () => {
   });
 
   it('patchStore merges top-level keys', async () => {
-    await patchStore({ settings: { language: 'en', newtabMode: 'blank' } });
+    await patchStore({ settings: { language: 'en' } });
     const s = await loadStore();
     expect(s.settings.language).toBe('en');
     expect(s.manualItems).toEqual([]);
   });
 
   it('migrate fills missing keys from partial data', () => {
-    const m = migrate({ settings: { language: 'zh' }, userState: { done: { 'x:1': true } } });
+    const m = migrate({ settings: { language: 'zh', newtabMode: 'blank' }, userState: { done: { 'x:1': true } } });
     expect(m.schemaVersion).toBe(1);
-    expect(m.settings).toEqual({ language: 'zh', newtabMode: 'dashboard' });
+    expect(m.settings).toEqual({ language: 'zh' });
     expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, merges: {} });
     expect(m.snapshots).toEqual({});
   });
@@ -82,7 +82,7 @@ describe('store', () => {
   it('onStoreChange fires on local storage changes and can unsubscribe', async () => {
     const cb = vi.fn();
     const off = onStoreChange(cb);
-    await browser.storage.local.set({ settings: { language: 'en', newtabMode: 'dashboard' } });
+    await browser.storage.local.set({ settings: { language: 'en' } });
     expect(cb).toHaveBeenCalledTimes(1);
     off();
     await browser.storage.local.set({ manualItems: [] });

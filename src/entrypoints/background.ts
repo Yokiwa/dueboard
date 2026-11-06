@@ -1,4 +1,5 @@
 import { createRouter } from '../background/router';
+import { handleInstalled } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
@@ -17,9 +18,12 @@ export default defineBackground(() => {
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };
 
-  browser.runtime.onInstalled.addListener(() => {
-    void ensureAlarm();
-    void syncNow();
+  browser.runtime.onInstalled.addListener((details) => {
+    void handleInstalled(details.reason, {
+      ensureAlarm,
+      sync: syncNow,
+      openDashboard: () => browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') }),
+    });
   });
   browser.runtime.onStartup.addListener(() => void ensureAlarm());
   browser.alarms.onAlarm.addListener((alarm) => {

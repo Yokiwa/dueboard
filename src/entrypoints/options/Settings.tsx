@@ -45,23 +45,6 @@ function Body({ store }: { store: StoreShape }) {
         </section>
 
         <section className={card}>
-          <h2 className={h2}>{t('settings.newtab')}</h2>
-          {(['dashboard', 'blank'] as const).map((mode) => (
-            <label key={mode} className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="newtab"
-                value={mode}
-                checked={store.settings.newtabMode === mode}
-                onChange={() => void updateSettings({ newtabMode: mode })}
-                className="size-4 accent-db-accent"
-              />
-              {t(mode === 'dashboard' ? 'newtab.dashboard' : 'newtab.blank')}
-            </label>
-          ))}
-        </section>
-
-        <section className={card}>
           <h2 className={h2}>{t('settings.courses')}</h2>
           <p className={hint}>{sorted.length ? t('settings.coursesHint') : t('settings.noCourses')}</p>
           <ul className="m-0 flex list-none flex-col p-0">

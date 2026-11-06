@@ -9,7 +9,7 @@ import { loadStore, patchStore, saveSnapshot } from '../../src/storage/store';
 import { PALETTE } from '../../src/core/dashboard';
 
 async function seed() {
-  await patchStore({ settings: { language: 'zh', newtabMode: 'dashboard' } });
+  await patchStore({ settings: { language: 'zh' } });
   await saveSnapshot('brightspace', {
     syncedAt: 'x', partial: [], items: [], links: [],
     courses: [
@@ -58,11 +58,11 @@ describe('Settings', () => {
     expect((await loadStore()).settings.language).toBe('en');
   });
 
-  it('newtab mode blank', async () => {
+  it('has no new-tab section any more', async () => {
     render(<Settings />);
-    await waitFor(() => screen.getByRole('radio', { name: /简洁空白页/ }));
-    fireEvent.click(screen.getByRole('radio', { name: /简洁空白页/ }));
-    await waitFor(async () => expect((await loadStore()).settings.newtabMode).toBe('blank'));
+    await waitFor(() => screen.getByLabelText('界面语言'));
+    expect(screen.queryByText('新标签页')).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
   });
 
   it('merge gradescope course into brightspace course writes userState.merges', async () => {
