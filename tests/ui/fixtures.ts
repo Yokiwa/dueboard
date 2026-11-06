@@ -4,7 +4,7 @@ import type { Course, CourseLink, Item } from '../../src/core/types';
 export const NOW = new Date('2026-11-04T12:00:00-05:00');
 
 export const course = (id: string, code: string, p: Partial<Course> = {}): Course => ({
-  id, code, name: `${code} name`, sources: { brightspace: id }, color: '#2563EB', hidden: false, url: `https://purdue.brightspace.com/d2l/home/${id}`, partial: false, ...p,
+  id, code, name: `${code} name`, sources: { brightspace: id }, color: '#2563EB', hidden: false, url: `https://purdue.brightspace.com/d2l/home/${id}`, partial: false, isCourse: true, ...p,
 });
 export const item = (id: string, courseId: string, title: string, dueAt: string | null, p: Partial<Item> = {}): Item => ({
   id, courseId, title, type: 'assignment', dueAt: dueAt ? new Date(dueAt).toISOString() : null, url: `https://x/${id}`,

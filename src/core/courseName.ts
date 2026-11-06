@@ -17,9 +17,10 @@ export function displayName(course: { name: string; code: string }): string {
     .replace(TERM, ' ')
     .replace(CODE_TOKEN, (token) => (extractCourseCode(token.replace(/-[A-Za-z0-9]+$/, '')) === course.code ? ' ' : token))
     .replace(MARKERS, (m) => (/^merged?$/i.test(m) || m === m.toUpperCase() ? ' ' : m))
+    .replace(/\b\d{3}\b/g, ' ') // section numbers like "331 332 333"
     .replace(/\(\s*\)/g, ' ')
     .replace(/\s+/g, ' ')
     .replace(EDGE, '')
     .trim();
-  return cleaned;
+  return /\p{L}/u.test(cleaned) ? cleaned.replace(/^[\s,;/]+|[\s,;/]+$/g, '').replace(/\s*,(\s*,)+\s*/g, ' ') : '';
 }

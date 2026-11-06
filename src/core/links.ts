@@ -17,6 +17,7 @@ const PLATFORMS: Platform[] = [
   { label: 'McGraw-Hill Connect', category: 'homework', host: /(^|\.)mheducation\.com$/, title: /mcgraw|connect\b/i },
   { label: 'Cengage', category: 'textbook', host: /(^|\.)cengage\.com$/, title: /cengage|mindtap/i },
   { label: 'zyBooks', category: 'textbook', host: /(^|\.)zybooks\.com$/, title: /zybook/i },
+  { label: 'WileyPLUS', category: 'homework', host: /(^|\.)(wileyplus|wiley)\.com$/, title: /wiley/i },
   { label: 'Piazza', category: 'discussion', host: /(^|\.)piazza\.com$/, title: /piazza/i },
   { label: 'Ed', category: 'discussion', host: /(^|\.)edstem\.org$/, title: /\bed (discussion|stem)\b|edstem/i },
 ];
@@ -40,7 +41,13 @@ export function classifyLink(title: string, url: string): { label: string; categ
     if (byHost) return { label: byHost.label, category: byHost.category };
     return { label: title.trim() || u.hostname, category: 'website' };
   }
-  if (!/\/lti\//i.test(u.pathname)) return null;
+  // Inside Brightspace only launches count: LTI paths, quickLinks of type=lti, or a content topic page
+  // (some platforms appear only as a topic) — and only when the title names a known platform.
+  const isLaunch =
+    /\/lti\//i.test(u.pathname) ||
+    (/quickLink/i.test(u.pathname) && /(^|[?&])type=lti(&|$)/i.test(u.search)) ||
+    /\/viewContent\/\d+\/View$/i.test(u.pathname);
+  if (!isLaunch) return null;
   const byTitle = PLATFORMS.find((p) => p.title.test(title));
   return byTitle ? { label: byTitle.label, category: byTitle.category } : null;
 }

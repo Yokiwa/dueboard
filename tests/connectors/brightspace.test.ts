@@ -270,3 +270,13 @@ describe('calendar event links (Open → 500 bug)', () => {
     expect(result.items.find((i) => i.sourceItemId === 'event:900')?.url).toBe(`${B}/d2l/le/calendar/102`);
   });
 });
+
+describe('content topics without a url', () => {
+  it('link to the topic page so platform launches (e.g. WileyPLUS) still get a button', async () => {
+    const { result } = await run(
+      routes({ [`${LE}/102/content/toc`]: { body: { Modules: [{ Title: 'Homework', Modules: [], Topics: [{ TopicId: 77, Title: 'WileyPLUS', Url: null, TypeIdentifier: 'Link' }] }] } } }),
+    );
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.links.find((l) => l.title === 'WileyPLUS')).toEqual({ source: 'brightspace', sourceCourseId: '102', title: 'WileyPLUS', url: `${B}/d2l/le/content/102/viewContent/77/View` });
+  });
+});

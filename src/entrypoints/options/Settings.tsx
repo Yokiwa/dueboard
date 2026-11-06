@@ -3,7 +3,7 @@ import { browser } from 'wxt/browser';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
 import type { Settings as SettingsShape } from '../../core/types';
-import { setCourseColor, setCourseHidden, setMerge, updateSettings } from '../../storage/store';
+import { setCourseColor, setCourseVisible, setMerge, updateSettings } from '../../storage/store';
 import { FEEDBACK_URL } from '../../ui/config';
 import { field, label } from '../../ui/forms';
 import { useStore } from '../../ui/hooks/useStore';
@@ -18,7 +18,7 @@ function Body({ store }: { store: StoreShape }) {
   const t = useT();
   const id = useId();
   // All courses, including hidden ones, with their current colors.
-  const all = useMemo(() => buildDashboard({ ...store, userState: { ...store.userState, hidden: {} } }, new Date()).courses, [store]);
+  const all = useMemo(() => buildDashboard(store, new Date(), { includeHidden: true }).courses, [store]);
   const sorted = [...all].sort((a, b) => a.code.localeCompare(b.code));
   const bsCourses = sorted.filter((c) => c.sources.brightspace);
   const gsCourses = store.snapshots.gradescope?.courses ?? [];
@@ -54,8 +54,8 @@ function Body({ store }: { store: StoreShape }) {
                   <input
                     type="checkbox"
                     aria-label={t('settings.show', { code: c.code })}
-                    checked={!store.userState.hidden[c.id]}
-                    onChange={(e) => void setCourseHidden(c.id, !e.target.checked)}
+                    checked={!c.hidden}
+                    onChange={(e) => void setCourseVisible(c.id, e.target.checked)}
                     className="size-4 accent-db-accent"
                   />
                   <span className="font-semibold">{c.code}</span>

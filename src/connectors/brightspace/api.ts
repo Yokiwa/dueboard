@@ -18,7 +18,7 @@ export interface CalendarEvent {
   CalendarEventViewUrl?: string | null;
 }
 export interface ObjectListPage<T> { Objects: T[]; Next: string | null }
-export interface TocTopic { Title: string; Url: string | null }
+export interface TocTopic { TopicId?: number; Title: string; Url: string | null }
 export interface TocModule { Title: string; Modules: TocModule[]; Topics: TocTopic[] }
 export interface Toc { Modules: TocModule[] }
 

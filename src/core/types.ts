@@ -53,6 +53,8 @@ export interface Course {
   hidden: boolean;
   url: string;
   partial: boolean;
+  /** false for Brightspace org units without a course code (orientation, trainings…): hidden unless shown. Gradescope courses are always true. */
+  isCourse: boolean;
 }
 export interface Item {
   id: string;
@@ -85,6 +87,8 @@ export interface UserState {
   done: Record<string, true>;
   colors: Record<string, string>;
   hidden: Record<string, true>;
+  /** Non-course entries the user chose to show (they are hidden by default). */
+  shown: Record<string, true>;
   /** "gradescope:<id>" → Course.id of the Brightspace course it should merge into */
   merges: Record<string, string>;
 }

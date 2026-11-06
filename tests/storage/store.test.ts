@@ -11,6 +11,7 @@ import {
   toggleDone,
   onStoreChange,
   addManualItem,
+  setCourseVisible,
   removeManualItem,
   addManualLink,
   removeManualLink,
@@ -29,7 +30,7 @@ describe('store', () => {
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
-    expect(s.userState).toEqual({ done: {}, colors: {}, hidden: {}, merges: {} });
+    expect(s.userState).toEqual({ done: {}, colors: {}, hidden: {}, shown: {}, merges: {} });
     expect(s.syncMeta).toEqual({});
   });
 
@@ -70,7 +71,7 @@ describe('store', () => {
     const m = migrate({ settings: { language: 'zh', newtabMode: 'blank' }, userState: { done: { 'x:1': true } } });
     expect(m.schemaVersion).toBe(1);
     expect(m.settings).toEqual({ language: 'zh' });
-    expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, merges: {} });
+    expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, shown: {}, merges: {} });
     expect(m.snapshots).toEqual({});
   });
 
@@ -107,5 +108,12 @@ describe('store', () => {
     expect((await loadStore()).manualLinks).toHaveLength(1);
     await removeManualLink('brightspace:1', 'https://piazza.com/x');
     expect((await loadStore()).manualLinks).toEqual([]);
+  });
+
+  it('setCourseVisible flips hidden/shown together', async () => {
+    await setCourseVisible('brightspace:51', true);
+    expect((await loadStore()).userState).toMatchObject({ hidden: {}, shown: { 'brightspace:51': true } });
+    await setCourseVisible('brightspace:51', false);
+    expect((await loadStore()).userState).toMatchObject({ hidden: { 'brightspace:51': true }, shown: {} });
   });
 });

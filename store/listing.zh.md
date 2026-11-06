@@ -6,7 +6,7 @@
 DueBoard
 
 ## 简短说明（不超过 132 个字符）
-打开新标签页，就能看到 Brightspace 和 Gradescope 上所有课程的作业、截止日期和教材入口。
+点一下工具栏图标，就能看到 Brightspace 和 Gradescope 上所有课程的作业、截止日期和教材入口。
 
 ## 类别
 效率 › 教育（Productivity › Education）
@@ -15,7 +15,7 @@ DueBoard
 中文（简体），另在英文版里提交英文文案
 
 ## 详细说明
-不用再一门一门点进 Brightspace，也不用在各个平台之间来回登录。DueBoard 把你所有课程的作业和截止日期放进一个新标签页。
+不用再一门一门点进 Brightspace，也不用在各个平台之间来回登录。DueBoard 把你所有课程的作业和截止日期放进一个页面。
 
 · 课程卡片：每门课一张卡片，显示接下来要交的作业、倒计时，以及 Brightspace、Gradescope、教材、讨论区的一键入口
 · 下一个截止：最近的截止永远在最上面，实时倒计时
@@ -36,7 +36,7 @@ store/screenshots/zh-1-courses.png、zh-2-calendar.png、zh-3-todo.png
 ## 隐私权规范（Privacy practices）页面
 
 ### 单一用途说明
-在新标签页中汇总显示用户在 Brightspace 和 Gradescope 上的课程作业、截止日期和课程资料链接。
+在一个扩展页面中汇总显示用户在 Brightspace 和 Gradescope 上的课程作业、截止日期和课程资料链接。
 
 ### 权限理由
 - storage：在本机保存同步到的作业、用户手动添加的内容和设置。
@@ -44,7 +44,6 @@ store/screenshots/zh-1-courses.png、zh-2-calendar.png、zh-3-todo.png
 - offscreen：在后台解析 Gradescope 的网页内容（service worker 无法直接解析 HTML）。
 - 主机权限 https://purdue.brightspace.com/*：读取用户自己的课程、作业、测验、日历和课程资料目录。
 - 主机权限 https://www.gradescope.com/*：读取用户自己的课程、作业、截止时间和提交状态。
-- 替换新标签页：在新标签页显示作业面板（用户可在设置中改为简洁空白页）。
 
 ### 远程代码
 不使用远程代码。所有代码都打包在扩展里。

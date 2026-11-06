@@ -24,6 +24,7 @@ export function migrate(raw: unknown): StoreShape {
       done: obj(us.done) as Record<string, true>,
       colors: obj(us.colors) as Record<string, string>,
       hidden: obj(us.hidden) as Record<string, true>,
+      shown: obj(us.shown) as Record<string, true>,
       merges: obj(us.merges) as Record<string, string>,
     },
     settings: {
@@ -109,12 +110,19 @@ export async function updateSettings(patch: Partial<Settings>): Promise<void> {
   await patchStore({ settings: { ...settings, ...patch } });
 }
 
-export async function setCourseHidden(courseId: string, hidden: boolean): Promise<void> {
+/** Shows or hides a course card. Works for real courses (hidden by choice) and non-course entries (hidden by default). */
+export async function setCourseVisible(courseId: string, visible: boolean): Promise<void> {
   const { userState } = await loadStore();
-  const next = { ...userState.hidden };
-  if (hidden) next[courseId] = true;
-  else delete next[courseId];
-  await patchStore({ userState: { ...userState, hidden: next } });
+  const hidden = { ...userState.hidden };
+  const shown = { ...userState.shown };
+  if (visible) {
+    delete hidden[courseId];
+    shown[courseId] = true;
+  } else {
+    hidden[courseId] = true;
+    delete shown[courseId];
+  }
+  await patchStore({ userState: { ...userState, hidden, shown } });
 }
 
 export async function setCourseColor(courseId: string, color: string): Promise<void> {

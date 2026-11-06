@@ -17,7 +17,7 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
           target="_blank"
           rel="noopener noreferrer"
           data-title
-          className={`truncate text-sm font-medium text-db-text no-underline hover:underline ${item.doneByUser || item.submitted ? 'text-db-faint line-through' : ''}`}
+          className={`truncate text-sm font-medium ${item.doneByUser || item.submitted ? 'text-db-faint line-through' : 'text-db-text no-underline hover:underline'}`}
         >
           {item.title}
         </a>

@@ -49,7 +49,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
           target="_blank"
           rel="noopener noreferrer"
           data-testid="todo-title"
-          className={`truncate text-sm font-medium no-underline hover:underline ${done ? 'text-db-faint line-through' : 'text-db-text'}`}
+          className={`truncate text-sm font-medium ${done ? 'text-db-faint line-through' : 'text-db-text no-underline hover:underline'}`}
         >
           {item.title}
         </a>

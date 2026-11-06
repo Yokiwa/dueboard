@@ -40,7 +40,7 @@ describe('Header', () => {
   });
 });
 
-const course: Course = { id: 'brightspace:1', code: 'CS 18000', name: 'CS 18000', sources: {}, color: '#EA580C', hidden: false, url: '', partial: false };
+const course: Course = { id: 'brightspace:1', code: 'CS 18000', name: 'CS 18000', sources: {}, color: '#EA580C', hidden: false, url: '', partial: false, isCourse: true };
 const nextItem: Item = {
   id: 'gradescope:3', courseId: 'brightspace:1', title: 'Project 3', type: 'assignment', dueAt: '2026-11-04T22:42:18.000Z',
   url: 'https://www.gradescope.com/courses/9/assignments/3', sources: ['gradescope'], sourceKeys: ['gradescope:3'], submitted: false, doneByUser: false,

@@ -12,6 +12,8 @@ describe('classifyLink by domain', () => {
     ['https://learn.zybooks.com/zybook/PURDUECS180', 'zyBooks', 'textbook'],
     ['https://piazza.com/class/abc', 'Piazza', 'discussion'],
     ['https://edstem.org/us/courses/1', 'Ed', 'discussion'],
+    ['https://www.wileyplus.com/course/123', 'WileyPLUS', 'homework'],
+    ['https://education.wiley.com/courses/abc', 'WileyPLUS', 'homework'],
   ])('%s', (url, label, category) => {
     expect(classifyLink('anything', url)).toEqual({ label, category });
   });
@@ -35,5 +37,11 @@ describe('classifyLink other cases', () => {
   it('non-http links are ignored', () => {
     expect(classifyLink('Email TA', 'mailto:ta@purdue.edu')).toBeNull();
     expect(classifyLink('bad', '::::')).toBeNull();
+  });
+
+  it('Brightspace quickLink launches and content-topic pages count when the title names a platform', () => {
+    expect(classifyLink('WileyPLUS', '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=X')).toEqual({ label: 'WileyPLUS', category: 'homework' });
+    expect(classifyLink('Pearson MyLab Math', 'https://purdue.brightspace.com/d2l/le/content/1/viewContent/2/View')).toEqual({ label: 'Pearson', category: 'homework' });
+    expect(classifyLink('Week 1 notes', '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti')).toBeNull();
   });
 });

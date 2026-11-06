@@ -15,6 +15,7 @@ async function seed() {
     courses: [
       { source: 'brightspace', sourceCourseId: '1', name: 'CS 18000 Java', code: 'CS 18000', url: 'u1' },
       { source: 'brightspace', sourceCourseId: '2', name: 'PHYS 17200', code: 'PHYS 17200', url: 'u2' },
+      { source: 'brightspace', sourceCourseId: '3', name: 'Fall 2026 ISS Training WL', code: null, url: 'u3' },
     ],
   });
   await saveSnapshot('gradescope', {
@@ -85,5 +86,14 @@ describe('Settings', () => {
     await waitFor(() => screen.getByRole('link', { name: '诊断工具' }));
     expect(screen.getByText('版本 1.0.0')).toBeTruthy();
     expect((screen.getByRole('link', { name: '诊断工具' }) as HTMLAnchorElement).href).toContain('/diagnostics.html');
+  });
+
+  it('non-course entries are listed unchecked; checking one shows it', async () => {
+    render(<Settings />);
+    await waitFor(() => screen.getByRole('checkbox', { name: '显示 Fall 2026 ISS Training WL' }));
+    const box = screen.getByRole('checkbox', { name: '显示 Fall 2026 ISS Training WL' }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    fireEvent.click(box);
+    await waitFor(async () => expect((await loadStore()).userState.shown).toEqual({ 'brightspace:3': true }));
   });
 });

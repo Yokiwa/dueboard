@@ -4,13 +4,13 @@
 DueBoard
 
 ## Summary (max 132 characters)
-Every assignment, deadline and textbook link from Brightspace and Gradescope, in one new tab.
+Every assignment, deadline and textbook link from Brightspace and Gradescope, on one page.
 
 ## Category
 Productivity › Education
 
 ## Description
-Stop clicking into every course on Brightspace and logging in to platform after platform. DueBoard puts every assignment and deadline from all your courses into your new tab.
+Stop clicking into every course on Brightspace and logging in to platform after platform. DueBoard puts every assignment and deadline from all your courses on one page, one click from your toolbar.
 
 • Course cards: upcoming assignments with countdowns, plus one-click links to Brightspace, Gradescope, textbooks and discussion boards
 • Next deadline: the nearest deadline always sits on top with a live countdown
@@ -31,7 +31,7 @@ store/screenshots/en-1-courses.png (+ the zh ones)
 ## Privacy practices
 
 ### Single purpose
-Show the user's own assignments, deadlines and course resource links from Brightspace and Gradescope in one new-tab dashboard.
+Show the user's own assignments, deadlines and course resource links from Brightspace and Gradescope in one dashboard page.
 
 ### Permission justifications
 - storage: keep synced assignments, the user's own entries and settings on this device.
@@ -39,7 +39,6 @@ Show the user's own assignments, deadlines and course resource links from Bright
 - offscreen: parse Gradescope pages in the background (service workers cannot parse HTML).
 - Host permission https://purdue.brightspace.com/*: read the user's own courses, assignments, quizzes, calendar and course content listing.
 - Host permission https://www.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
-- New tab override: show the dashboard on new tabs (can be switched to a plain blank page in settings).
 
 ### Remote code
 No remote code. All code ships inside the extension package.

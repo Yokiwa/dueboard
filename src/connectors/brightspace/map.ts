@@ -100,11 +100,13 @@ export function toEventItem(ev: CalendarEvent, base: string): RawItem | null {
   };
 }
 
-export function tocLinks(toc: Toc, ou: string): RawLink[] {
+export function tocLinks(toc: Toc, ou: string, base = 'https://purdue.brightspace.com'): RawLink[] {
   const out: RawLink[] = [];
   const walk = (m: TocModule) => {
     for (const t of m.Topics ?? []) {
-      if (t.Url) out.push({ source: 'brightspace', sourceCourseId: ou, title: t.Title, url: t.Url });
+      // Topics without a Url (some LTI tools) still open through their content page.
+      const url = t.Url || (t.TopicId !== undefined ? `${base}/d2l/le/content/${ou}/viewContent/${t.TopicId}/View` : null);
+      if (url) out.push({ source: 'brightspace', sourceCourseId: ou, title: t.Title, url });
     }
     for (const child of m.Modules ?? []) walk(child);
   };

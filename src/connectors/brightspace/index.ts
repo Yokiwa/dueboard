@@ -99,7 +99,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
         );
         visible.forEach((f, i) => items.push(toDropboxItem(f, ou, base, submitted[i]!)));
         quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
-        links.push(...tocLinks(toc, ou));
+        links.push(...tocLinks(toc, ou, base));
         if (failed) partial.push(ou);
       });
 

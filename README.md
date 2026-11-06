@@ -2,8 +2,8 @@
 
 <h1 align="center">DueBoard</h1>
 
-<p align="center">打开新标签页，就能看到所有课程的作业、截止日期和教材入口。<br>
-All your Brightspace and Gradescope deadlines in one new tab.</p>
+<p align="center">点一下工具栏图标，就能看到所有课程的作业、截止日期和教材入口。<br>
+All your Brightspace and Gradescope deadlines on one page.</p>
 
 <p align="center"><img src="docs/assets/screenshot-zh.png" width="720" alt="DueBoard 课程卡片视图"></p>
 

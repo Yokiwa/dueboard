@@ -46,7 +46,7 @@ function buildCourses(input: DashboardInput) {
   for (const c of snapshots.brightspace?.courses ?? []) {
     const id = courseId('brightspace', c.sourceCourseId);
     const partial = snapshots.brightspace?.partial.includes(c.sourceCourseId) ?? false;
-    byId.set(id, { id, code: codeOf(c) ?? c.name, name: c.name, sources: { brightspace: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial });
+    byId.set(id, { id, code: codeOf(c) ?? c.name, name: c.name, sources: { brightspace: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial, isCourse: codeOf(c) !== null });
     alias.set(id, id);
   }
   for (const c of snapshots.gradescope?.courses ?? []) {
@@ -64,7 +64,7 @@ function buildCourses(input: DashboardInput) {
       gsUrl.set(target.id, c.url);
     } else {
       gsUrl.set(key, c.url);
-      byId.set(key, { id: key, code: code ?? c.name, name: c.name, sources: { gradescope: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial });
+      byId.set(key, { id: key, code: code ?? c.name, name: c.name, sources: { gradescope: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial, isCourse: true }); // every Gradescope course is a class
       alias.set(key, key);
     }
   }
@@ -75,7 +75,8 @@ function buildCourses(input: DashboardInput) {
   stable.forEach((c, i) => {
     const keys = keysOf(c.id);
     c.color = keys.map((k) => userState.colors[k]).find(Boolean) ?? PALETTE[i % PALETTE.length]!;
-    c.hidden = keys.some((k) => userState.hidden[k]);
+    const shown = keys.some((k) => userState.shown?.[k]);
+    c.hidden = keys.some((k) => userState.hidden[k]) || (!c.isCourse && !shown);
   });
   return { all: byId, alias, gsUrl };
 }
@@ -155,7 +156,7 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
 }
 
 /** Combines per-platform snapshots, manual entries and user state into what the UI shows. Pure. */
-export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
+export function buildDashboard(input: DashboardInput, now: Date, opts: { includeHidden?: boolean } = {}): Dashboard {
   const { all, alias, gsUrl } = buildCourses(input);
   const visible = new Set([...all.values()].filter((c) => !c.hidden).map((c) => c.id));
   const minDue = now.getTime() - WINDOW_MS;
@@ -193,7 +194,7 @@ export function buildDashboard(input: DashboardInput, now: Date): Dashboard {
     if (pending(i) && i.dueAt && !nearest.has(i.courseId)) nearest.set(i.courseId, dueMs(i));
   }
   const courses = [...all.values()]
-    .filter((c) => !c.hidden)
+    .filter((c) => opts.includeHidden || !c.hidden)
     .sort(
       (a, b) =>
         (nearest.get(a.id) ?? Number.POSITIVE_INFINITY) - (nearest.get(b.id) ?? Number.POSITIVE_INFINITY) ||

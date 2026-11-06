@@ -12,6 +12,9 @@ describe('displayName', () => {
     ['Java 编程入门', 'CS 18000', 'Java 编程入门'],
     ['Physics Lab', 'Physics Lab', ''],
     ['ENGL 10600 First-Year Composition (Online)', 'ENGL 10600', 'First-Year Composition (Online)'],
+    ['Fall 2026 MA 26100 331 332 333', 'MA 26100', ''],
+    ['MA 26100-331, 332, 333 Multivariate Calculus', 'MA 26100', 'Multivariate Calculus'],
+    ['Calculus 2', 'MA 16600', 'Calculus 2'],
   ])('%s → "%s"', (name, code, expected) => {
     expect(displayName({ name, code })).toBe(expected);
   });

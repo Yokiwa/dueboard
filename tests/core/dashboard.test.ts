@@ -33,7 +33,7 @@ const snap = (courses: RawCourse[], items: RawItem[] = [], partial: string[] = [
   links: [],
   partial,
 });
-const emptyUser = (): UserState => ({ done: {}, colors: {}, hidden: {}, merges: {} });
+const emptyUser = (): UserState => ({ done: {}, colors: {}, hidden: {}, shown: {}, merges: {} });
 const input = (p: Partial<DashboardInput>): DashboardInput => ({
   snapshots: {},
   manualItems: [],
@@ -404,5 +404,33 @@ describe('final review regressions', () => {
       now,
     );
     expect(hidden.courses).toEqual([]);
+  });
+});
+
+describe('non-course entries', () => {
+  const orgs = () =>
+    input({
+      snapshots: {
+        brightspace: snap([
+          bsCourse('42', 'Fall 2026 CHM 11510 - Merge', 'CHM 11510'),
+          bsCourse('50', '2026 Orientation Programs / Purdue 101 College of Science', null),
+          bsCourse('51', 'Fall 2026 ISS Training WL', null),
+        ], [item({ source: 'brightspace', sourceItemId: 'q', sourceCourseId: '51', title: 'Certification Quiz', dueAt: null })]),
+      },
+    });
+
+  it('entries without a course code are hidden by default, with their items', () => {
+    const d = buildDashboard(orgs(), now);
+    expect(d.courses.map((c) => c.id)).toEqual(['brightspace:42']);
+    expect(d.items).toEqual([]);
+  });
+
+  it('userState.shown brings one back; isCourse tells them apart', () => {
+    const i = orgs();
+    i.userState.shown = { 'brightspace:51': true };
+    const d = buildDashboard(i, now);
+    expect(d.courses.map((c) => c.id).sort()).toEqual(['brightspace:42', 'brightspace:51']);
+    expect(d.courses.find((c) => c.id === 'brightspace:51')!.isCourse).toBe(false);
+    expect(d.courses.find((c) => c.id === 'brightspace:42')!.isCourse).toBe(true);
   });
 });

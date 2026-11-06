@@ -19,8 +19,8 @@ function Chip({ item, course, lang }: { item: Item; course: Course | undefined; 
       rel="noopener noreferrer"
       data-done={String(done)}
       title={course ? `${course.code} · ${item.title}` : item.title}
-      className={`flex min-w-0 items-center gap-1.5 rounded-md bg-db-subtle px-1.5 py-1 text-xs no-underline hover:bg-db-track ${
-        done ? 'text-db-faint line-through' : 'text-db-text'
+      className={`flex min-w-0 items-center gap-1.5 rounded-md bg-db-subtle px-1.5 py-1 text-xs hover:bg-db-track ${
+        done ? 'text-db-faint line-through' : 'text-db-text no-underline'
       }`}
     >
       <span data-testid="chip-dot" aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
