@@ -7,10 +7,12 @@ import { useNow } from '../../ui/hooks/useNow';
 import { LangProvider, resolveLang, useT } from '../../ui/i18n';
 import { primaryBtn } from '../../ui/forms';
 import type { Dashboard } from '../../core/dashboard';
+import type { StoreShape } from '../../core/types';
+import { DevTools } from '../../ui/components/DevTools';
 
 const LIMIT = 5;
 
-function Body({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
+function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; store: StoreShape }) {
   const t = useT();
   const next = dashboard.nextDue;
   const upcoming = dashboard.items.filter((i) => !i.doneByUser && !i.submitted && i.dueAt && i.id !== next?.id && Date.parse(i.dueAt) > now.getTime()).slice(0, LIMIT);
@@ -31,6 +33,7 @@ function Body({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
       <button type="button" className={primaryBtn} onClick={() => void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') })}>
         {t('popup.open')}
       </button>
+      <DevTools store={store} />
     </div>
   );
 }
@@ -42,7 +45,7 @@ export function PopupApp() {
   return (
     <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
       <DoneToastProvider>
-        <Body dashboard={dashboard} now={now} />
+        <Body dashboard={dashboard} now={now} store={store} />
       </DoneToastProvider>
     </LangProvider>
   );

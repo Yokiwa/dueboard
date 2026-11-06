@@ -10,7 +10,7 @@ export default defineConfig({
   manifest: {
     name: 'DueBoard',
     description: 'All your Brightspace and Gradescope deadlines in one new tab.',
-    permissions: ['storage', 'alarms', 'offscreen'],
+    permissions: ['storage', 'alarms', 'offscreen', 'activeTab', 'scripting'],
     host_permissions: ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*'],
   },
   vite: () => ({

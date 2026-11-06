@@ -37,6 +37,7 @@ Show the user's own assignments, deadlines and course resource links from Bright
 - storage: keep synced assignments, the user's own entries and settings on this device.
 - alarms: re-sync assignments and deadlines in the background every 30 minutes.
 - offscreen: parse Gradescope pages in the background (service workers cannot parse HTML).
+- activeTab, scripting: only when the user clicks “Export this page” in the popup, read the current tab and save it as a local file to help add support for another homework platform.
 - Host permission https://purdue.brightspace.com/*: read the user's own courses, assignments, quizzes, calendar and course content listing.
 - Host permission https://www.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
 

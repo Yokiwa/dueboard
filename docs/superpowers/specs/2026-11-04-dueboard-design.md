@@ -328,3 +328,6 @@ interface CourseLink {
 - **非课程条目默认隐藏**：没有课程代码的 Brightspace 条目（迎新、培训、辅导项目等）默认不显示，可在设置中勾选显示（`userState.shown`）。Gradescope 课程始终视为课程。
 - **课程标题**去掉纯数字的班级编号。
 - **平台入口**：识别 WileyPLUS；Brightspace 内的 quickLink（`type=lti`）和课程内容页链接，只要标题点名已知平台，也生成入口按钮；没有 Url 的内容条目使用其内容页地址。
+
+### 1.1.1（2026-11）
+- 工具栏弹窗新增折叠的“开发者工具”：**导出当前页面**（需要 `activeTab` + `scripting`，只在用户点击时读取当前标签页，脱敏后下载到本地）和**导出课程链接**（插件保存的 Brightspace 课程内容链接）。用于收集 Pearson、Wiley 等平台的真实页面结构，为后续直接读取这些平台的作业做准备。
