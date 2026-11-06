@@ -82,3 +82,13 @@ describe('isStale', () => {
     ).toBe(false);
   });
 });
+
+describe('isStale with optional sources', () => {
+  const now = new Date('2026-11-04T17:00:00.000Z');
+  const recent = new Date(now.getTime() - 60_000).toISOString();
+  it('ignores a source that was never set up (no meta) and checks it once it has meta', () => {
+    const core = { brightspace: { lastSuccess: recent }, gradescope: { lastSuccess: recent } };
+    expect(isStale(core, now)).toBe(false);
+    expect(isStale({ ...core, pearson: { lastError: { at: new Date(now.getTime() - 3600_000).toISOString(), reason: 'not_logged_in' } } }, now)).toBe(true);
+  });
+});

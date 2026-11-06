@@ -1,4 +1,4 @@
-import { SOURCES, type Connector, type ConnectorFailureReason, type ConnectorResult, type SourceId, type StoreShape } from '../core/types';
+import { ALL_SOURCES, SOURCES, type Connector, type ConnectorFailureReason, type ConnectorResult, type SourceId, type StoreShape } from '../core/types';
 import { loadStore, recordSyncError, recordSyncSuccess, saveSnapshot } from '../storage/store';
 
 export type SyncReport = Partial<Record<SourceId, 'ok' | ConnectorFailureReason>>;
@@ -48,7 +48,8 @@ export function runSync(connectors: Connector[], now: () => Date = () => new Dat
 
 /** True when any source was never tried, or the least recently tried one is older than maxAgeMs. */
 export function isStale(syncMeta: StoreShape['syncMeta'], now: Date, maxAgeMs = 300_000): boolean {
-  for (const s of SOURCES) {
+  const sources = ALL_SOURCES.filter((s) => SOURCES.includes(s) || syncMeta[s]);
+  for (const s of sources) {
     const meta = syncMeta[s];
     const attempts = [meta?.lastSuccess, meta?.lastError?.at].filter((x): x is string => Boolean(x)).map(Date.parse);
     if (attempts.length === 0) return true;

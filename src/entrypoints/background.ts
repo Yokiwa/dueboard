@@ -5,13 +5,23 @@ import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
 import { loadStore } from '../storage/store';
 import { isStale, runSync } from '../sync/runSync';
-import { offscreenParser } from '../sync/offscreenParser';
+import { offscreenParser, offscreenParsePearson } from '../sync/offscreenParser';
+import { createPearsonConnector } from '../connectors/pearson';
+import { activeSourceIds } from '../background/sources';
+import type { Connector, SourceId } from '../core/types';
 import { withKeepAlive } from '../sync/keepAlive';
 
 const ALARM = 'dueboard-sync';
 
-const connectors = () => [createBrightspaceConnector(), createGradescopeConnector({ parser: offscreenParser })];
-const syncNow = () => withKeepAlive(runSync(connectors()), () => browser.runtime.getPlatformInfo());
+const CONNECTORS: Record<SourceId, () => Connector> = {
+  brightspace: () => createBrightspaceConnector(),
+  gradescope: () => createGradescopeConnector({ parser: offscreenParser }),
+  pearson: () => createPearsonConnector({ parse: offscreenParsePearson }),
+};
+const syncNow = async () => {
+  const ids = activeSourceIds(await loadStore());
+  return withKeepAlive(runSync(ids.map((id) => CONNECTORS[id]())), () => browser.runtime.getPlatformInfo());
+};
 
 export default defineBackground(() => {
   const ensureAlarm = async () => {

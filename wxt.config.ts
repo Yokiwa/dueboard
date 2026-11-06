@@ -11,7 +11,7 @@ export default defineConfig({
     name: 'DueBoard',
     description: 'All your Brightspace and Gradescope deadlines in one new tab.',
     permissions: ['storage', 'alarms', 'offscreen', 'activeTab', 'scripting'],
-    host_permissions: ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*'],
+    host_permissions: ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*', 'https://mylab.pearson.com/*'],
   },
   vite: () => ({
     plugins: [tailwindcss()],

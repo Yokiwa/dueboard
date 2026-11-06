@@ -82,6 +82,27 @@ function buildCourses(input: DashboardInput) {
     }
   }
 
+  // Pearson MyLab has no course codes: it belongs to the course whose content links to Pearson.
+  const pearsonLaunch = new Map<string, string>();
+  for (const l of snapshots.brightspace?.links ?? []) {
+    const cid = alias.get(courseId('brightspace', l.sourceCourseId));
+    if (cid && !pearsonLaunch.has(cid) && classifyLink(l.title, l.url)?.label === 'Pearson') {
+      pearsonLaunch.set(cid, new URL(l.url, 'https://purdue.brightspace.com').href);
+    }
+  }
+  for (const c of snapshots.pearson?.courses ?? []) {
+    const key = courseId('pearson', c.sourceCourseId);
+    const targetId = userState.merges[key] ?? [...pearsonLaunch.keys()][0];
+    const target = targetId ? byId.get(targetId) : undefined;
+    if (target) {
+      target.sources.pearson = c.sourceCourseId;
+      alias.set(key, target.id);
+    } else {
+      byId.set(key, { id: key, code: 'Pearson MyLab', name: c.name, sources: { pearson: c.sourceCourseId }, color: '', hidden: false, url: c.url, partial: false, isCourse: true });
+      alias.set(key, key);
+    }
+  }
+
   // Settings saved under an id that has since been folded into another course still apply to it.
   const keysOf = (id: string) => [id, ...[...alias].filter(([from, to]) => to === id && from !== id).map(([from]) => from)];
   const stable = [...byId.values()].sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
@@ -91,7 +112,7 @@ function buildCourses(input: DashboardInput) {
     const shown = keys.some((k) => userState.shown?.[k]);
     c.hidden = keys.some((k) => userState.hidden[k]) || (!c.isCourse && !shown);
   });
-  return { all: byId, alias, gsUrl };
+  return { all: byId, alias, gsUrl, pearsonLaunch };
 }
 
 function titlesMatch(a: string, b: string): boolean {
@@ -172,13 +193,13 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
 
 /** Combines per-platform snapshots, manual entries and user state into what the UI shows. Pure. */
 export function buildDashboard(input: DashboardInput, now: Date, opts: { includeHidden?: boolean } = {}): Dashboard {
-  const { all, alias, gsUrl } = buildCourses(input);
+  const { all, alias, gsUrl, pearsonLaunch } = buildCourses(input);
   const visible = new Set([...all.values()].filter((c) => !c.hidden).map((c) => c.id));
   const minDue = now.getTime() - WINDOW_MS;
   const inWindow = (i: { dueAt: string | null }) => !i.dueAt || Date.parse(i.dueAt) >= minDue;
 
   const raw: Item[] = [];
-  for (const source of ['brightspace', 'gradescope'] as const) {
+  for (const source of ['brightspace', 'gradescope', 'pearson'] as const) {
     for (const r of input.snapshots[source]?.items ?? []) {
       const cid = alias.get(courseId(source, r.sourceCourseId));
       if (cid && visible.has(cid) && inWindow(r)) raw.push(fromRaw(r, cid));
@@ -192,7 +213,12 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
     if (twin) mergeInto(twin, it);
     else merged.push(it);
   }
-  for (const m of merged) m.id = m.sourceKeys[0]!;
+  for (const m of merged) {
+    m.id = m.sourceKeys[0]!;
+    // A MyLab session expires; the Brightspace launch link always gets the student back in.
+    const launch = m.sources.includes('pearson') ? pearsonLaunch.get(m.courseId) : undefined;
+    if (launch) m.url = launch;
+  }
 
   for (const m of input.manualItems) {
     const cid = alias.get(m.courseId) ?? m.courseId;

@@ -36,3 +36,11 @@ describe('createProxyParser', () => {
     await expect(p.home('x')).rejects.toThrow(/offscreen/);
   });
 });
+
+describe('offscreen pearson kind', () => {
+  it('parses a Pearson page', () => {
+    const page = readFileSync('tests/fixtures/pearson/assignments.html', 'utf8');
+    const r = handleOffscreenMessage({ target: 'offscreen', kind: 'pearson', html: page });
+    expect(r && 'data' in r && (r.data as { items: unknown[] }).items.length).toBe(42);
+  });
+});

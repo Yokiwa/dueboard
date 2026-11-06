@@ -22,7 +22,7 @@ All your Brightspace and Gradescope deadlines on one page.</p>
 - **Chrome 应用商店**：上架后会在这里放链接。
 - **手动安装测试版**：从 [Releases](../../releases) 下载 zip，按照 [指南 01](docs/guide/01-加载插件.md) 操作。
 
-目前只支持 `purdue.brightspace.com` 和 `www.gradescope.com`。
+目前支持 `purdue.brightspace.com`、`www.gradescope.com` 和 Pearson MyLab（`mylab.pearson.com`）。其他平台（Achieve、WileyPLUS 等）的作业，如果放在了 Brightspace 课程内容里，也会显示。
 
 ## 隐私
 

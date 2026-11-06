@@ -53,7 +53,7 @@ export function App() {
       <DoneToastProvider>
         <AppShell>
           <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh} />
-          <SourceBanners store={store} now={now} />
+          <SourceBanners store={store} now={now} launchUrls={{ pearson: dashboard.links.find((l) => l.label === 'Pearson')?.url }} />
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <ViewTabs view={view} onChange={setView} />

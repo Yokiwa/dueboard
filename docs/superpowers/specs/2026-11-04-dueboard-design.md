@@ -331,3 +331,9 @@ interface CourseLink {
 
 ### 1.1.1（2026-11）
 - 工具栏弹窗新增折叠的“开发者工具”：**导出当前页面**（需要 `activeTab` + `scripting`，只在用户点击时读取当前标签页，脱敏后下载到本地）和**导出课程链接**（插件保存的 Brightspace 课程内容链接）。用于收集 Pearson、Wiley 等平台的真实页面结构，为后续直接读取这些平台的作业做准备。
+
+### 1.2.0（2026-11）
+- **Pearson MyLab connector**：读取 `https://mylab.pearson.com/Student/DoAssignments.aspx?view=all`（新增 host 权限），解析作业表格（截止日期 `MM/DD/YY` + `h:mmam/pm`，按浏览器本地时间）。已截止且不能再做的作业视为完成。只有当某门课的内容里有 Pearson 入口（或之前同步过 Pearson）时才同步。会话过期时提示“从 Brightspace 重新打开一次”，按钮使用该课程的 Pearson 启动链接；作业的“去提交”也走这个启动链接。Pearson 课程挂到含 Pearson 入口的那门课上，没有则单独一张卡片。
+- **同一课程代码的多个 Brightspace 课程（LEC + REC）合并成一张卡片**，优先以 LEC 为主。
+- **课程内容里的作业入口变成作业**：标题含 “HW + 数字 / Homework + 数字” 的外部工具（LTI）条目，排除 “Copy of / study purposes / practice / solutions”。日期取条目自带的截止日期，否则与日历里同名事件合并取日期。
+- 识别 Macmillan Achieve 入口。

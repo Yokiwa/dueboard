@@ -45,6 +45,7 @@ store/screenshots/zh-1-courses.png、zh-2-calendar.png、zh-3-todo.png
 - activeTab、scripting：仅当用户在弹窗里点击“导出当前页面”时，读取当前标签页的内容，保存为本地文件，用于帮助支持新的作业平台。
 - 主机权限 https://purdue.brightspace.com/*：读取用户自己的课程、作业、测验、日历和课程资料目录。
 - 主机权限 https://www.gradescope.com/*：读取用户自己的课程、作业、截止时间和提交状态。
+- 主机权限 https://mylab.pearson.com/*：仅当用户的课程使用 Pearson MyLab 时，读取其作业列表和截止时间。
 
 ### 远程代码
 不使用远程代码。所有代码都打包在扩展里。

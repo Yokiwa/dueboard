@@ -5,7 +5,7 @@ import { sendToBackground } from '../messaging';
 import { useT } from '../i18n';
 import { primaryBtn } from '../forms';
 
-const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope' };
+const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope', pearson: 'Pearson' };
 const step = 'flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-border bg-db-surface p-4';
 const linkBtn = 'rounded-lg border border-db-border bg-db-subtle px-3 py-2 text-sm font-medium text-db-text no-underline hover:bg-db-track';
 

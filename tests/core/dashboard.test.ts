@@ -474,3 +474,31 @@ describe('undated content item vs dated calendar event', () => {
     expect(d.items[0]).toMatchObject({ dueAt: iso('2026-11-11T23:59:00-05:00'), type: 'assignment', url: 'https://b/topic' });
   });
 });
+
+describe('Pearson', () => {
+  const pearsonSnap = snap([{ source: 'pearson', sourceCourseId: '14285764', name: 'Pearson MyLab', code: null, url: 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all' }], [
+    item({ source: 'pearson', sourceItemId: '729259669', sourceCourseId: '14285764', title: "Lesson 29- Section 17.4 - Green's Theorem", url: 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all' }),
+  ]);
+  const launch = '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti&rcode=X-126';
+
+  it('attaches to the course that has the Pearson link and opens through that launch link', () => {
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          brightspace: { ...snap([bsCourse('14', 'Fall 2026 MA 26100-300 LEC', 'MA 26100'), bsCourse('98', 'Fall 2026 MA 261 331 332 333 REC', 'MA 26100')]), links: [{ source: 'brightspace', sourceCourseId: '98', title: 'Access Pearson', url: launch }] },
+          pearson: pearsonSnap,
+        },
+      }),
+      now,
+    );
+    expect(d.courses.map((c) => c.id)).toEqual(['brightspace:14']);
+    expect(d.items[0]).toMatchObject({ courseId: 'brightspace:14', sources: ['pearson'], url: `https://purdue.brightspace.com${launch}` });
+    expect(d.courses[0]!.sources.pearson).toBe('14285764');
+  });
+
+  it('gets its own card when no course links to Pearson', () => {
+    const d = buildDashboard(input({ snapshots: { pearson: pearsonSnap } }), now);
+    expect(d.courses).toEqual([expect.objectContaining({ id: 'pearson:14285764', code: 'Pearson MyLab', isCourse: true })]);
+    expect(d.items[0]!.courseId).toBe('pearson:14285764');
+  });
+});

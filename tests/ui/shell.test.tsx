@@ -131,3 +131,14 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('页面出错了')).toBeTruthy();
   });
 });
+
+describe('SourceBanners for Pearson', () => {
+  it('asks to reopen Pearson and the button uses the course launch link', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const store = migrate({ syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    renderIn('zh', <SourceBanners store={store} now={now} launchUrls={{ pearson: 'https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti' }} />);
+    expect(screen.getByText('Pearson 的登录已过期，请从 Brightspace 重新打开一次')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '打开 Pearson' }));
+    expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti', '_blank', 'noopener');
+  });
+});

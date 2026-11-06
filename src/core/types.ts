@@ -1,5 +1,8 @@
-export type SourceId = 'brightspace' | 'gradescope';
+export type SourceId = 'brightspace' | 'gradescope' | 'pearson';
+/** Always synced. */
 export const SOURCES: SourceId[] = ['brightspace', 'gradescope'];
+/** Every platform DueBoard can read; the extra ones only sync when the student's courses use them. */
+export const ALL_SOURCES: SourceId[] = ['brightspace', 'gradescope', 'pearson'];
 export type ItemType = 'assignment' | 'quiz' | 'exam' | 'event' | 'manual';
 export type LinkCategory = 'textbook' | 'homework' | 'discussion' | 'website' | 'lms' | 'other';
 

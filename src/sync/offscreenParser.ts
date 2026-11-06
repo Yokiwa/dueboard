@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import { domGradescopeParser, GradescopeParseError, type GradescopeParser } from '../connectors/gradescope/parse';
+import { parsePearson, PearsonParseError, type PearsonPage } from '../connectors/pearson/parse';
 
 type OffscreenReply = { data: unknown } | { error: string; errorName: string };
 
@@ -10,6 +11,7 @@ export function handleOffscreenMessage(msg: unknown): OffscreenReply | undefined
   try {
     if (m.kind === 'home') return { data: domGradescopeParser.home(m.html ?? '') };
     if (m.kind === 'course') return { data: domGradescopeParser.course(m.html ?? '', m.courseId ?? '') };
+    if (m.kind === 'pearson') return { data: parsePearson(m.html ?? '') };
     return { error: `unknown kind ${m.kind}`, errorName: 'Error' };
   } catch (e) {
     return { error: (e as Error).message, errorName: (e as Error).name };
@@ -24,6 +26,7 @@ export function createProxyParser(send: (msg: unknown) => Promise<unknown>, ensu
     if (!reply) throw new Error('offscreen document did not answer');
     if ('error' in reply) {
       if (reply.errorName === 'GradescopeParseError') throw new GradescopeParseError(reply.error);
+      if (reply.errorName === 'PearsonParseError') throw new PearsonParseError(reply.error);
       throw new Error(reply.error);
     }
     return reply.data as T;
@@ -53,3 +56,12 @@ export async function ensureOffscreenDocument(): Promise<void> {
 }
 
 export const offscreenParser: GradescopeParser = createProxyParser((m) => browser.runtime.sendMessage(m), ensureOffscreenDocument);
+
+/** Pearson page parsing for the service worker, through the same offscreen document. */
+export async function offscreenParsePearson(html: string): Promise<PearsonPage> {
+  await ensureOffscreenDocument();
+  const reply = (await browser.runtime.sendMessage({ target: 'offscreen', kind: 'pearson', html })) as OffscreenReply | undefined;
+  if (!reply) throw new Error('offscreen document did not answer');
+  if ('error' in reply) throw reply.errorName === 'PearsonParseError' ? new PearsonParseError(reply.error) : new Error(reply.error);
+  return reply.data as PearsonPage;
+}
