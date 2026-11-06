@@ -5,7 +5,7 @@ import { renderIn } from './render';
 import { TodoView } from '../../src/ui/views/TodoView';
 import { ManualItemForm } from '../../src/ui/components/ManualItemForm';
 import { ManualLinkForm } from '../../src/ui/components/ManualLinkForm';
-import { loadStore, addManualItem } from '../../src/storage/store';
+import { loadStore, addManualItem, toggleDone } from '../../src/storage/store';
 import { NOW, course, item, dash } from './fixtures';
 
 const cs = course('brightspace:1', 'CS 18000');
@@ -35,7 +35,7 @@ describe('TodoView', () => {
     expect(titles(group('已逾期'))).toEqual(['Late lab']);
     expect(titles(group('今天'))).toEqual(['Project 3']);
     expect(titles(group('明天'))).toEqual(['WebAssign 14.3']);
-    expect(titles(group('本周'))).toEqual(['Quiz 6']);
+    expect(titles(group('本周'))).toEqual(['Office hours prep', 'Quiz 6']);
     expect(titles(group('以后'))).toEqual(['Exam 2']);
     expect(titles(group('无截止日期'))).toEqual(['Reading']);
     expect(within(group('今天')).getByText('CS 18000')).toBeTruthy();
@@ -47,11 +47,24 @@ describe('TodoView', () => {
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({ 'brightspace:t': true, 'gradescope:9': true }));
   });
 
-  it('completed section collapsed by default, holds done and submitted items', () => {
+  it('done items that are not past due stay in their group, checked', () => {
     renderIn('zh', <TodoView dashboard={d} now={NOW} />);
-    const details = screen.getByText('已完成（2）').closest('details')!;
+    expect(titles(group('本周'))).toEqual(['Office hours prep', 'Quiz 6']);
+    expect((screen.getByRole('checkbox', { name: 'Office hours prep' }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('completed section (collapsed) only holds finished items whose due time has passed', () => {
+    renderIn('zh', <TodoView dashboard={d} now={NOW} />);
+    const details = screen.getByText('已完成（1）').closest('details')!;
     expect(details.open).toBe(false);
-    expect(within(details).getAllByTestId('todo-title').map((x) => x.textContent)).toEqual(['Lab 08', 'Office hours prep']);
+    expect(within(details).getAllByTestId('todo-title').map((x) => x.textContent)).toEqual(['Lab 08']);
+  });
+
+  it('unchecking a done item clears its done flag', async () => {
+    await toggleDone(['manual:abc'], true);
+    renderIn('zh', <TodoView dashboard={d} now={NOW} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Office hours prep' }));
+    await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
   });
 
   it('submitted items show 已提交 and are checked and locked', () => {

@@ -48,9 +48,16 @@ describe('CoursesView', () => {
     ]);
   });
 
-  it('card with no pending items shows 近期没有待交作业', () => {
+  it('card with nothing upcoming shows 近期没有待交作业', () => {
     renderIn('zh', <CoursesView dashboard={d} now={NOW} />);
-    expect(within(card('MA 26100')).getByText('近期没有待交作业')).toBeTruthy();
+    expect(within(card('COM 11400')).getByText('近期没有待交作业')).toBeTruthy();
+  });
+
+  it('a submitted item that is not past due stays on the card, checked and locked', () => {
+    renderIn('zh', <CoursesView dashboard={d} now={NOW} />);
+    const box = within(card('MA 26100')).getByRole('checkbox', { name: '标记完成：WebAssign 14.3' }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(box.disabled).toBe(true);
   });
 
   it('partial course card shows 部分数据未同步', () => {

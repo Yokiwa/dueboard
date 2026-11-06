@@ -6,7 +6,6 @@ import { removeManualItem, toggleDone } from '../../storage/store';
 import { useT, type MessageKey } from '../i18n';
 import { DueBadge } from '../components/DueBadge';
 import { ManualItemForm } from '../components/ManualItemForm';
-import { useMarkDone } from '../components/DoneToast';
 import { primaryBtn } from '../forms';
 
 type Group = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'noDue';
@@ -32,7 +31,6 @@ function groupOf(i: Item, now: Date): Group {
 
 function Row({ item, course, now }: { item: Item; course: Course | undefined; now: Date }) {
   const t = useT();
-  const markDone = useMarkDone();
   const done = item.doneByUser || item.submitted;
   return (
     <li className="flex items-center gap-3 border-t border-db-border-soft py-2.5 first:border-t-0">
@@ -41,7 +39,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         aria-label={item.title}
         checked={done}
         disabled={item.submitted}
-        onChange={(e) => void (e.target.checked ? markDone(item) : toggleDone(item.sourceKeys, false))}
+        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked)}
         className="size-5 shrink-0 cursor-pointer accent-db-accent"
       />
       <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: course?.color }} />
@@ -78,8 +76,10 @@ export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }
   const courseOf = new Map(dashboard.courses.map((c) => [c.id, c]));
   const byDue = (a: Item, b: Item) => (a.dueAt ? Date.parse(a.dueAt) : Infinity) - (b.dueAt ? Date.parse(b.dueAt) : Infinity);
   const sorted = [...dashboard.items].sort(byDue);
-  const completed = sorted.filter((i) => i.doneByUser || i.submitted);
-  const open = sorted.filter((i) => !i.doneByUser && !i.submitted);
+  // Finished items stay in their group (ticked) until their due time passes; then they fold into "已完成".
+  const isArchived = (i: Item) => (i.doneByUser || i.submitted) && i.dueAt !== null && Date.parse(i.dueAt) <= now.getTime();
+  const completed = sorted.filter(isArchived);
+  const open = sorted.filter((i) => !isArchived(i));
 
   return (
     <section className="flex flex-col gap-5 rounded-[14px] border border-db-border bg-db-surface p-5">

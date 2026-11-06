@@ -3,7 +3,7 @@ import type { Course, CourseLink, Item } from '../../core/types';
 import { useT } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
-import { useMarkDone } from '../components/DoneToast';
+import { toggleDone } from '../../storage/store';
 
 const SHOWN = 3;
 
@@ -17,9 +17,12 @@ export interface CourseCardProps {
 
 export function CourseCard({ course, items, links, now, onOpen }: CourseCardProps) {
   const t = useT();
-  const markDone = useMarkDone();
-  const pending = items.filter((i) => !i.doneByUser && !i.submitted);
-  const shown = pending.slice(0, SHOWN);
+  // Dated items that still matter: anything unfinished (overdue included), plus finished ones not yet past due,
+  // which stay in place with a tick. Undated items live in the course detail only.
+  const relevant = items.filter(
+    (i) => i.dueAt && ((!i.doneByUser && !i.submitted) || Date.parse(i.dueAt) > now.getTime()),
+  );
+  const shown = relevant.slice(0, SHOWN);
   const name = displayName(course);
   // Lecture videos etc. found in course content only appear in the detail view; the card keeps platform shortcuts.
   const shortcuts = links.filter((l) => l.category !== 'website' || l.source === 'manual');
@@ -55,8 +58,9 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
                 <input
                   type="checkbox"
                   aria-label={t('done.mark', { title: i.title })}
-                  checked={false}
-                  onChange={() => void markDone(i)}
+                  checked={i.doneByUser || i.submitted}
+                  disabled={i.submitted}
+                  onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
                   className="size-[18px] shrink-0 cursor-pointer accent-db-accent"
                 />
                 <div className="min-w-0 grow">
@@ -68,9 +72,9 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
         ) : (
           <p className="m-0 border-t border-db-border-soft py-[18px] text-sm text-db-faint">{t('course.empty')}</p>
         )}
-        {pending.length > SHOWN && (
+        {relevant.length > SHOWN && (
           <button type="button" onClick={onOpen} className="cursor-pointer self-start border-0 bg-transparent p-0 pt-1 text-[13px] font-medium text-db-accent">
-            {t('course.more', { n: pending.length - SHOWN })}
+            {t('course.more', { n: relevant.length - SHOWN })}
           </button>
         )}
         {course.partial && <p className="m-0 pt-2 text-xs text-db-soon-fg">{t('course.partial')}</p>}

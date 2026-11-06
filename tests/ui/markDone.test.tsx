@@ -53,14 +53,35 @@ describe('mark done from the banner', () => {
 describe('mark done from course cards', () => {
   beforeEach(() => fakeBrowser.reset());
 
-  it('each pending card item has a checkbox that marks it done with undo', async () => {
+  it('checking a card item marks it done and it stays on the card, checked and struck through (no toast)', async () => {
     withToast(<CoursesView dashboard={dash({ courses: [cs], items: [p3, lab] })} now={NOW} />);
     const card = within(screen.getByRole('article', { name: 'CS 18000' }));
-    const box = card.getByRole('checkbox', { name: '标记完成：Lab 09' }) as HTMLInputElement;
-    expect(box.checked).toBe(false);
-    fireEvent.click(box);
+    fireEvent.click(card.getByRole('checkbox', { name: '标记完成：Lab 09' }));
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({ 'b:lab': true }));
-    expect(screen.getByText('已标记完成：Lab 09')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('a done item that is not past due stays in place on the card, checked; unchecking clears it', async () => {
+    await toggleDone(['b:lab'], true);
+    const doneLab = { ...lab, doneByUser: true };
+    withToast(<CoursesView dashboard={dash({ courses: [cs], items: [p3, doneLab] })} now={NOW} />);
+    const card = within(screen.getByRole('article', { name: 'CS 18000' }));
+    const titles = card.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent);
+    expect(titles).toEqual(['Project 3', 'Lab 09']);
+    const box = card.getByRole('checkbox', { name: '标记完成：Lab 09' }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    fireEvent.click(box);
+    await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
+  });
+
+  it('cards leave out done items that are already past due, and undated items', () => {
+    const oldDone = item('b:old', 'b:1', 'Old lab', '2026-11-02T23:59:00-05:00', { doneByUser: true });
+    const undated = item('b:quiz1', 'b:1', 'Quiz 1', null, { type: 'quiz' });
+    withToast(<CoursesView dashboard={dash({ courses: [cs], items: [oldDone, p3, undated] })} now={NOW} />);
+    const card = within(screen.getByRole('article', { name: 'CS 18000' }));
+    expect(card.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent)).toEqual(['Project 3']);
+    fireEvent.click(card.getByRole('button', { name: '查看 CS 18000 详情' }));
+    expect(within(screen.getByRole('dialog')).getByText('Quiz 1')).toBeTruthy();
   });
 
   it('the course detail lists done items checked and lets you uncheck them', async () => {
