@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install DueBoard</title>
+  <meta name="description" content="How to add DueBoard to Chrome or Edge in about two minutes, step by step with pictures.">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="./"><img src="assets/icon.svg" alt="">DueBoard</a>
+      <nav>
+        <a href="install.html">Install</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="https://github.com/Yokiwa/dueboard">GitHub</a>
+      </nav>
+    </header>
+
+    <main class="guide">
+      <h1>Install DueBoard</h1>
+      <p class="lede">DueBoard isn't on the Chrome Web Store yet, so you add it by hand. It takes about two minutes and works in Chrome and Microsoft Edge. You don't need to know anything about code.</p>
+
+      <ol class="steps">
+        <li class="step">
+          <h2>Download DueBoard</h2>
+          <p>Go to the <a href="https://github.com/Yokiwa/dueboard/releases/latest">latest release</a>. Under <b>Assets</b>, click the file named <code>dueboard-…-chrome.zip</code> to download it.</p>
+          <p class="tip">Don't pick "Source code". That's for developers and won't install.</p>
+          <a class="btn" href="https://github.com/Yokiwa/dueboard/releases/latest">Go to the download</a>
+        </li>
+
+        <li class="step">
+          <h2>Unzip it and put the folder somewhere safe</h2>
+          <ul>
+            <li><b>Mac:</b> double-click the zip in Downloads.</li>
+            <li><b>Windows:</b> right-click the zip → <b>Extract All…</b> → <b>Extract</b>.</li>
+          </ul>
+          <p>You get a folder named like <code>dueboard-1.0.2-chrome</code>. Move it somewhere you won't clean up, such as your Documents folder. Chrome runs DueBoard from this folder, so if you delete it, DueBoard stops working.</p>
+          <div class="tree" aria-label="What the folder should look like">
+            <div class="row folder">Documents</div>
+            <div class="row folder in1 pick">dueboard-1.0.2-chrome <span class="tag">choose this one in step 5</span></div>
+            <div class="row file in2">manifest.json</div>
+            <div class="row folder in2">assets</div>
+            <div class="row file in2">dashboard.html</div>
+            <div class="row more in2">…</div>
+          </div>
+        </li>
+
+        <li class="step">
+          <h2>Open the extensions page and turn on Developer mode</h2>
+          <p>Type <code>chrome://extensions</code> in the address bar and press Enter. In Edge, type <code>edge://extensions</code>.</p>
+          <p>Turn on <b>Developer mode</b> in the top-right corner. In Edge, the switch is in the left sidebar.</p>
+          <figure>
+            <a href="assets/install/developer-mode.png"><img src="assets/install/developer-mode.png" width="1100" height="240" alt="Chrome's extensions page with the Developer mode switch in the top-right corner highlighted"></a>
+            <figcaption>① Turn on Developer mode.</figcaption>
+          </figure>
+        </li>
+
+        <li class="step">
+          <h2>Click Load unpacked</h2>
+          <p>Three new buttons appear. Click <b>Load unpacked</b>.</p>
+          <figure>
+            <a href="assets/install/load-unpacked.png"><img src="assets/install/load-unpacked.png" width="1100" height="300" alt="The Load unpacked button highlighted, at the top left of the extensions page"></a>
+            <figcaption>② Click Load unpacked.</figcaption>
+          </figure>
+        </li>
+
+        <li class="step">
+          <h2>Choose the DueBoard folder</h2>
+          <p>In the window that opens, go to the folder from step 2 (the one that has <code>manifest.json</code> directly inside it). Select the folder and click <b>Select</b>. On a Mac the button may say <b>Open</b>.</p>
+          <p>DueBoard now appears in your list of extensions.</p>
+          <figure>
+            <a href="assets/install/installed.png"><img src="assets/install/installed.png" width="1100" height="440" alt="The DueBoard card in the list of extensions, switched on"></a>
+            <figcaption>③ DueBoard is installed. Keep its switch on.</figcaption>
+          </figure>
+        </li>
+
+        <li class="step">
+          <h2>Pin it to your toolbar</h2>
+          <p>Click the puzzle-piece icon
+            <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.7 2.7 0 0 1 0 5.4H2V20a2 2 0 0 0 2 2h3.8v-1.5a2.7 2.7 0 0 1 5.4 0V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z" fill="currentColor"/></svg>
+            to the right of the address bar, then click the pin next to <b>DueBoard</b>. Now its icon is always one click away.</p>
+        </li>
+
+        <li class="step">
+          <h2>Sign in to Brightspace and run the first sync</h2>
+          <p>Click the DueBoard icon, then <b>Open full dashboard</b>. The welcome page asks for one thing: sign in to Brightspace in this browser. Then come back and click <b>Start sync</b>.</p>
+          <p>That's it. You don't sign in to Gradescope, Pearson or WileyPLUS separately. DueBoard finds the platforms your courses use from Brightspace.</p>
+          <figure>
+            <a href="assets/install/welcome.png"><img class="narrow" src="assets/install/welcome.png" width="640" height="440" alt="DueBoard's welcome page with two steps: Open Brightspace, then Start sync"></a>
+            <figcaption>The welcome page. Brightspace is the only account DueBoard needs.</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <section class="faq">
+        <h2>If something goes wrong</h2>
+        <details>
+          <summary>"Manifest file is missing or unreadable"</summary>
+          <p>You picked a folder one level too high or too low. Choose the folder that has <code>manifest.json</code> directly inside it. On Windows, Extract All sometimes makes a folder inside a folder of the same name. If so, pick the inner one.</p>
+        </details>
+        <details>
+          <summary>I don't see Load unpacked</summary>
+          <p>Developer mode is still off. Turn on the switch from step 3 and the buttons appear.</p>
+        </details>
+        <details>
+          <summary>Chrome says "Disable developer mode extensions"</summary>
+          <p>Chrome shows this for anything installed by hand. Close the message. DueBoard keeps working. The warning goes away once DueBoard is on the Chrome Web Store.</p>
+        </details>
+        <details>
+          <summary>A school or work computer won't let me turn on Developer mode</summary>
+          <p>Some managed computers block it. Use your own computer instead.</p>
+        </details>
+        <details>
+          <summary>How do I update to a new version?</summary>
+          <p>Download the new zip and unzip it. Replace the files in your DueBoard folder with the new ones. Then open <code>chrome://extensions</code> and click the reload arrow on the DueBoard card. Your ticks and settings stay.</p>
+        </details>
+        <details>
+          <summary>How do I remove it?</summary>
+          <p>Click <b>Remove</b> on the DueBoard card in <code>chrome://extensions</code>. All of DueBoard's data is deleted with it. You can delete the folder afterwards.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer>
+      DueBoard is an open-source student project. It is not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson or Wiley.
+    </footer>
+  </div>
+</body>
+</html>

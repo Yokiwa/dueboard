@@ -2,6 +2,8 @@
 
 Until DueBoard is on the Chrome Web Store, install it with Chrome's developer mode. It takes about two minutes.
 
+A version of these steps with screenshots is on the website: [Install DueBoard](https://yokiwa.github.io/dueboard/install.html). Send that link to anyone who wants to try DueBoard.
+
 ## First install
 
 1. Download `dueboard-x.y.z-chrome.zip` from the [latest release](https://github.com/Yokiwa/dueboard/releases/latest).

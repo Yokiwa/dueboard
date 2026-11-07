@@ -9,7 +9,7 @@ export default defineConfig({
   },
   manifest: {
     name: 'DueBoard',
-    description: 'All your Brightspace and Gradescope deadlines in one new tab.',
+    description: 'Every deadline from Brightspace and the homework platforms your courses use, on one page.',
     permissions: ['storage', 'alarms', 'offscreen', 'activeTab', 'scripting'],
     host_permissions: ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*', 'https://mylab.pearson.com/*'],
   },

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2 — 2026-11
+
+- Homework launched from Brightspace content is now found for any platform, not only known ones: numbered work (HW 3, Project #2, Lab 5, Quiz 4, Problem Set 1…), "Chapter 7 Quiz"-style titles, and every launch inside a Homework or Assignments module. Platform home pages, practice copies, solutions and registration links are left out
+- Clearer extension description in Chrome's extensions list
+- New illustrated install guide: https://yokiwa.github.io/dueboard/install.html
+
 ## 1.0.1 — 2026-11
 
 - Sign-in prompts for Gradescope and Pearson now open the platform through your course in Brightspace (the way Purdue courses reach them), falling back to the platform's own sign-in page only when no course links it

@@ -28,13 +28,13 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 | Gradescope | Read from your Gradescope course pages when you are signed in |
 | Pearson MyLab | Read from MyLab when a course links to Pearson; open it once from Brightspace if the session expired |
 | WileyPLUS | Noted when you open an assignment page (each assignment needs to be opened once) |
-| Achieve and other platforms | Shown when the platform puts its dates into Brightspace (most do) |
+| Achieve and other platforms | Homework links in your Brightspace course content are listed; due dates appear when the platform puts them into Brightspace (most do) |
 | Anything else | Add it by hand; it stays until you remove it |
 
 ## Install
 
 - **Chrome Web Store:** link coming soon.
-- **Manual install:** download the zip from [Releases](../../releases) and follow [docs/guide/01-install.md](docs/guide/01-install.md).
+- **Manual install (about two minutes):** follow the [illustrated install guide](https://yokiwa.github.io/dueboard/install.html). The same steps are in [docs/guide/01-install.md](docs/guide/01-install.md).
 
 DueBoard currently supports `purdue.brightspace.com`.
 

@@ -1,8 +1,8 @@
 {
   "name": "dueboard",
-  "description": "All your Brightspace and Gradescope deadlines in one new tab.",
+  "description": "Every deadline from Brightspace and the homework platforms your courses use, on one page.",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",
