@@ -86,3 +86,27 @@ describe('pearson connector', () => {
     expect(r).toMatchObject({ ok: false, reason: 'network' });
   });
 });
+
+describe('pearson redirects', () => {
+  const opaque = (async () => ({ type: 'opaqueredirect', status: 0, ok: false, redirected: false, url: '', text: async () => '' })) as unknown as typeof fetch;
+
+  it('does not follow redirects, so a hop to the sign-in site is reported as not_logged_in', async () => {
+    let init: RequestInit | undefined;
+    const spy = (async (_u: RequestInfo | URL, i?: RequestInit) => {
+      init = i;
+      return opaque('');
+    }) as typeof fetch;
+    const r = await createPearsonConnector({ parse: async (h) => parsePearson(h), fetchImpl: spy }).fetchAll();
+    expect(init?.redirect).toBe('manual');
+    expect(r).toMatchObject({ ok: false, reason: 'not_logged_in' });
+    if (!r.ok) expect(r.detail).toContain('redirect');
+  });
+
+  it('keeps the error message when the request itself fails', async () => {
+    const boom = (async () => {
+      throw new TypeError('Failed to fetch');
+    }) as typeof fetch;
+    const r = await createPearsonConnector({ parse: async (h) => parsePearson(h), fetchImpl: boom }).fetchAll();
+    expect(r).toMatchObject({ ok: false, reason: 'network', detail: 'TypeError: Failed to fetch' });
+  });
+});

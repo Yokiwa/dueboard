@@ -142,3 +142,14 @@ describe('SourceBanners for Pearson', () => {
     expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti', '_blank', 'noopener');
   });
 });
+
+describe('SourceBanners error details', () => {
+  it('a failed sync can be expanded to show what went wrong', () => {
+    const store = migrate({ syncMeta: { pearson: { lastError: { at: minsAgo(2), reason: 'network', detail: 'TypeError: Failed to fetch' } } } });
+    renderIn('zh', <SourceBanners store={store} now={now} />);
+    expect(screen.getByText('Pearson 同步失败')).toBeTruthy();
+    const details = screen.getByText('详情').closest('details')!;
+    expect(details.textContent).toContain('network');
+    expect(details.textContent).toContain('TypeError: Failed to fetch');
+  });
+});

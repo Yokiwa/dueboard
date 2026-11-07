@@ -39,7 +39,11 @@ export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreSha
     const text = snap ? t('source.stale', { name, ago: t('ago', { iso: snap.syncedAt, now }) }) : t('source.failed', { name });
     return [
       <div key={src} role="status" className="rounded-xl border border-db-border bg-db-surface px-4 py-3 text-sm text-db-muted">
-        {text}
+        <span>{text}</span>
+        <details className="mt-1 text-xs text-db-faint">
+          <summary className="cursor-pointer">{t('source.details')}</summary>
+          <code className="mt-1 block break-all whitespace-pre-wrap">{`${err.reason}${err.detail ? ` — ${err.detail}` : ''} (${t('ago', { iso: err.at, now })})`}</code>
+        </details>
       </div>,
     ];
   });

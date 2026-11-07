@@ -18,9 +18,14 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
   async function fetchAll(): Promise<ConnectorResult> {
     let res: Response;
     try {
-      res = await fetchImpl(PEARSON_ASSIGNMENTS_URL, { credentials: 'include' });
+      // Don't follow redirects: without a session Pearson bounces to its sign-in site, which the extension may not
+      // be allowed to reach — following would surface as an opaque network error instead of "please reopen Pearson".
+      res = await fetchImpl(PEARSON_ASSIGNMENTS_URL, { credentials: 'include', redirect: 'manual' });
     } catch (e) {
       return { ok: false, reason: 'network', detail: String(e) };
+    }
+    if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+      return { ok: false, reason: 'not_logged_in', detail: 'redirected (probably to the sign-in page)' };
     }
     if (res.status === 401 || res.status === 403) return { ok: false, reason: 'not_logged_in', detail: `HTTP ${res.status}` };
     if (!res.ok) return { ok: false, reason: 'network', detail: `HTTP ${res.status}` };
