@@ -1,3 +1,4 @@
+import { IS_FIREFOX } from '../core/env';
 import { domGradescopeParser, type GradescopeParser } from '../connectors/gradescope/parse';
 import { parsePearson, type PearsonPage } from '../connectors/pearson/parse';
 import { offscreenParser, offscreenParsePearson, offscreenSyllabusReaders } from './offscreenParser';
@@ -26,4 +27,4 @@ function chromeParsers(): Parsers {
 }
 
 // A build-time constant, so each browser's bundle keeps only its own branch (pdf.js stays out of Chrome's worker).
-export const parsers: Parsers = import.meta.env.FIREFOX ? firefoxParsers() : chromeParsers();
+export const parsers: Parsers = IS_FIREFOX ? firefoxParsers() : chromeParsers();

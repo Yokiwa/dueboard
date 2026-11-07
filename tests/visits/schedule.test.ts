@@ -133,3 +133,33 @@ describe('dueVisits: syllabus launches', () => {
     expect(dueVisits(s, now, 'auto', ['https://*/*'])).toEqual([]);
   });
 });
+
+describe('dueVisits: fixes from review', () => {
+  const pearsonStore = (session?: { at: string; failures: number }) => {
+    const s = store([]);
+    s.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P' }];
+    s.syncMeta.pearson = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
+    if (session) s.visitState.pearsonSession = session;
+    return s;
+  };
+
+  it('retries the Pearson session at most every 6 hours', () => {
+    expect(keys(pearsonStore({ at: ago(5), failures: 1 }))).toEqual([]);
+    expect(keys(pearsonStore({ at: ago(7), failures: 1 }))).toEqual(['pearson:session']);
+  });
+
+  it('after 3 failed Pearson session attempts, only a manual refresh tries again', () => {
+    expect(keys(pearsonStore({ at: ago(7), failures: 3 }))).toEqual([]);
+    expect(keys(pearsonStore({ at: ago(7), failures: 3 }), 'manual')).toEqual(['pearson:session']);
+  });
+
+  it('caps failed visits like misses: after 3, only a manual refresh, at most hourly', () => {
+    expect(keys(store([topic(1)], cap(1, { failures: 3, checkedAt: ago(7) })))).toEqual([]);
+    expect(keys(store([topic(1)], cap(1, { failures: 3, checkedAt: ago(2) })), 'manual')).toEqual(['brightspace:topic:1']);
+  });
+
+  it('never opens quizzes or exams on its own', () => {
+    const s = store([topic(1, 'Quiz 3'), topic(2, 'Midterm Exam 1'), topic(3, 'Unit Test 2'), topic(4, 'Homework 4')]);
+    expect(keys(s)).toEqual(['brightspace:topic:4']);
+  });
+});

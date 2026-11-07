@@ -83,3 +83,20 @@ describe('findDueUniversal on block layouts', () => {
     expect(findDueUniversal(d, now)?.dueAt).toBe(local(2026, 11, 10));
   });
 });
+
+describe('finders: fixes from review', () => {
+  it('a date shown once with and once without its time is one date, with the time', () => {
+    expect(findDueUniversal(page('<h1>HW</h1><p>Due: Nov 10, 2026<br>5:00 PM</p>'), now)?.dueAt).toBe(local(2026, 11, 10, 17, 0));
+    expect(findDueUniversal(page('<h1>HW</h1><div><span>Due Nov 10</span><div>5:00 PM EST</div></div>'), now)?.dueAt).toBe('2026-11-10T22:00:00.000Z');
+    expect(findDueUniversal(page('<h1>HW</h1><p>Due Nov 10</p><section><p>Details</p><p>Due Nov 10 at 5:00 PM</p></section>'), now)?.dueAt).toBe(local(2026, 11, 10, 17, 0));
+  });
+
+  it('still refuses a page with due dates on different days', () => {
+    expect(findDueUniversal(page('<p>Due Nov 10 5:00 PM</p><p>Due Nov 11 5:00 PM</p>'), now)).toBeNull();
+  });
+
+  it('the WileyPLUS finder refuses a list of assignments', () => {
+    const d = page('<main><h1>PHYS 172H</h1><ul><li>HW10 <span>Due Monday, Nov 2 at 11:59 PM (EST)</span></li><li>HW11 <span>Due Monday, Nov 9 at 11:59 PM (EST)</span></li></ul></main>');
+    expect(findDueWiley(d, now)).toBeNull();
+  });
+});

@@ -35,21 +35,50 @@ export interface SyncAndVisitDeps {
  * A full sync: read every source, then open the homework launches that still need a date (spec 3.2), then — if a
  * visit restored the Pearson session — read Pearson again. Visits are skipped while Brightspace is signed out.
  */
-let running: Promise<SyncReport> | null = null;
+export interface SyncRun {
+  /** Resolves once every source has been read (what the dashboard waits for). */
+  report: Promise<SyncReport>;
+  /** Resolves when the platform visits after it have finished too. */
+  done: Promise<SyncReport>;
+}
+
+let running: (SyncRun & { trigger: Trigger }) | null = null;
+let manualQueued = false;
 
 /**
- * One full sync at a time: a sync asked for while another runs (the 30-minute alarm, a page load, a Refresh click)
- * joins it, so there is never more than one visit window.
+ * One full sync at a time. A sync asked for while another runs joins it, so there is never more than one visit
+ * window; a Refresh that joins an automatic run gets a manual visit pass right after it.
  */
-export function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
-  running ??= fullSync(deps, trigger).finally(() => {
+export function startSync(deps: SyncAndVisitDeps, trigger: Trigger): SyncRun {
+  if (running) {
+    if (trigger === 'manual' && running.trigger === 'auto') manualQueued = true;
+    return running;
+  }
+  let report!: (r: SyncReport) => void;
+  const reportP = new Promise<SyncReport>((r) => (report = r));
+  const done = fullSync(deps, trigger, report).finally(() => {
     running = null;
+    if (manualQueued) {
+      manualQueued = false;
+      void startSync(deps, 'manual').done;
+    }
   });
+  running = { report: reportP, done, trigger };
   return running;
 }
 
-async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
-  const report = await deps.sync();
+/** The whole sync, visits included. */
+export function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
+  return startSync(deps, trigger).done;
+}
+
+async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: SyncReport) => void): Promise<SyncReport> {
+  let report: SyncReport = {};
+  try {
+    report = await deps.sync();
+  } finally {
+    onReport(report);
+  }
   if (report.brightspace === 'not_logged_in') return report;
   if (deps.syllabus) {
     const before = await deps.load();
@@ -62,8 +91,19 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncR
   const store = await deps.load();
   const targets = dueVisits(store, deps.now(), trigger, await deps.granted());
   if (targets.length === 0) return report;
-  const outcomes = await deps.visit(targets);
+  const outcomes = await deps.visit(targets).catch((e: unknown) => {
+    console.warn('DueBoard: platform visits stopped early', e);
+    return [] as VisitOutcome[];
+  });
   await deps.save(applyOutcomes(await deps.load(), targets, outcomes, deps.now()));
-  if (outcomes.some((o) => o.key === 'pearson:session' && o.status === 'landed')) Object.assign(report, await deps.resyncPearson());
+  if (outcomes.some((o) => o.key === 'pearson:session' && o.status === 'landed')) {
+    const pearson = await deps.resyncPearson();
+    Object.assign(report, pearson);
+    if (pearson.pearson !== 'ok') {
+      const { visitState } = await deps.load();
+      const prev = visitState.pearsonSession;
+      await deps.save({ visitState: { ...visitState, pearsonSession: { at: prev?.at ?? deps.now().toISOString(), failures: (prev?.failures ?? 0) + 1 } } });
+    }
+  }
   return report;
 }

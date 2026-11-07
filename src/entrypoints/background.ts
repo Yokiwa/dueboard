@@ -3,16 +3,16 @@ import { handleInstalled } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
-import { loadStore, patchStore, saveCaptured, setVisitProgress } from '../storage/store';
+import { getVisitWindow, loadStore, patchStore, saveCaptured, setVisitProgress } from '../storage/store';
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
 import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
-import { syncAndVisit, syncWithDiscovery } from '../background/syncFlow';
+import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
 import { closeLeftover, runVisits } from '../visits/runner';
-import { createBrowserVisitApi, deliverVisitMessage } from '../visits/browserApi';
+import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visits/browserApi';
 import { isVisitMessage } from '../visits/messages';
 import type { Connector, SourceId } from '../core/types';
 import { withKeepAlive } from '../sync/keepAlive';
@@ -26,10 +26,13 @@ const CONNECTORS: Record<SourceId, () => Connector> = {
 };
 const visitApi = createBrowserVisitApi();
 
-/** One full sync: every source, then platform visits (alarm and page loads are 'auto'; Refresh is 'manual'). */
-const syncNow = (trigger: Trigger = 'auto') =>
-  withKeepAlive(
-    syncAndVisit(
+/**
+ * One full sync: every source, then platform visits (alarm and page loads are 'auto'; Refresh is 'manual').
+ * Resolves with the sync report as soon as the sources are read; the visits continue, kept alive, and their
+ * progress shows in the dashboard.
+ */
+const syncNow = (trigger: Trigger = 'auto') => {
+  const run = startSync(
       {
         load: loadStore,
         sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
@@ -47,34 +50,37 @@ const syncNow = (trigger: Trigger = 'auto') =>
         now: () => new Date(),
       },
       trigger,
-    ),
-    () => browser.runtime.getPlatformInfo(),
-  );
+    );
+  void withKeepAlive(run.done, () => browser.runtime.getPlatformInfo()).catch(() => undefined);
+  return run.report;
+};
 
-/** A visit window a crashed run left open is closed on the next start. */
-const closeOldVisitWindow = async () => closeLeftover((await loadStore()).visitState.windowId, visitApi);
+/** A visit window a dead run left open (worker restart, update) is closed whenever the background starts. */
+const closeOldVisitWindow = async () => {
+  const id = await getVisitWindow();
+  if (id === undefined) return;
+  await closeLeftover(id, visitApi);
+  await setVisitProgress(null);
+};
 
 export default defineBackground({
   // Firefox's event page can load modules on demand, so pdf.js stays out of it until a syllabus PDF is read.
   // Chrome's service worker stays a classic script (it has no dynamic imports to split).
   type: import.meta.env.FIREFOX ? 'module' : undefined,
   main: () => {
+  void closeOldVisitWindow();
   const ensureAlarm = async () => {
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };
 
   browser.runtime.onInstalled.addListener((details) => {
-    void closeOldVisitWindow();
     void handleInstalled(details.reason, {
       ensureAlarm,
       sync: () => syncNow('auto'),
       openDashboard: () => browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html') }),
     });
   });
-  browser.runtime.onStartup.addListener(() => {
-    void ensureAlarm();
-    void closeOldVisitWindow();
-  });
+  browser.runtime.onStartup.addListener(() => void ensureAlarm());
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === ALARM) void syncNow('auto');
   });
@@ -90,7 +96,7 @@ export default defineBackground({
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
     captureDue: async (msg, sender) => {
-      const c = acceptCapture(msg, sender?.url, new Date());
+      const c = acceptCapture(msg, sender?.url, new Date(), { fromVisit: isVisitTab(sender?.tab?.id) });
       if (c) await saveCaptured([c]);
       return Boolean(c);
     },

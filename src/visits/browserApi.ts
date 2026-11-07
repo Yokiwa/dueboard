@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
-import { patchVisitState } from '../storage/store';
+import { IS_FIREFOX } from '../core/env';
+import { setVisitWindow } from '../storage/store';
 import { FINDER_FILE, type VisitMessage } from './messages';
 import { launchTargetHost, SIGN_IN, type Landing, type VisitApi } from './runner';
 
@@ -8,6 +9,9 @@ const BRIGHTSPACE_HOST = new URL(BASE).hostname;
 
 /** The tab visits run in; messages from any other tab are ignored. */
 let visitTab: number | null = null;
+/** Windows this background opened, and how each looked at the run's first check (once the system has settled it). */
+const ours = new Set<number>();
+const opened = new Map<number, { state?: string; focused?: boolean }>();
 const queue: VisitMessage[] = [];
 let waiter: ((m: VisitMessage) => void) | null = null;
 
@@ -20,6 +24,11 @@ export function deliverVisitMessage(msg: VisitMessage, sender: { tab?: { id?: nu
     w(msg);
   } else queue.push(msg);
   return true;
+}
+
+/** Whether a tab is the visit tab (page captures from it are ignored: a visit records its own result). */
+export function isVisitTab(tabId: number | undefined): boolean {
+  return tabId !== undefined && tabId === visitTab;
 }
 
 /** Test hook: which tab currently accepts finder messages. */
@@ -42,9 +51,13 @@ function landed(url: string | undefined): boolean {
 export function createBrowserVisitApi(): VisitApi {
   return {
     async openWindow() {
-      const win = await browser.windows.create({ url: 'about:blank', state: 'minimized', focused: false, type: 'normal' });
+      // Firefox can't open a window without focusing it; give focus back to the window the student was using.
+      const before = IS_FIREFOX ? await browser.windows.getLastFocused().catch(() => undefined) : undefined;
+      const win = await browser.windows.create({ url: 'about:blank', state: 'minimized', ...(IS_FIREFOX ? {} : { focused: false }), type: 'normal' });
+      if (before?.id !== undefined) await browser.windows.update(before.id, { focused: true }).catch(() => undefined);
       const tabId = win?.tabs?.[0]?.id;
       if (win?.id === undefined || tabId === undefined) throw new Error('could not open the visit window');
+      ours.add(win.id);
       setVisitTab(tabId);
       return { windowId: win.id, tabId };
     },
@@ -80,12 +93,45 @@ export function createBrowserVisitApi(): VisitApi {
 
     async launchHost(url) {
       try {
-        const res = await fetch(url, { credentials: 'include' });
+        const res = await fetch(url, { credentials: 'include', signal: AbortSignal.timeout(15_000) });
+        if (SIGN_IN.test(res.url)) return 'signed_out';
         const finalHost = new URL(res.url).hostname;
         if (finalHost !== BRIGHTSPACE_HOST) return finalHost;
         return launchTargetHost(await res.text(), BASE);
       } catch {
         return null; // a redirect to a site without access, or offline: visit and see
+      }
+    },
+
+    async signedIn() {
+      try {
+        const versions = (await (await fetch(`${BASE}/d2l/api/versions/`, { credentials: 'include', signal: AbortSignal.timeout(15_000) })).json()) as { ProductCode: string; LatestVersion: string }[];
+        const lp = versions.find((v) => v.ProductCode === 'lp')?.LatestVersion;
+        if (!lp) return true;
+        const res = await fetch(`${BASE}/d2l/api/lp/${lp}/users/whoami`, { credentials: 'include', signal: AbortSignal.timeout(15_000) });
+        return res.ok && !SIGN_IN.test(res.url);
+      } catch {
+        return true; // offline or a hiccup: don't end the run on a guess
+      }
+    },
+
+    async windowState(windowId) {
+      try {
+        const win = await browser.windows.get(windowId, { populate: true });
+        if ((win.tabs?.length ?? 0) > 1) return 'open';
+        // A change from how DueBoard opened it means the student took it over: un-minimized it or clicked into it.
+        // Where the system couldn't minimize or unfocus it in the first place, nothing changes and visits go on.
+        const was = opened.get(windowId);
+        if (!was) {
+          // First check of our own window: remember how the system shows it (some can't minimize or unfocus it).
+          if (ours.has(windowId)) opened.set(windowId, { state: win.state, focused: win.focused });
+          return 'minimized'; // ours, or left from an earlier run: a single tab is DueBoard's
+        }
+        if (was.state === 'minimized' && win.state !== 'minimized') return 'open';
+        if (was.focused === false && win.focused) return 'open';
+        return 'minimized';
+      } catch {
+        return 'gone';
       }
     },
 
@@ -122,12 +168,14 @@ export function createBrowserVisitApi(): VisitApi {
     },
 
     async closeWindow(windowId) {
-      setVisitTab(null);
+      opened.delete(windowId);
+      ours.delete(windowId);
+      if (windowId !== undefined && visitTab !== null) setVisitTab(null);
       await browser.windows.remove(windowId);
     },
 
     async remember(windowId) {
-      await patchVisitState({ windowId: windowId ?? undefined });
+      await setVisitWindow(windowId);
     },
   };
 }

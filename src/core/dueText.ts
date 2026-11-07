@@ -10,6 +10,8 @@ export interface DueMatch {
   dueAt: string;
   /** The matched label and date, at most 120 characters. */
   text: string;
+  /** Whether a time was written (else 11:59 PM was assumed). */
+  hasTime: boolean;
 }
 export interface FoundDate {
   iso: string;
@@ -148,7 +150,7 @@ export function findDueMatches(text: string, now: Date): DueMatch[] {
       const found = findDate(window, now);
       if (!found || found.index > MAX_GAP || BREAK.test(window.slice(0, found.index))) continue;
       const raw = text.slice(m.index, after + found.index + found.length).replace(/\s+/g, ' ').trim();
-      out.push({ label, dueAt: found.iso, text: raw.length > 120 ? `${raw.slice(0, 119)}…` : raw, at: m.index });
+      out.push({ label, dueAt: found.iso, text: raw.length > 120 ? `${raw.slice(0, 119)}…` : raw, hasTime: found.hasTime, at: m.index });
     }
   }
   return out.sort((a, b) => a.at - b.at).map(({ at: _at, ...rest }) => rest);
@@ -157,4 +159,17 @@ export function findDueMatches(text: string, now: Date): DueMatch[] {
 /** The first "Due …" date in `text` (1.0 Wiley behavior). */
 export function parseDueText(text: string, now: Date): string | null {
   return findDueMatches(text, now).find((m) => m.label === 'due')?.dueAt ?? null;
+}
+
+/**
+ * The one due date a set of matches agrees on, or null when they name different days (a list) or different times on
+ * one day. A date written once with its time and once without is the same date: the one with the time wins.
+ */
+export function agreedDue(matches: DueMatch[]): DueMatch | null {
+  if (matches.length === 0) return null;
+  const days = new Set(matches.map((m) => new Date(m.dueAt).toDateString()));
+  if (days.size > 1) return null;
+  const timed = matches.filter((m) => m.hasTime);
+  if (new Set(timed.map((m) => m.dueAt)).size > 1) return null;
+  return timed[0] ?? matches[0]!;
 }

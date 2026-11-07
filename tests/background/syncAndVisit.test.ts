@@ -99,7 +99,7 @@ describe('syncAndVisit: one run at a time', () => {
     });
     const { d } = deps(withHomework(), [], { visit });
     const a = syncAndVisit(d, 'auto');
-    const b = syncAndVisit(d, 'manual');
+    const b = syncAndVisit(d, 'auto');
     await new Promise((r) => setTimeout(r, 10));
     release();
     await Promise.all([a, b]);
@@ -112,5 +112,57 @@ describe('syncAndVisit: one run at a time', () => {
     await syncAndVisit(d, 'auto');
     await syncAndVisit(d, 'auto');
     expect(d.sync).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('startSync', () => {
+  it('answers with the sync report before the platform visits finish', async () => {
+    const { startSync } = await import('../../src/background/syncFlow');
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const visit = vi.fn(async () => {
+      await gate;
+      return [] as VisitOutcome[];
+    });
+    const { d } = deps(withHomework(), [], { visit });
+    const run = startSync(d, 'manual');
+    await expect(run.report).resolves.toEqual({ brightspace: 'ok', gradescope: 'ok' });
+    expect(visit).toHaveBeenCalledTimes(1);
+    release();
+    await run.done;
+  });
+
+  it('a visit run that crashes does not break the sync', async () => {
+    const { d } = deps(withHomework(), [], { visit: vi.fn(async () => Promise.reject(new Error('openWindow failed'))) });
+    await expect(syncAndVisit(d, 'auto')).resolves.toEqual({ brightspace: 'ok', gradescope: 'ok' });
+  });
+
+  it('a Refresh that joins an automatic run gets its own manual pass afterwards', async () => {
+    const { startSync } = await import('../../src/background/syncFlow');
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const visit = vi.fn(async () => {
+      await gate;
+      return [] as VisitOutcome[];
+    });
+    const { d } = deps(withHomework(), [], { visit });
+    const auto = startSync(d, 'auto');
+    await auto.report;
+    startSync(d, 'manual');
+    release();
+    await auto.done;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(d.sync).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Pearson session retries', () => {
+  it('counts a failure when Pearson is still signed out after the session visit', async () => {
+    const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
+    const { d, saved } = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], { resyncPearson: vi.fn(async () => ({ pearson: 'not_logged_in' as const })) });
+    await syncAndVisit(d, 'auto');
+    const last = saved.at(-1) as Pick<StoreShape, 'visitState'>;
+    expect(last.visitState.pearsonSession).toEqual({ at: now.toISOString(), failures: 1 });
   });
 });

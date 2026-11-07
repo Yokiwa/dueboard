@@ -6,7 +6,9 @@ const YEAR = 365 * 86_400_000;
  * Background-side check of a due date sent by the Wiley content script: it must come from a Wiley page and look
  * sane. Anything else is dropped, so other pages can't plant fake deadlines.
  */
-export function acceptCapture(msg: Record<string, unknown>, senderUrl: string | undefined, now: Date): CapturedDue | null {
+export function acceptCapture(msg: Record<string, unknown>, senderUrl: string | undefined, now: Date, opts: { fromVisit?: boolean } = {}): CapturedDue | null {
+  // In DueBoard's own visit window the visit records the result per item; a title capture could leak to other courses.
+  if (opts.fromVisit) return null;
   let host = '';
   try {
     host = new URL(senderUrl ?? '').hostname;

@@ -71,3 +71,12 @@ describe('acceptCapture (background check of content-script messages)', () => {
     expect(acceptCapture(msg, url as string | undefined, now)).toBeNull();
   });
 });
+
+describe('acceptCapture ignores the visit window', () => {
+  it('a page DueBoard opened itself is recorded by the visit, not as a title capture', () => {
+    const now = new Date('2026-11-07T12:00:00-05:00');
+    const ok = { type: 'captureDue', platform: 'wiley', title: 'HW 1', dueAt: '2026-11-10T04:59:00.000Z' };
+    expect(acceptCapture(ok, 'https://education.wiley.com/x', now, { fromVisit: true })).toBeNull();
+    expect(acceptCapture(ok, 'https://education.wiley.com/x', now, { fromVisit: false })).not.toBeNull();
+  });
+});

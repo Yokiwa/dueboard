@@ -209,8 +209,9 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
  */
 function fillFromCaptured(m: Item, captured: StoreShape['captured'] | undefined): void {
   if (!captured) return;
-  const keys = [...m.sourceKeys, `title:${normalizeTitle(m.title)}`];
-  const c = keys.map((k) => captured[k]).find((x) => x?.dueAt);
+  // An item with its own visit record uses only that; a title match could be another course's homework.
+  const own = m.sourceKeys.map((k) => captured[k]).filter((x) => x !== undefined);
+  const c = own.length ? own.find((x) => x.dueAt) : captured[`title:${normalizeTitle(m.title)}`];
   if (!c?.dueAt) return;
   m.dueAt = c.dueAt;
   m.dueFrom = 'platform';

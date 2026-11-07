@@ -32,6 +32,8 @@ function migrateVisitState(v: unknown): VisitState {
   };
   if (typeof r.windowId === 'number') out.windowId = r.windowId;
   if (typeof r.lastRun === 'string') out.lastRun = r.lastRun;
+  const ps = obj(r.pearsonSession);
+  if (typeof ps.at === 'string' && typeof ps.failures === 'number') out.pearsonSession = { at: ps.at, failures: ps.failures };
   return out;
 }
 
@@ -220,4 +222,17 @@ export async function getVisitProgress(): Promise<VisitProgress | null> {
 export async function hideSuggestion(key: string): Promise<void> {
   const { userState } = await loadStore();
   await patchStore({ userState: { ...userState, syllabusHidden: { ...userState.syllabusHidden, [key]: true } } });
+}
+
+/**
+ * The open visit window's id. Kept in session storage, which the browser clears on restart, so an id from an earlier
+ * browser session (window ids are reused) can never point at one of the student's own windows.
+ */
+const sessionArea = () => (browser.storage as unknown as { session?: typeof browser.storage.local }).session ?? browser.storage.local;
+export async function setVisitWindow(id: number | null): Promise<void> {
+  await sessionArea().set({ visitWindowId: id });
+}
+export async function getVisitWindow(): Promise<number | undefined> {
+  const r = (await sessionArea().get('visitWindowId')) as { visitWindowId?: number | null };
+  return typeof r.visitWindowId === 'number' ? r.visitWindowId : undefined;
 }

@@ -153,6 +153,8 @@ export interface VisitState {
   needsPermission: string[];
   /** Permission asks the student postponed: platform id or host → ISO time until which not to ask. */
   snoozed: Record<string, string>;
+  /** Last attempt to restore the Pearson session through Brightspace, and how many in a row did not help. */
+  pearsonSession?: { at: string; failures: number };
 }
 export interface SyncMeta {
   lastSuccess?: string;

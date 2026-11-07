@@ -1,4 +1,4 @@
-import { findDueMatches, type DueLabel, type DueMatch } from '../../core/dueText';
+import { agreedDue, findDueMatches, type DueLabel, type DueMatch } from '../../core/dueText';
 import { compactBlocks, pageLines, pageTitle } from './lines';
 import type { FoundDue } from './types';
 
@@ -14,8 +14,8 @@ export function findDueUniversal(doc: Document, now: Date): FoundDue | null {
   for (const label of STRENGTH) {
     const these = matches.filter((m) => m.label === label);
     if (these.length === 0) continue;
-    if (new Set(these.map((m) => m.dueAt)).size > 1) return null;
-    return { title: pageTitle(doc), dueAt: these[0]!.dueAt, evidence: these[0]!.text };
+    const pick = agreedDue(these);
+    return pick ? { title: pageTitle(doc), dueAt: pick.dueAt, evidence: pick.text } : null;
   }
   return null;
 }

@@ -16,8 +16,15 @@ export function applyOutcomes(
   const needsPermission = [...store.visitState.needsPermission];
   const byKey = new Map(targets.map((t) => [t.key, t]));
 
+  let pearsonSession = store.visitState.pearsonSession;
   for (const o of outcomes) {
     const target = byKey.get(o.key);
+    if (target?.mode === 'session') {
+      // Landing is not yet success (the re-read of Pearson decides that); anything else is a failed attempt.
+      const failures = (pearsonSession?.failures ?? 0) + (o.status === 'landed' ? 0 : 1);
+      pearsonSession = { at, failures };
+      continue;
+    }
     if (target?.mode === 'syllabus') {
       const ou = o.key.slice('syllabus:'.length);
       const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: null };
@@ -47,6 +54,7 @@ export function applyOutcomes(
         break;
       case 'failed':
         captured[o.key] = { ...base, failures: (prev?.failures ?? 0) + 1 };
+        delete captured[o.key]!.blocked;
         break;
       case 'needs_permission':
         captured[o.key] = { ...base, platform: platformOf(o.host), blocked: o.host };
@@ -56,5 +64,7 @@ export function applyOutcomes(
         break;
     }
   }
-  return { captured, syllabus, visitState: { ...store.visitState, needsPermission, lastRun: at } };
+  const visitState = { ...store.visitState, needsPermission, lastRun: at };
+  if (pearsonSession) visitState.pearsonSession = pearsonSession;
+  return { captured, syllabus, visitState };
 }

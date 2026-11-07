@@ -60,11 +60,13 @@ const launchPage = (target) =>
     args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
   });
   const hits = { aleks: 0, norton: 0, unknown: 0 };
+  let signedOut = false; // the session expires when the Worksheet 9 link is opened
   const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   const html = (body) => ({ status: 200, contentType: 'text/html', body });
 
   await ctx.route(`${B}/**`, (r) => {
     const u = r.request().url();
+    if (u.includes('/users/whoami')) return signedOut ? r.fulfill({ status: 401, body: '' }) : r.fulfill(json({ Identifier: '1', FirstName: 'Test' }));
     if (u.endsWith('/d2l/api/versions/')) return r.fulfill(json([{ ProductCode: 'lp', LatestVersion: '1.47' }, { ProductCode: 'le', LatestVersion: '1.80' }]));
     if (u.includes('myenrollments'))
       return r.fulfill(json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 102, Name: 'MA 26100 Multivariate Calculus', Code: 'MA-26100' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] }));
@@ -76,7 +78,10 @@ const launchPage = (target) =>
     if (u.includes('rcode=A1')) return r.fulfill(html(launchPage('https://www.aleks.com/hw7')));
     if (u.includes('rcode=N1')) return r.fulfill(html(launchPage('https://digital.wwnorton.com/inq5')));
     if (u.includes('rcode=U1')) return r.fulfill(html(launchPage('https://example-unknown.com/a3')));
-    if (u.includes('rcode=L1')) return r.fulfill({ status: 302, headers: { location: `${B}/d2l/login?target=x` } });
+    if (u.includes('rcode=L1')) {
+      signedOut = true;
+      return r.fulfill({ status: 302, headers: { location: `${B}/d2l/login?target=x` } });
+    }
     if (u.includes('/d2l/login')) return r.fulfill(html('<h1>Purdue sign in</h1>'));
     if (u.includes('/d2l/home/102')) return r.fulfill(html('<nav><a href="/d2l/le/content/102/Home">Content</a></nav>'));
     return r.fulfill({ status: 404, body: '' });
@@ -102,21 +107,36 @@ const launchPage = (target) =>
   await page.goto(`chrome-extension://${id}/dashboard.html`);
   const windowsBefore = await page.evaluate(async () => (await chrome.windows.getAll()).length);
 
+  // The sync answers once sources are read; visits go on until the visit window is gone and progress is cleared.
+  const lastRun = () => page.evaluate(async () => (await chrome.storage.local.get('visitState')).visitState?.lastRun ?? null);
+  const syncAndWait = async () => {
+    const before = await lastRun();
+    await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'manual' }));
+    // A run records lastRun when it finishes; with nothing to visit there is no run, so stop waiting after 2 min.
+    for (let waited = 0; waited < 120000 && (await lastRun()) === before; waited += 500) await page.waitForTimeout(500);
+    // A Refresh that joined an automatic run gets its own pass afterwards: wait until no visit window for 3 s.
+    const windowOpen = () => page.evaluate(async () => (await chrome.storage.session.get('visitWindowId')).visitWindowId != null);
+    for (let quiet = 0, waited = 0; quiet < 3000 && waited < 120000; waited += 500) {
+      quiet = (await windowOpen()) ? 0 : quiet + 500;
+      await page.waitForTimeout(500);
+    }
+  };
   console.log('e2e visits: first sync (manual)');
-  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'manual' }));
+  await syncAndWait();
   const s = await page.evaluate(() => chrome.storage.local.get(['captured', 'visitState', 'syllabus']));
   const expected = await page.evaluate(() => new Date(2026, 10, 20, 23, 59).toISOString()); // the browser's local time
 
+  if (process.env.E2E_DEBUG) console.log(JSON.stringify(await page.evaluate(() => chrome.storage.local.get(['visitState', 'syncMeta', 'captured', 'visitProgress', 'settings']))));
   const hw7 = s.captured?.['brightspace:topic:1'];
   check(hw7?.dueAt === expected && hw7?.platform === 'aleks', `ALEKS homework read (${hw7?.dueAt}, ${hw7?.platform})`);
   const inq = s.captured?.["brightspace:topic:2"];
-  if (process.env.E2E_DEBUG) console.log(JSON.stringify(s, null, 1));
   check(inq?.dueAt === '2026-11-22T04:59:00.000Z' && inq?.platform === 'norton', `late-rendering InQuizitive page read (${inq?.dueAt})`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');
   check(s.visitState?.needsPermission?.includes('example-unknown.com'), 'access request recorded for example-unknown.com');
   check(!s.captured?.['brightspace:topic:4'], 'run stopped at the sign-in page without recording a failure');
-  check(s.visitState?.windowId === undefined, 'no visit window remembered as open');
+  const remembered = await page.evaluate(async () => (await chrome.storage.session.get('visitWindowId')).visitWindowId);
+  check(remembered === null || remembered === undefined, 'no visit window remembered as open');
   const windowsAfter = await page.evaluate(async () => (await chrome.windows.getAll()).length);
   check(windowsAfter === windowsBefore, `visit window closed (${windowsBefore} → ${windowsAfter} windows)`);
   const rows = s.syllabus?.['102']?.rows ?? [];
@@ -132,9 +152,10 @@ const launchPage = (target) =>
   check(true, 'syllabus suggestion listed under "From syllabus"');
   if (process.env.E2E_SCREENSHOT) await page.screenshot({ path: process.env.E2E_SCREENSHOT, fullPage: true });
 
-  console.log('e2e visits: second sync within the hour');
+  console.log('e2e visits: second sync within the hour (signed back in)');
+  signedOut = false;
   const before = { ...hits };
-  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'manual' }));
+  await syncAndWait();
   check(hits.aleks === before.aleks && hits.norton === before.norton, 'no platform page opened again');
 
   await ctx.close();

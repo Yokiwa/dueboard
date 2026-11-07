@@ -73,3 +73,11 @@ describe('applyOutcomes: syllabus visits', () => {
     expect(r.visitState.needsPermission).toEqual(['purdue.simplesyllabus.com']);
   });
 });
+
+describe('applyOutcomes: blocked items once allowed', () => {
+  it('a failed visit after access was granted clears the block, so normal backoff applies', () => {
+    const r = run([{ key: 'brightspace:topic:1', status: 'failed', reason: 'timeout' }], { 'brightspace:topic:1': prev({ blocked: 'learn.example.com' }) });
+    expect(r.captured['brightspace:topic:1']!.blocked).toBeUndefined();
+    expect(r.captured['brightspace:topic:1']!.failures).toBe(1);
+  });
+});

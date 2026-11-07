@@ -563,6 +563,17 @@ describe('dates read on platform visits', () => {
     expect(buildDashboard(i, now).items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!.dueAt).toBeNull();
   });
 
+  it("an item visited without finding a date never borrows another course's date by title", () => {
+    const i = twoCourses();
+    i.captured = {
+      'brightspace:topic:2': { itemKey: 'brightspace:topic:2', title: 'HW 1', dueAt: null, platform: 'wileyplus', via: 'visit', checkedAt: 'x', misses: 1 },
+      'title:hw1': { title: 'HW 1', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
+    };
+    const d = buildDashboard(i, now);
+    expect(d.items.find((x) => x.sourceKeys.includes('brightspace:topic:2'))!.dueAt).toBeNull();
+    expect(d.items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!.dueAt).toBe('2026-11-10T04:59:00.000Z');
+  });
+
   it('names an unknown platform by its host', () => {
     const i = twoCourses();
     i.captured = { 'brightspace:topic:1': { itemKey: 'brightspace:topic:1', title: 'HW 1', dueAt: '2026-11-10T04:59:00.000Z', platform: 'learn.example.com', via: 'visit', evidence: 'Due Nov 9', checkedAt: 'x' } };

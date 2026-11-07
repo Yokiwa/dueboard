@@ -24,13 +24,15 @@ export interface VisitTarget {
 export type VisitOutcome =
   | { key: string; status: 'found'; found: FoundDue; host: string }
   | { key: string; status: 'none'; host: string }
-  | { key: string; status: 'failed'; reason: 'timeout' | 'closed' }
+  | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' }
   | { key: string; status: 'needs_permission'; host: string }
   | { key: string; status: 'text'; lines: string[]; host: string }
   | { key: string; status: 'landed'; host: string }
   | { key: string; status: 'signed_out' };
 
 const H = 3_600_000;
+/** Opening these could start a timed or proctored attempt; they are never opened automatically. */
+const NEVER_OPEN = /\b(quiz(?:zes)?|exams?|midterms?|tests?)\b/i;
 export const MAX_VISITS = 25;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
@@ -40,14 +42,18 @@ function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted
   if (c.dueAt && Date.parse(c.dueAt) < now) return null;
   const age = now - Date.parse(c.checkedAt);
   const stamp = Date.parse(c.checkedAt) || 0;
+  if ((c.failures ?? 0) >= 3) return trigger === 'manual' && age > H ? 1 + stamp : null;
   if ((c.failures ?? 0) >= 1) return age > 6 * H ? 1 + stamp : null;
   if (c.dueAt) return age > 24 * H ? 1 + stamp : null;
   if ((c.misses ?? 0) < 3) return age > 24 * H ? 1 + stamp : null;
   return trigger === 'manual' && age > H ? 1 + stamp : null;
 }
 
-/** The Brightspace launch to reopen when Pearson's session expired. */
-function pearsonSession(store: StoreShape): VisitTarget | null {
+/** The Brightspace launch to reopen when Pearson's session expired: at most every 6 h; after 3 failures, on Refresh only. */
+function pearsonSession(store: StoreShape, now: Date, trigger: Trigger): VisitTarget | null {
+  const last = store.visitState.pearsonSession;
+  if (last && now.getTime() - Date.parse(last.at) < 6 * H) return null;
+  if (last && last.failures >= 3 && trigger !== 'manual') return null;
   const meta = store.syncMeta.pearson;
   const err = meta?.lastError;
   if (err?.reason !== 'not_logged_in') return null;
@@ -79,6 +85,7 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
     const key = item.sourceKeys.find((k) => k.startsWith('brightspace:topic:') && raw.get(k)?.launchUrl);
     if (!key) continue;
     const r = raw.get(key)!;
+    if (NEVER_OPEN.test(r.title)) continue;
     const platform = platformByTitle(r.title);
     if (platform && (platform.reader === 'fetch' || platform.reader === 'none')) continue;
     // A known platform is visited only with access to its sites; an unknown one is visited to learn its site.
@@ -99,6 +106,6 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       return t;
     });
   const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
-  const session = pearsonSession(store);
+  const session = pearsonSession(store, now, trigger);
   return session ? [session, ...out] : out;
 }

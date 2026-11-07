@@ -10,11 +10,15 @@ const found = (n: number): VisitMessage => ({ type: 'visitFound', found: { title
 interface Script {
   landings?: Landing[];
   messages?: (VisitMessage | 'timeout')[];
-  hosts?: (string | null)[];
+  hosts?: (string | null | 'signed_out')[];
   granted?: string[];
   injectThrows?: boolean;
+  navigateThrows?: boolean;
   closeThrows?: boolean;
   tick?: number;
+  /** Window state reported before each visit, in order (default: minimized). */
+  states?: ('minimized' | 'open' | 'gone')[];
+  signedIn?: boolean;
 }
 function fakeApi(s: Script) {
   const calls: string[] = [];
@@ -30,9 +34,12 @@ function fakeApi(s: Script) {
     navigate: async (_tab, url) => {
       calls.push(`navigate ${url}`);
       clock += s.tick ?? 0;
+      if (s.navigateThrows) throw new Error('No tab with id: 5');
     },
     waitForLanding: async () => landings.shift() ?? 'timeout',
-    launchHost: async () => (hosts.length ? hosts.shift()! : null),
+    launchHost: async () => (hosts.length ? hosts.shift()! : 'www.aleks.com'),
+    signedIn: async () => s.signedIn ?? true,
+    windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
     granted: async () => s.granted ?? ['https://*/*'],
     inject: async (_tab, mode, platform) => {
       calls.push(`inject ${mode}${platform ? ` ${platform}` : ''}`);
@@ -121,14 +128,66 @@ describe('runVisits', () => {
     ]);
   });
 
-  it('the student closing the window ends the run quietly', async () => {
+  it('the student closing the window ends the run quietly, without blaming any item', async () => {
     const f = fakeApi({ landings: ['closed'], closeThrows: true });
     const out = await runVisits([target(1), target(2)], f.api);
-    expect(out).toEqual([
-      { key: 'brightspace:topic:1', status: 'failed', reason: 'closed' },
-      { key: 'brightspace:topic:2', status: 'failed', reason: 'closed' },
-    ]);
+    expect(out).toEqual([]);
     expect(f.calls.at(-1)).toBe('remember null');
+  });
+
+  it('a window closed between visits stops the run and keeps what was read', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/a')], messages: [found(1)], states: ['minimized', 'gone'] });
+    const out = await runVisits([target(1), target(2)], f.api);
+    expect(out.map((o) => o.status)).toEqual(['found']);
+  });
+
+  it('a window the student un-minimized stops the run and is left open for them', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/a')], messages: [found(1)], states: ['minimized', 'open'] });
+    const out = await runVisits([target(1), target(2)], f.api);
+    expect(out.map((o) => o.status)).toEqual(['found']);
+    expect(f.calls.some((c) => c.startsWith('close'))).toBe(false);
+    expect(f.calls.at(-1)).toBe('remember null');
+  });
+
+  it('an error on one page fails that item and the run goes on', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/a'), at('https://www.aleks.com/b')], messages: [found(2)], injectThrows: false });
+    let n = 0;
+    const inject = f.api.inject;
+    f.api.inject = async (...a) => {
+      if (n++ === 0) throw new Error('Frame 0 is showing error page');
+      return inject(...a);
+    };
+    const out = await runVisits([target(1), target(2)], f.api);
+    expect(out).toEqual([
+      { key: 'brightspace:topic:1', status: 'failed', reason: 'error' },
+      { key: 'brightspace:topic:2', status: 'found', host: 'www.aleks.com', found: (found(2) as { found: unknown }).found },
+    ]);
+    expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
+  });
+
+  it('stops when the launch page shows Brightspace signed out (session expired mid-run)', async () => {
+    const f = fakeApi({ hosts: ['www.aleks.com', 'signed_out'], landings: [at('https://www.aleks.com/a')], messages: [found(1)] });
+    const out = await runVisits([target(1), target(2), target(3)], f.api);
+    expect(out.map((o) => o.status)).toEqual(['found', 'signed_out']);
+  });
+
+  it('a page that never loads while Brightspace is signed out stops the run', async () => {
+    const f = fakeApi({ landings: ['timeout'], signedIn: false });
+    const out = await runVisits([target(1), target(2)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'signed_out' }]);
+  });
+
+  it('never opens a launch whose site is unknown and not a known platform', async () => {
+    const f = fakeApi({ hosts: [null] });
+    const out = await runVisits([target(1)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'unknown' }]);
+    expect(f.calls.some((c) => c.startsWith('navigate'))).toBe(false);
+  });
+
+  it('opens a launch whose site could not be read when its platform is known and allowed', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://www.aleks.com/a')], messages: [found(1)] });
+    const out = await runVisits([{ ...target(1), platform: 'aleks' }], f.api);
+    expect(out.map((o) => o.status)).toEqual(['found']);
   });
 
   it('stops when the time budget runs out, and closes the window', async () => {
@@ -138,14 +197,20 @@ describe('runVisits', () => {
     expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
   });
 
-  it('closes the window even when a step throws, then rethrows', async () => {
-    const f = fakeApi({ landings: [at('https://www.aleks.com/a')], injectThrows: true });
-    await expect(runVisits([target(1)], f.api)).rejects.toThrow('boom');
+  it('closes the window even when navigation throws', async () => {
+    const f = fakeApi({ navigateThrows: true });
+    const out = await runVisits([target(1)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'error' }]);
     expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
   });
 });
 
 describe('closeLeftover', () => {
+  it('leaves a window alone that the student opened to use (only a minimized visit window is closed)', async () => {
+    const f = fakeApi({ states: ['open'] });
+    await closeLeftover(42, f.api);
+    expect(f.calls).toEqual(['remember null']);
+  });
   it('closes a window left over from an earlier run', async () => {
     const f = fakeApi({ closeThrows: true });
     await closeLeftover(42, f.api);
