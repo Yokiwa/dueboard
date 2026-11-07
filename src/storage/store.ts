@@ -1,14 +1,61 @@
 import { browser } from 'wxt/browser';
 import { normalizeTitle } from '../core/courseCode';
-import type { CapturedDue, CourseLink, ManualItem, SourceId, Snapshot, StoreShape } from '../core/types';
+import { DEFAULT_SETTINGS, type CapturedDue, type CourseLink, type ManualItem, type Settings, type SourceId, type Snapshot, type StoreShape, type VisitState } from '../core/types';
 
-const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured'] as const;
+const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured', 'visitState'] as const;
 
 function obj(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 }
 function arr<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : [];
+}
+
+/** The storage key of a captured date: its item, else its normalized title. */
+export function capturedKey(c: Pick<CapturedDue, 'itemKey' | 'title'>): string {
+  return c.itemKey ?? `title:${normalizeTitle(c.title)}`;
+}
+
+function migrateSettings(v: unknown): Settings {
+  const r = obj(v);
+  return {
+    visits: r.visits === 'auto' || r.visits === 'manual' || r.visits === 'off' ? r.visits : DEFAULT_SETTINGS.visits,
+    syllabus: typeof r.syllabus === 'boolean' ? r.syllabus : DEFAULT_SETTINGS.syllabus,
+  };
+}
+
+function migrateVisitState(v: unknown): VisitState {
+  const r = obj(v);
+  const out: VisitState = {
+    needsPermission: arr<unknown>(r.needsPermission).filter((h): h is string => typeof h === 'string'),
+    snoozed: obj(r.snoozed) as Record<string, string>,
+  };
+  if (typeof r.windowId === 'number') out.windowId = r.windowId;
+  if (typeof r.lastRun === 'string') out.lastRun = r.lastRun;
+  return out;
+}
+
+/** 1.0 stored page captures by bare normalized title with `capturedAt`; 1.1 keys by item or "title:". */
+function migrateCaptured(v: unknown): StoreShape['captured'] {
+  const out: StoreShape['captured'] = {};
+  for (const [key, raw] of Object.entries(obj(v))) {
+    const c = obj(raw);
+    if (typeof c.title !== 'string') continue;
+    if (c.via === 'visit' || c.via === 'opened') {
+      out[key] = c as unknown as CapturedDue;
+      continue;
+    }
+    if (typeof c.dueAt !== 'string') continue;
+    const entry: CapturedDue = {
+      title: c.title,
+      dueAt: c.dueAt,
+      platform: c.platform === 'wiley' ? 'wileyplus' : String(c.platform ?? 'wileyplus'),
+      via: 'opened',
+      checkedAt: typeof c.capturedAt === 'string' ? c.capturedAt : new Date(0).toISOString(),
+    };
+    out[capturedKey(entry)] = entry;
+  }
+  return out;
 }
 
 /** Turns whatever is in storage (possibly old or partial) into a complete StoreShape. */
@@ -27,9 +74,10 @@ export function migrate(raw: unknown): StoreShape {
       shown: obj(us.shown) as Record<string, true>,
       merges: obj(us.merges) as Record<string, string>,
     },
-    settings: {},
+    settings: migrateSettings(r.settings),
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
-    captured: obj(r.captured) as StoreShape['captured'],
+    captured: migrateCaptured(r.captured),
+    visitState: migrateVisitState(r.visitState),
   };
 }
 
@@ -133,7 +181,22 @@ export async function setMerge(gradescopeKey: string, target: string | null): Pr
   await patchStore({ userState: { ...userState, merges: next } });
 }
 
-export async function saveCapturedDue(c: CapturedDue): Promise<void> {
+export async function saveCaptured(entries: CapturedDue[]): Promise<void> {
+  if (entries.length === 0) return;
   const { captured } = await loadStore();
-  await patchStore({ captured: { ...captured, [normalizeTitle(c.title)]: c } });
+  const next = { ...captured };
+  for (const c of entries) next[capturedKey(c)] = c;
+  await patchStore({ captured: next });
+}
+
+export async function saveSettings(patch: Partial<Settings>): Promise<void> {
+  const { settings } = await loadStore();
+  await patchStore({ settings: { ...settings, ...patch } });
+}
+
+export async function patchVisitState(patch: Partial<VisitState>): Promise<void> {
+  const { visitState } = await loadStore();
+  const next: VisitState = { ...visitState, ...patch };
+  for (const k of Object.keys(patch) as (keyof VisitState)[]) if (patch[k] === undefined) delete next[k];
+  await patchStore({ visitState: next });
 }

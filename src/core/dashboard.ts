@@ -1,3 +1,4 @@
+import { platformById } from './platformRegistry';
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
 import { classifyLink } from './links';
 import type {
@@ -202,6 +203,22 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
   return courses.flatMap((c) => perCourse.get(c.id) ?? []);
 }
 
+/**
+ * An undated item takes a date read on a platform page: first the one stored for one of its own source keys (a
+ * visit), then one stored under its title (a page the student opened). Items with any other date keep it.
+ */
+function fillFromCaptured(m: Item, captured: StoreShape['captured'] | undefined): void {
+  if (!captured) return;
+  const keys = [...m.sourceKeys, `title:${normalizeTitle(m.title)}`];
+  const c = keys.map((k) => captured[k]).find((x) => x?.dueAt);
+  if (!c?.dueAt) return;
+  m.dueAt = c.dueAt;
+  m.dueFrom = 'platform';
+  const label = platformById(c.platform)?.label ?? c.platform;
+  if (c.evidence) m.dueEvidence = `Read from ${label}: '${c.evidence}'`;
+  else m.dueEvidence = `Read from ${label}`;
+}
+
 /** Combines per-platform snapshots, manual entries and user state into what the UI shows. Pure. */
 export function buildDashboard(input: DashboardInput, now: Date, opts: { includeHidden?: boolean } = {}): Dashboard {
   const { all, alias, gsUrl, pearsonLaunch } = buildCourses(input);
@@ -226,7 +243,7 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   }
   for (const m of merged) {
     m.id = m.sourceKeys[0]!;
-    if (!m.dueAt) m.dueAt = input.captured?.[normalizeTitle(m.title)]?.dueAt ?? null;
+    if (!m.dueAt) fillFromCaptured(m, input.captured);
     // A MyLab session expires; the Brightspace launch link always gets the student back in.
     const launch = m.sources.includes('pearson') ? pearsonLaunch.get(m.courseId) : undefined;
     if (launch) m.url = launch;

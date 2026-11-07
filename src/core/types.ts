@@ -12,6 +12,9 @@ export interface RawCourse {
   name: string;
   code: string | null;
   url: string;
+  /** Brightspace term dates (Access.StartDate / EndDate), when known. */
+  start?: string | null;
+  end?: string | null;
 }
 export interface RawItem {
   source: SourceId;
@@ -22,6 +25,8 @@ export interface RawItem {
   dueAt: string | null;
   url: string;
   submitted: boolean;
+  /** Absolute Brightspace launch URL (a content topic's Url), used to visit the platform. */
+  launchUrl?: string;
 }
 export interface RawLink {
   source: 'brightspace';
@@ -71,6 +76,10 @@ export interface Item {
   sourceKeys: string[];
   submitted: boolean;
   doneByUser: boolean;
+  /** Set only when a platform page (visit or page capture) supplied the date. */
+  dueFrom?: 'platform';
+  /** "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'" */
+  dueEvidence?: string;
 }
 export interface CourseLink {
   courseId: string;
@@ -95,18 +104,44 @@ export interface UserState {
   /** "gradescope:<id>" → Course.id of the Brightspace course it should merge into */
   merges: Record<string, string>;
 }
-/** User preferences (none yet besides per-course choices in UserState). */
-export type Settings = Record<string, never>;
+export type VisitMode = 'auto' | 'manual' | 'off';
+export interface Settings {
+  /** When to read platforms in a minimized window. */
+  visits: VisitMode;
+  /** Show dates found in syllabi as suggestions. */
+  syllabus: boolean;
+}
+export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true };
+export interface VisitState {
+  /** The minimized window of a run in progress, so a restart can close it. */
+  windowId?: number;
+  lastRun?: string;
+  /** Landing hosts DueBoard has no permission for (unknown platforms). */
+  needsPermission: string[];
+  /** Permission asks the student postponed: platform id or host → ISO time until which not to ask. */
+  snoozed: Record<string, string>;
+}
 export interface SyncMeta {
   lastSuccess?: string;
   lastError?: { at: string; reason: string; detail?: string };
 }
-/** A due date read from a platform page the student opened (e.g. a WileyPLUS assignment). */
+/** A due date read on a platform page: by a visit, or when the student opened the page. */
 export interface CapturedDue {
+  /** "brightspace:topic:123" — set by visits. */
+  itemKey?: string;
+  /** The page heading; matched by title when there is no item key (1.0 behavior). */
   title: string;
-  dueAt: string;
-  platform: 'wiley';
-  capturedAt: string;
+  /** null: visited, nothing found. */
+  dueAt: string | null;
+  /** Registry id, or the landing host for unknown platforms. */
+  platform: string;
+  via: 'visit' | 'opened';
+  evidence?: string;
+  checkedAt: string;
+  /** Visits in a row that found no date. */
+  misses?: number;
+  /** Visits in a row that failed (timeout, window closed). */
+  failures?: number;
 }
 
 export interface StoreShape {
@@ -117,6 +152,7 @@ export interface StoreShape {
   userState: UserState;
   settings: Settings;
   syncMeta: Partial<Record<SourceId, SyncMeta>>;
-  /** keyed by normalizeTitle(title) */
+  /** Keyed by itemKey, else "title:" + normalizeTitle(title). */
   captured: Record<string, CapturedDue>;
+  visitState: VisitState;
 }

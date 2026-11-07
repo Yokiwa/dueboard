@@ -17,5 +17,5 @@ export function acceptCapture(msg: Record<string, unknown>, senderUrl: string | 
   const title = typeof msg.title === 'string' ? msg.title.trim() : '';
   const due = typeof msg.dueAt === 'string' ? Date.parse(msg.dueAt) : NaN;
   if (!title || title.length > 300 || Number.isNaN(due) || Math.abs(due - now.getTime()) > YEAR) return null;
-  return { title, dueAt: new Date(due).toISOString(), platform: 'wiley', capturedAt: now.toISOString() };
+  return { title, dueAt: new Date(due).toISOString(), platform: 'wileyplus', via: 'opened', checkedAt: now.toISOString() };
 }

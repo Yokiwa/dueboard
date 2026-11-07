@@ -3,7 +3,7 @@ import { handleInstalled } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
-import { loadStore, saveCapturedDue } from '../storage/store';
+import { loadStore, saveCaptured } from '../storage/store';
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { offscreenParser, offscreenParsePearson } from '../sync/offscreenParser';
@@ -52,7 +52,7 @@ export default defineBackground(() => {
     collectFixtures: () => collectFixtures(),
     captureDue: async (msg, sender) => {
       const c = acceptCapture(msg, sender?.url, new Date());
-      if (c) await saveCapturedDue(c);
+      if (c) await saveCaptured([c]);
       return Boolean(c);
     },
   });

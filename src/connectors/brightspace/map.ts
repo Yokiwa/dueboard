@@ -21,6 +21,8 @@ export function toCourse(e: Enrollment, base: string): RawCourse {
     name: e.OrgUnit.Name,
     code: extractCourseCode(e.OrgUnit.Name) ?? (e.OrgUnit.Code ? extractCourseCode(e.OrgUnit.Code.replace(/-/g, ' ')) : null),
     url: `${base}/d2l/home/${id}`,
+    start: e.Access.StartDate,
+    end: e.Access.EndDate,
   };
 }
 
@@ -147,6 +149,7 @@ export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
         dueAt: t.DueDate ?? t.EndDateTime ?? null,
         url: `${base}/d2l/le/content/${ou}/viewContent/${t.TopicId}/View`,
         submitted: false,
+        launchUrl: new URL(t.Url, base).href,
       });
     }
     for (const child of m.Modules ?? []) walk(child, workHere);

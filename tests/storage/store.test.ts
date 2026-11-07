@@ -12,12 +12,14 @@ import {
   onStoreChange,
   addManualItem,
   setCourseVisible,
-  saveCapturedDue,
+  saveCaptured,
+  saveSettings,
+  patchVisitState,
   removeManualItem,
   addManualLink,
   removeManualLink,
 } from '../../src/storage/store';
-import type { Snapshot } from '../../src/core/types';
+import { DEFAULT_SETTINGS, type Snapshot } from '../../src/core/types';
 
 const snap = (syncedAt: string): Snapshot => ({ syncedAt, courses: [], items: [], links: [], partial: [] });
 
@@ -27,7 +29,8 @@ describe('store', () => {
   it('loadStore on empty storage returns defaults', async () => {
     const s = await loadStore();
     expect(s.schemaVersion).toBe(1);
-    expect(s.settings).toEqual({});
+    expect(s.settings).toEqual(DEFAULT_SETTINGS);
+    expect(s.visitState).toEqual({ needsPermission: [], snoozed: {} });
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
@@ -71,13 +74,15 @@ describe('store', () => {
   it('migrate fills missing keys from partial data', () => {
     const m = migrate({ settings: { language: 'zh', newtabMode: 'blank' }, userState: { done: { 'x:1': true } } });
     expect(m.schemaVersion).toBe(1);
-    expect(m.settings).toEqual({}); // old language setting is dropped
+    expect(m.settings).toEqual(DEFAULT_SETTINGS); // old language setting is dropped
     expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, shown: {}, merges: {} });
     expect(m.snapshots).toEqual({});
   });
 
   it('migrate tolerates garbage', () => {
-    expect(migrate(null).settings).toEqual({});
+    expect(migrate(null).settings).toEqual(DEFAULT_SETTINGS);
+    expect(migrate({ settings: { visits: 'sometimes', syllabus: 'yes' } }).settings).toEqual(DEFAULT_SETTINGS);
+    expect(migrate({ visitState: { needsPermission: 'x', snoozed: [] } }).visitState).toEqual({ needsPermission: [], snoozed: {} });
     expect(migrate('x').manualItems).toEqual([]);
   });
 
@@ -118,9 +123,43 @@ describe('store', () => {
     expect((await loadStore()).userState).toMatchObject({ hidden: { 'brightspace:51': true }, shown: {} });
   });
 
-  it('saveCapturedDue keys by normalized title and overwrites with the newest', async () => {
-    await saveCapturedDue({ title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: 'a' });
-    await saveCapturedDue({ title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-11T04:59:00.000Z', platform: 'wiley', capturedAt: 'b' });
-    expect((await loadStore()).captured).toEqual({ phys172hhw11fa26: { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-11T04:59:00.000Z', platform: 'wiley', capturedAt: 'b' } });
+  it('migrate keeps valid settings', () => {
+    expect(migrate({ settings: { visits: 'manual', syllabus: false } }).settings).toEqual({ visits: 'manual', syllabus: false });
+  });
+
+  it('migrate moves 1.0 page captures to title keys', () => {
+    const m = migrate({
+      captured: { phys172hhw11fa26: { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: 'b' } },
+    });
+    expect(m.captured).toEqual({
+      'title:phys172hhw11fa26': { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'b' },
+    });
+  });
+
+  it('migrate keeps 1.1 captures as they are', () => {
+    const c = { itemKey: 'brightspace:topic:1', title: 'HW 1', dueAt: null, platform: 'aleks', via: 'visit', checkedAt: 'a', misses: 1 };
+    expect(migrate({ captured: { 'brightspace:topic:1': c } }).captured).toEqual({ 'brightspace:topic:1': c });
+  });
+
+  it('saveCaptured keys by item, else by normalized title, and overwrites with the newest', async () => {
+    await saveCaptured([
+      { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'a' },
+      { itemKey: 'brightspace:topic:9', title: 'Homework 7', dueAt: '2026-11-11T04:59:00.000Z', platform: 'aleks', via: 'visit', checkedAt: 'a' },
+    ]);
+    await saveCaptured([{ title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-11T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'b' }]);
+    const { captured } = await loadStore();
+    expect(Object.keys(captured).sort()).toEqual(['brightspace:topic:9', 'title:phys172hhw11fa26']);
+    expect(captured['title:phys172hhw11fa26']!.checkedAt).toBe('b');
+  });
+
+  it('saveSettings merges into the current settings', async () => {
+    await saveSettings({ visits: 'off' });
+    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true });
+  });
+
+  it('patchVisitState merges into the current visit state', async () => {
+    await patchVisitState({ windowId: 7 });
+    await patchVisitState({ needsPermission: ['learn.example.com'] });
+    expect((await loadStore()).visitState).toEqual({ windowId: 7, needsPermission: ['learn.example.com'], snoozed: {} });
   });
 });

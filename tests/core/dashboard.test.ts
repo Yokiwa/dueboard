@@ -514,12 +514,59 @@ describe('dates captured on platform pages', () => {
       },
     });
     i.captured = {
-      'phys172hhw11fa26': { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: 'x' },
-      'phys172hhw10fa26': { title: 'PHYS 172H - HW10 - FA26', dueAt: '2026-12-01T04:59:00.000Z', platform: 'wiley', capturedAt: 'x' },
+      'title:phys172hhw11fa26': { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
+      'title:phys172hhw10fa26': { title: 'PHYS 172H - HW10 - FA26', dueAt: '2026-12-01T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
     };
     const d = buildDashboard(i, now);
     expect(d.items.find((x) => x.title === 'PHYS 172H - HW11 - FA26')!.dueAt).toBe('2026-11-10T04:59:00.000Z');
     expect(d.items.find((x) => x.title === 'PHYS 172H - HW10 - FA26')!.dueAt).toBe(iso('2026-11-03T23:59:00-05:00'));
+  });
+});
+
+describe('dates read on platform visits', () => {
+  const twoCourses = () =>
+    input({
+      snapshots: {
+        brightspace: snap([bsCourse('1', 'MA 16100', 'MA 16100'), bsCourse('2', 'CHM 11500', 'CHM 11500')], [
+          item({ source: 'brightspace', sourceItemId: 'topic:1', sourceCourseId: '1', title: 'HW 1', dueAt: null }),
+          item({ source: 'brightspace', sourceItemId: 'topic:2', sourceCourseId: '2', title: 'HW 1', dueAt: null }),
+          item({ source: 'brightspace', sourceItemId: 'topic:3', sourceCourseId: '2', title: 'HW 2', dueAt: iso('2026-11-05T23:59:00-05:00') }),
+        ]),
+      },
+    });
+
+  it('visited dates are matched by item key, not title', () => {
+    const i = twoCourses();
+    i.captured = {
+      'brightspace:topic:1': { itemKey: 'brightspace:topic:1', title: 'Homework 1', dueAt: '2026-11-10T04:59:00.000Z', platform: 'aleks', via: 'visit', evidence: 'Due: 11/9/2026 11:59 PM', checkedAt: 'x' },
+    };
+    const d = buildDashboard(i, now);
+    const a = d.items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!;
+    const b = d.items.find((x) => x.sourceKeys.includes('brightspace:topic:2'))!;
+    expect(a).toMatchObject({ dueAt: '2026-11-10T04:59:00.000Z', dueFrom: 'platform', dueEvidence: "Read from ALEKS: 'Due: 11/9/2026 11:59 PM'" });
+    expect(b.dueAt).toBeNull();
+    expect(b.dueFrom).toBeUndefined();
+  });
+
+  it('a Brightspace date wins over a visited one', () => {
+    const i = twoCourses();
+    i.captured = { 'brightspace:topic:3': { itemKey: 'brightspace:topic:3', title: 'HW 2', dueAt: '2026-12-01T04:59:00.000Z', platform: 'aleks', via: 'visit', checkedAt: 'x' } };
+    const d = buildDashboard(i, now);
+    const it2 = d.items.find((x) => x.sourceKeys.includes('brightspace:topic:3'))!;
+    expect(it2.dueAt).toBe(iso('2026-11-05T23:59:00-05:00'));
+    expect(it2.dueFrom).toBeUndefined();
+  });
+
+  it('a visit that found no date leaves the item undated', () => {
+    const i = twoCourses();
+    i.captured = { 'brightspace:topic:1': { itemKey: 'brightspace:topic:1', title: 'HW 1', dueAt: null, platform: 'aleks', via: 'visit', checkedAt: 'x', misses: 1 } };
+    expect(buildDashboard(i, now).items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!.dueAt).toBeNull();
+  });
+
+  it('names an unknown platform by its host', () => {
+    const i = twoCourses();
+    i.captured = { 'brightspace:topic:1': { itemKey: 'brightspace:topic:1', title: 'HW 1', dueAt: '2026-11-10T04:59:00.000Z', platform: 'learn.example.com', via: 'visit', evidence: 'Due Nov 9', checkedAt: 'x' } };
+    expect(buildDashboard(i, now).items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!.dueEvidence).toBe("Read from learn.example.com: 'Due Nov 9'");
   });
 });
 

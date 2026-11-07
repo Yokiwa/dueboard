@@ -44,8 +44,8 @@ describe('brightspace connector', () => {
     expect(calls.some((c) => c.includes('bookmark=BM1'))).toBe(true);
     if (!result.ok) throw new Error('expected ok');
     expect(result.courses).toEqual([
-      { source: 'brightspace', sourceCourseId: '101', name: 'CS 18000-LEC Fall 2026', code: 'CS 18000', url: `${B}/d2l/home/101` },
-      { source: 'brightspace', sourceCourseId: '102', name: 'MA 26100 Multivariate Calculus', code: 'MA 26100', url: `${B}/d2l/home/102` },
+      { source: 'brightspace', sourceCourseId: '101', name: 'CS 18000-LEC Fall 2026', code: 'CS 18000', url: `${B}/d2l/home/101`, start: '2026-08-20T04:00:00.000Z', end: '2026-12-20T04:59:00.000Z' },
+      { source: 'brightspace', sourceCourseId: '102', name: 'MA 26100 Multivariate Calculus', code: 'MA 26100', url: `${B}/d2l/home/102`, start: null, end: null },
     ]);
     expect(result.partial).toEqual([]);
   });
@@ -301,6 +301,7 @@ describe('homework launches in course content become items', () => {
     expect(topics.find((i) => i.sourceItemId === 'topic:501')).toEqual({
       source: 'brightspace', sourceItemId: 'topic:501', sourceCourseId: '102', title: 'PHYS 172H - HW11 - FA26',
       type: 'assignment', dueAt: null, url: `${B}/d2l/le/content/102/viewContent/501/View`, submitted: false,
+      launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rCode=ABC-130`,
     });
     expect(topics.find((i) => i.sourceItemId === 'topic:502')!.dueAt).toBe('2026-11-04T04:59:00.000Z');
   });

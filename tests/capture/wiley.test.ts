@@ -57,7 +57,7 @@ describe('acceptCapture (background check of content-script messages)', () => {
   const ok = { type: 'captureDue', platform: 'wiley', title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z' };
   it('accepts a well-formed message from a Wiley page', () => {
     expect(acceptCapture(ok, 'https://education.wiley.com/was/ui/v2/assessment-player/index.html?launchId=x', now)).toEqual({
-      title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: now.toISOString(),
+      title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: now.toISOString(),
     });
   });
   it.each([
