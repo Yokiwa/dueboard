@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { CheckCircle } from '@phosphor-icons/react';
 import type { Item } from '../../core/types';
 import { toggleDone } from '../../storage/store';
 import { useT } from '../i18n';
@@ -39,10 +40,15 @@ export function DoneToastProvider({ children }: { children: ReactNode }) {
       {last && (
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-4 rounded-xl bg-db-ink px-4 py-3 text-sm text-db-on-ink shadow-lg"
+          className="db-rise fixed bottom-6 left-1/2 z-50 flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-3 rounded-xl bg-db-ink py-2 pr-2 pl-4 body-6 text-db-on-ink shadow-lg"
         >
+          <CheckCircle aria-hidden="true" size={18} weight="fill" className="shrink-0" />
           <span className="truncate">{t('toast.done', { title: last.title })}</span>
-          <button type="button" onClick={undo} className="min-h-9 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent px-2 font-semibold text-db-on-ink underline">
+          <button
+            type="button"
+            onClick={undo}
+            className="db-press min-h-9 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent px-3 button-sm text-db-on-ink underline underline-offset-4 hover:opacity-70"
+          >
             {t('toast.undo')}
           </button>
         </div>

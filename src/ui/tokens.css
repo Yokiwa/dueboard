@@ -1,39 +1,239 @@
 @import 'tailwindcss';
 
-/* DueBoard design tokens. Components use these via Tailwind classes (bg-db-surface, text-db-muted…), never raw hex values. */
+/*
+ * DueBoard design tokens. Components use these via Tailwind classes (bg-db-surface, text-db-muted…), never raw hex values.
+ * Light values live in @theme; dark values override the same variables under prefers-color-scheme, so every
+ * utility (which reads var(--color-db-*)) follows the system theme with no per-component dark: classes.
+ */
 @theme {
-  --font-sans: 'Inter Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-sans: 'Geist Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
 
-  --color-db-bg: #f7f8fa;
+  /* Base curve: weighted, decelerating into place. */
+  --ease-db: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Surfaces */
+  --color-db-bg: #f4f4f2;
   --color-db-surface: #ffffff;
-  --color-db-subtle: #f9fafb;
-  --color-db-border: #e5e7eb;
-  --color-db-border-soft: #f0f1f3;
-  --color-db-track: #eceef2;
-  --color-db-text: #111827;
-  --color-db-text-2: #374151;
-  --color-db-muted: #4b5563;
-  --color-db-faint: #6b7280;
+  --color-db-subtle: #f8f8f7;
+  --color-db-raised: #ffffff;
+  --color-db-glass: rgb(255 255 255 / 0.72);
+  --color-db-border: #e4e4e0;
+  --color-db-border-soft: #eeeeeb;
+  --color-db-track: #ebebe8;
+  --color-db-hover: #f1f1ee;
+
+  /* Text */
+  --color-db-text: #141413;
+  --color-db-text-2: #33332f;
+  --color-db-muted: #57574f;
+  --color-db-faint: #74746b;
+
+  /* Brand and controls */
   --color-db-accent: #2563eb;
-  --color-db-ink: #111827;
+  --color-db-accent-soft: #e8efff;
+  --color-db-ink: #141413;
+  --color-db-ink-hover: #2c2c29;
   --color-db-on-ink: #ffffff;
+  --color-db-on-accent: #ffffff;
+  --color-db-ring: #2563eb;
+  --color-db-ok: #1f8a4c;
 
-  --color-db-urgent-bg: #fee2e2;
-  --color-db-urgent-fg: #b91c1c;
-  --color-db-soon-bg: #fef3c7;
-  --color-db-soon-fg: #92400e;
-  --color-db-normal-bg: #f3f4f6;
-  --color-db-normal-fg: #374151;
+  /* Hero heading text gradient (the one place a gradient is allowed: on text). */
+  --color-db-hero-from: #000000;
+  --color-db-hero-to: #666666;
 
-  --color-db-banner-bg: #fff8eb;
-  --color-db-banner-border: #f3d9a4;
-  --color-db-banner-label: #92400e;
-  --color-db-banner-sub: #6b5a3a;
-  --color-db-countdown: #b45309;
+  /* Urgency */
+  --color-db-urgent-bg: #fde8e6;
+  --color-db-urgent-fg: #b4231a;
+  --color-db-soon-bg: #fdf0d5;
+  --color-db-soon-fg: #8a4b06;
+  --color-db-normal-bg: #efefec;
+  --color-db-normal-fg: #3d3d38;
 
-  --color-db-alert-bg: #fef2f2;
-  --color-db-alert-border: #fecaca;
+  /* Next deadline card */
+  --color-db-banner-bg: #ffffff;
+  --color-db-banner-border: #e4e4e0;
+  --color-db-banner-label: #b4231a;
+  --color-db-banner-sub: #57574f;
+  --color-db-countdown: #b4231a;
+
+  /* Alerts */
+  --color-db-alert-bg: #fdf1f0;
+  --color-db-alert-border: #f6cdc9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-db-bg: #131209;
+    --color-db-surface: #1f1f1f;
+    --color-db-subtle: #272727;
+    --color-db-raised: #272727;
+    --color-db-glass: rgb(24 24 24 / 0.72);
+    --color-db-border: #313131;
+    --color-db-border-soft: #272727;
+    --color-db-track: #181818;
+    --color-db-hover: #313131;
+
+    --color-db-text: #f4f4f2;
+    --color-db-text-2: #dadad6;
+    --color-db-muted: #b0b0a8;
+    --color-db-faint: #8e8e86;
+
+    --color-db-accent: #7ba2ff;
+    --color-db-accent-soft: #1d2a4a;
+    --color-db-ink: #f4f4f2;
+    --color-db-ink-hover: #dadad6;
+    --color-db-on-ink: #141413;
+    --color-db-on-accent: #0b1430;
+    --color-db-ring: #7ba2ff;
+    --color-db-ok: #5fd08f;
+
+    --color-db-hero-from: #ffffff;
+    --color-db-hero-to: #9b9b9b;
+
+    --color-db-urgent-bg: #3b1b18;
+    --color-db-urgent-fg: #ff9b91;
+    --color-db-soon-bg: #382a12;
+    --color-db-soon-fg: #f5c46b;
+    --color-db-normal-bg: #313131;
+    --color-db-normal-fg: #dadad6;
+
+    --color-db-banner-bg: #1f1f1f;
+    --color-db-banner-border: #313131;
+    --color-db-banner-label: #ff9b91;
+    --color-db-banner-sub: #b0b0a8;
+    --color-db-countdown: #ff9b91;
+
+    --color-db-alert-bg: #2a1716;
+    --color-db-alert-border: #4a2622;
+    color-scheme: dark;
+  }
+}
+
+/* Text styles. Every text element uses one of these instead of a loose size and weight. */
+@utility heading-3 {
+  font-size: var(--text-4xl);
+  line-height: var(--text-4xl--line-height);
+  font-weight: 600;
+}
+@utility heading-4 {
+  font-size: var(--text-3xl);
+  line-height: var(--text-3xl--line-height);
+  font-weight: 600;
+}
+@utility heading-5 {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 600;
+}
+@utility heading-6 {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 600;
+}
+@utility title-2 {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 500;
+}
+@utility title-3 {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-weight: 500;
+}
+@utility title-4 {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 500;
+}
+@utility title-5 {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+}
+@utility body-3 {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-weight: 400;
+}
+@utility body-4 {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 600;
+}
+@utility body-5 {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 500;
+}
+@utility body-6 {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+@utility button-sm {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 600;
+}
+@utility button-xsm {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+}
+@utility caption-2 {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+@utility caption-3 {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+}
+@utility caption-4 {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+}
+@utility caption-5 {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 400;
+}
+
+/* Hero heading: left to right gradient on the text only. */
+@utility hero-text {
+  background-image: linear-gradient(to right, var(--color-db-hero-from), var(--color-db-hero-to));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Interactive base: color and opacity shifts on the base curve, a press, and a visible focus ring. */
+@utility db-press {
+  transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: var(--ease-db);
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+@utility db-rise {
+  animation: db-rise 600ms var(--ease-db) both;
+}
+
+@keyframes db-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 html,
@@ -42,4 +242,50 @@ body {
   color: var(--color-db-text);
   font-family: var(--font-sans);
   margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-db-ring);
+  outline-offset: 2px;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--color-db-accent);
+}
+
+::selection {
+  background: var(--color-db-accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+  .db-rise {
+    animation-name: db-fade !important;
+  }
+}
+
+@keyframes db-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

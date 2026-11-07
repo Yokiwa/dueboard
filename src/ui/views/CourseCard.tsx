@@ -4,6 +4,7 @@ import { useT } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
 import { toggleDone } from '../../storage/store';
+import { CaretRight, WarningCircle } from '@phosphor-icons/react';
 
 const SHOWN = 3;
 
@@ -27,41 +28,49 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
   // Lecture videos etc. found in course content only appear in the detail view; the card keeps platform shortcuts.
   const shortcuts = links.filter((l) => l.category !== 'website' || l.source === 'manual');
   return (
-    <article aria-label={course.code} className="flex flex-col gap-3.5 rounded-[14px] border border-db-border bg-db-surface p-5">
+    <article aria-label={course.code} className="db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm transition-shadow duration-300 ease-db hover:shadow-md">
       <button
         type="button"
         onClick={onOpen}
         aria-label={t('course.open', { code: course.code })}
-        className="flex cursor-pointer flex-col gap-1 border-0 bg-transparent p-0 text-left"
+        className="db-press group -m-2 flex cursor-pointer items-start justify-between gap-3 rounded-lg border-0 bg-transparent p-2 text-left hover:bg-db-hover"
       >
+        <span className="flex min-w-0 flex-col gap-1">
         {name ? (
           <>
             <span className="flex items-center gap-2">
-              <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
-              <span className="text-[13px] font-semibold tracking-[0.02em] text-db-muted">{course.code}</span>
+              <span data-testid="course-dot" className="size-2 rounded-full" style={{ background: course.color }} aria-hidden="true" />
+              <span className="caption-3 tracking-wide text-db-muted">{course.code}</span>
             </span>
-            <span className="text-lg font-semibold text-db-text">{name}</span>
+            <span className="title-2 text-db-text">{name}</span>
           </>
         ) : (
           <span className="flex items-center gap-2">
-            <span data-testid="course-dot" className="size-2.5 rounded-full" style={{ background: course.color }} aria-hidden="true" />
-            <span className="text-lg font-semibold text-db-text">{course.code}</span>
+            <span data-testid="course-dot" className="size-2 rounded-full" style={{ background: course.color }} aria-hidden="true" />
+            <span className="title-2 text-db-text">{course.code}</span>
           </span>
         )}
+        </span>
+        <CaretRight
+          aria-hidden="true"
+          size={16}
+          weight="bold"
+          className="mt-1 shrink-0 text-db-faint transition-transform duration-300 ease-db group-hover:translate-x-0.5 group-hover:text-db-text"
+        />
       </button>
 
       <div className="flex grow flex-col">
         {shown.length > 0 ? (
           <ul className="m-0 list-none p-0">
             {shown.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 border-t border-db-border-soft py-2.5">
+              <li key={i.id} className="flex items-center gap-3 border-t border-db-border-soft py-3">
                 <input
                   type="checkbox"
                   aria-label={t('done.mark', { title: i.title })}
                   checked={i.doneByUser || i.submitted}
                   disabled={i.submitted}
                   onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
-                  className="size-[18px] shrink-0 cursor-pointer accent-db-accent"
+                  className="size-4 shrink-0 cursor-pointer"
                 />
                 <div className="min-w-0 grow">
                   <ItemRow item={i} now={now} />
@@ -70,14 +79,19 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
             ))}
           </ul>
         ) : (
-          <p className="m-0 border-t border-db-border-soft py-[18px] text-sm text-db-faint">{t('course.empty')}</p>
+          <p className="m-0 border-t border-db-border-soft py-4 body-6 text-db-faint">{t('course.empty')}</p>
         )}
         {relevant.length > SHOWN && (
-          <button type="button" onClick={onOpen} className="cursor-pointer self-start border-0 bg-transparent p-0 pt-1 text-[13px] font-medium text-db-accent">
+          <button type="button" onClick={onOpen} className="db-press mt-1 cursor-pointer self-start rounded-sm border-0 bg-transparent p-0 body-5 text-db-accent hover:underline hover:underline-offset-4">
             {t('course.more', { n: relevant.length - SHOWN })}
           </button>
         )}
-        {course.partial && <p className="m-0 pt-2 text-xs text-db-soon-fg">{t('course.partial')}</p>}
+        {course.partial && (
+          <p className="m-0 flex items-center gap-1 pt-2 caption-4 text-db-soon-fg">
+            <WarningCircle aria-hidden="true" size={14} weight="fill" className="shrink-0" />
+            {t('course.partial')}
+          </p>
+        )}
       </div>
 
       {shortcuts.length > 0 && (

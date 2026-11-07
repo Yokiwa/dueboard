@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { linksBundle, scrubPage } from '../../diagnostics/pageExport';
 import type { StoreShape } from '../../core/types';
 import { captureActivePage, downloadText } from '../devExport';
+import { secondaryBtn as btn } from '../forms';
 import { useT } from '../i18n';
 
-const btn = 'min-h-9 cursor-pointer rounded-lg border border-db-border bg-db-surface px-3 text-xs font-medium text-db-text';
 
 /** Exports for helping the developer support a new platform. Nothing leaves the computer unless the user sends the file. */
 export function DevTools({ store }: { store: StoreShape }) {
@@ -29,8 +29,8 @@ export function DevTools({ store }: { store: StoreShape }) {
   };
 
   return (
-    <details className="rounded-xl border border-db-border bg-db-surface px-3 py-2 text-xs text-db-muted">
-      <summary className="cursor-pointer font-semibold">{t('dev.title')}</summary>
+    <details className="rounded-xl border border-db-border bg-db-surface px-3 py-2 caption-5 text-db-muted">
+      <summary className="db-press cursor-pointer rounded-sm caption-3 hover:text-db-text">{t('dev.title')}</summary>
       <p className="my-2">{t('dev.hint')}</p>
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btn} onClick={exportPage}>
@@ -41,7 +41,7 @@ export function DevTools({ store }: { store: StoreShape }) {
         </button>
       </div>
       {note && (
-        <p role="status" className="mt-2 mb-0 text-db-text">
+        <p role="status" className="mt-2 mb-0 caption-4 text-db-text">
           {note}
         </p>
       )}

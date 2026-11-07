@@ -17,11 +17,11 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
           target="_blank"
           rel="noopener noreferrer"
           data-title
-          className={`truncate text-sm font-medium ${item.doneByUser || item.submitted ? 'text-db-faint line-through' : 'text-db-text no-underline hover:underline'}`}
+          className={`db-press truncate rounded-sm title-4 ${item.doneByUser || item.submitted ? 'text-db-faint line-through' : 'text-db-text no-underline hover:text-db-accent'}`}
         >
           {item.title}
         </a>
-        <span className="text-xs text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
+        <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
       </div>
       <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
     </div>
