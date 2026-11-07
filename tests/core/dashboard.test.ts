@@ -522,3 +522,21 @@ describe('dates captured on platform pages', () => {
     expect(d.items.find((x) => x.title === 'PHYS 172H - HW10 - FA26')!.dueAt).toBe(iso('2026-11-03T23:59:00-05:00'));
   });
 });
+
+describe('course shortcut prefers the Brightspace launch', () => {
+  it('a Gradescope launch in the course content replaces the direct gradescope.com link', () => {
+    const launch = '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=42&type=lti&rcode=G';
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          brightspace: { ...snap([bsCourse('42', 'TDM 10100', 'TDM 10100')]), links: [{ source: 'brightspace', sourceCourseId: '42', title: 'Gradescope', url: launch }] },
+          gradescope: snap([gsCourse('9', 'TDM 101', 'TDM 10100')]),
+        },
+      }),
+      now,
+    );
+    const gs = d.links.filter((l) => l.label === 'Gradescope');
+    expect(gs).toHaveLength(1);
+    expect(gs[0]!.url).toBe(`https://purdue.brightspace.com${launch}`);
+  });
+});

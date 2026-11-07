@@ -50,7 +50,7 @@ export function App() {
           <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh}>
             <StatChips within48={counts.within48} week={counts.week} />
           </Header>
-          <SourceBanners store={store} now={now} launchUrls={{ pearson: dashboard.links.find((l) => l.label === 'Pearson')?.url }} />
+          <SourceBanners store={store} now={now} />
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <ViewBody key={view} view={view} dashboard={dashboard} now={now} />
         </AppShell>

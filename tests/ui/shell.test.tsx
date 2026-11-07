@@ -141,10 +141,10 @@ describe('SourceBanners for Pearson', () => {
   it('asks to reopen Pearson and the button uses the course launch link', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
-    renderIn('en', <SourceBanners store={store} now={now} launchUrls={{ pearson: 'https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti' }} />);
+    renderIn('en', <SourceBanners store={store} now={now} />);
     expect(screen.getByText('Pearson session expired — open it once from Brightspace')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open Pearson' }));
-    expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti', '_blank', 'noopener');
+    expect(open).toHaveBeenCalledWith(`https://purdue.brightspace.com${PEARSON_LINK}`, '_blank', 'noopener');
   });
 });
 
@@ -165,14 +165,28 @@ describe('SourceBanners only for platforms this student uses', () => {
     const { container } = renderIn('en', <SourceBanners store={store} now={now} />);
     expect(container.textContent).toBe('');
   });
-  it('shows it once Brightspace links Gradescope, and signs in through that link', () => {
+  it('shows it once Brightspace links Gradescope, and the button opens Gradescope through Brightspace', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     const store = migrate({
       snapshots: { brightspace: { syncedAt: 'x', partial: [], items: [], courses: [], links: [{ source: 'brightspace', sourceCourseId: '1', title: 'Gradescope', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G' }] } },
       syncMeta: { gradescope: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } },
     });
     renderIn('en', <SourceBanners store={store} now={now} />);
+    expect(screen.getByText('Gradescope session expired — open it once from Brightspace')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Gradescope' }));
+    expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G', '_blank', 'noopener');
+  });
+
+  it('falls back to the platform sign-in page when no course has a Brightspace launch for it', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const store = migrate({
+      snapshots: { gradescope: { syncedAt: 'x', partial: [], items: [], links: [], courses: [{ source: 'gradescope', sourceCourseId: '9', name: 'CS 180', code: 'CS 18000', url: 'u' }] } },
+      syncMeta: { gradescope: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } },
+    });
+    renderIn('en', <SourceBanners store={store} now={now} />);
+    expect(screen.getByText('Gradescope needs you to sign in again')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(open).toHaveBeenCalledWith('https://www.gradescope.com/login', '_blank', 'noopener');
   });
+
 });

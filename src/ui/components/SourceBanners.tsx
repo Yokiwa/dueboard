@@ -1,5 +1,5 @@
 import { ALL_SOURCES, type SourceId, type StoreShape } from '../../core/types';
-import { relevantSources } from '../../core/platforms';
+import { launchLinks, relevantSources } from '../../core/platforms';
 import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
 import { useT } from '../i18n';
@@ -10,13 +10,12 @@ export const LOGIN_URLS: Record<SourceId, string> = {
   gradescope: 'https://www.gradescope.com/login',
   pearson: 'https://purdue.brightspace.com/d2l/home',
 };
-/** Platforms reached through a Brightspace launch: re-opening that launch renews their session. */
-const LAUNCHED: SourceId[] = ['pearson'];
 
 /** One line per platform whose most recent sync attempt failed. */
-export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreShape; now: Date; launchUrls?: Partial<Record<SourceId, string>> }) {
+export function SourceBanners({ store, now }: { store: StoreShape; now: Date }) {
   const t = useT();
   const relevant = relevantSources(store);
+  const launches = launchLinks(store);
   const rows = ALL_SOURCES.filter((src) => relevant.includes(src)).flatMap((src) => {
     const meta = store.syncMeta[src];
     const err = meta?.lastError;
@@ -24,8 +23,10 @@ export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreSha
     if (meta.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return [];
     const name = NAMES[src];
     if (err.reason === 'not_logged_in') {
-      const launched = LAUNCHED.includes(src);
-      const target = (launched && launchUrls[src]) || LOGIN_URLS[src];
+      // Purdue reaches its platforms through Brightspace: re-opening that launch signs the student back in.
+      const launch = src === 'brightspace' ? undefined : launches[src];
+      const launched = Boolean(launch);
+      const target = launch ?? LOGIN_URLS[src];
       return [
         <div key={src} role="alert" className="db-rise flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-alert-border bg-db-alert-bg py-2 pr-2 pl-4">
           <span className="flex items-center gap-2 body-5 text-db-urgent-fg">

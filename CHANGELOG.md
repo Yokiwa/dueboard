@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 — 2026-11
+
+- Sign-in prompts for Gradescope and Pearson now open the platform through your course in Brightspace (the way Purdue courses reach them), falling back to the platform's own sign-in page only when no course links it
+- A course's Gradescope shortcut uses the Gradescope link in its Brightspace content when there is one
+
 ## 1.0.0 — 2026-11
 
 First public release.

@@ -179,9 +179,18 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
     const dup = list.some((x) => x.url === l.url || (l.category !== 'website' && x.category !== 'website' && x.label === l.label));
     if (!dup) list.push(l);
   };
+  // A Gradescope launch in the course's Brightspace content beats the direct gradescope.com page: it signs the student in.
+  const gsLaunch = new Map<string, string>();
+  for (const r of input.snapshots.brightspace?.links ?? []) {
+    const cid = alias.get(courseId('brightspace', r.sourceCourseId));
+    const url = new URL(r.url, 'https://purdue.brightspace.com');
+    if (cid && !gsLaunch.has(cid) && url.origin === 'https://purdue.brightspace.com' && classifyLink(r.title, r.url)?.label === 'Gradescope') {
+      gsLaunch.set(cid, url.href);
+    }
+  }
   for (const c of courses) {
     if (c.sources.brightspace) add({ courseId: c.id, label: 'Brightspace', url: c.url, category: 'lms', source: 'brightspace' });
-    const gs = gsUrl.get(c.id);
+    const gs = gsLaunch.get(c.id) ?? gsUrl.get(c.id);
     if (gs) add({ courseId: c.id, label: 'Gradescope', url: gs, category: 'homework', source: 'brightspace' });
   }
   for (const r of input.snapshots.brightspace?.links ?? []) {

@@ -23,3 +23,21 @@ export function relevantSources(store: StoreShape): SourceId[] {
     (s) => s === 'brightspace' || linked.includes(s) || (store.snapshots[s]?.courses.length ?? 0) > 0,
   );
 }
+
+const BS_BASE = 'https://purdue.brightspace.com';
+
+/**
+ * For each platform, the first course-content link that launches it from Brightspace (absolute URL).
+ * Opening a platform this way signs the student in to it, which is how Purdue courses reach Gradescope,
+ * Pearson and others — so sign-in prompts and shortcuts use it instead of the platform's own login page.
+ */
+export function launchLinks(store: StoreShape): Partial<Record<SourceId, string>> {
+  const out: Partial<Record<SourceId, string>> = {};
+  for (const l of store.snapshots.brightspace?.links ?? []) {
+    const src = LABELS[classifyLink(l.title, l.url)?.label ?? ''];
+    if (!src || out[src]) continue;
+    const url = new URL(l.url, BS_BASE);
+    if (url.origin === BS_BASE) out[src] = url.href;
+  }
+  return out;
+}

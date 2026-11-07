@@ -27,3 +27,23 @@ describe('relevantSources', () => {
     expect(relevantSources(linked)).toEqual(['brightspace', 'pearson']);
   });
 });
+
+import { launchLinks } from '../../src/core/platforms';
+
+describe('launchLinks (how to reach each platform through Brightspace)', () => {
+  it('first Brightspace launch per platform, as an absolute URL; direct platform URLs are not launches', () => {
+    const s = migrate({ snapshots: { brightspace: bs([
+      link('Gradescope (course page)', 'https://www.gradescope.com/courses/9'),
+      link('Gradescope', lti('77')),
+      link('Access Pearson', lti('126')),
+      link('Access Pearson again', lti('127')),
+    ]) } });
+    expect(launchLinks(s)).toEqual({
+      gradescope: `https://purdue.brightspace.com${lti('77')}`,
+      pearson: `https://purdue.brightspace.com${lti('126')}`,
+    });
+  });
+  it('none when Brightspace has no launch for a platform', () => {
+    expect(launchLinks(migrate({ snapshots: { brightspace: bs([link('Gradescope', 'https://www.gradescope.com/courses/9')]) } }))).toEqual({});
+  });
+});
