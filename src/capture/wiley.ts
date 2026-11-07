@@ -1,4 +1,5 @@
 import { parseDueText } from '../core/dueText';
+import { findDueWiley } from '../visits/finders/wiley';
 
 export { parseDueText };
 
@@ -9,14 +10,8 @@ export interface CapturedDue {
 
 /** The assignment title (page heading) and its due date, once both are rendered. */
 export function extractWileyDue(doc: Document, now: Date): CapturedDue | null {
-  const title = doc.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim();
-  if (!title) return null;
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    const dueAt = parseDueText(n.textContent ?? '', now);
-    if (dueAt) return { title, dueAt };
-  }
-  return null;
+  const found = findDueWiley(doc, now);
+  return found ? { title: found.title, dueAt: found.dueAt } : null;
 }
 
 /**
