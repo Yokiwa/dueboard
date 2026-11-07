@@ -44,3 +44,19 @@ describe('offscreen pearson kind', () => {
     expect(r && 'data' in r && (r.data as { items: unknown[] }).items.length).toBe(42);
   });
 });
+
+describe('handleOffscreenSyllabus', () => {
+  it('turns an HTML syllabus into lines', async () => {
+    const { handleOffscreenSyllabus } = await import('../../src/sync/syllabusLines');
+    await expect(handleOffscreenSyllabus({ target: 'offscreen', kind: 'syllabusHtml', html: '<table><tr><td>Oct 14</td><td>Exam 2</td></tr></table>' })).resolves.toEqual({ data: ['Oct 14 | Exam 2'] });
+  });
+  it('turns a PDF syllabus (sent as base64) into lines', async () => {
+    const { handleOffscreenSyllabus } = await import('../../src/sync/syllabusLines');
+    const b64 = readFileSync('tests/fixtures/syllabus/schedule.pdf').toString('base64');
+    await expect(handleOffscreenSyllabus({ target: 'offscreen', kind: 'syllabusPdf', base64: b64 })).resolves.toEqual({ data: ['Course Schedule', 'Oct 14 Exam 2', 'Nov 10 Project proposal due'] });
+  });
+  it('ignores other messages', async () => {
+    const { handleOffscreenSyllabus } = await import('../../src/sync/syllabusLines');
+    expect(handleOffscreenSyllabus({ target: 'offscreen', kind: 'home', html: '' })).toBeUndefined();
+  });
+});

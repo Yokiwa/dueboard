@@ -118,3 +118,18 @@ describe('originAllowed', () => {
     expect(originAllowed([], 'x.com')).toBe(false);
   });
 });
+
+describe('dueVisits: syllabus launches', () => {
+  it('adds a syllabus visit for a course with a Simple Syllabus launch', () => {
+    const s = store([]);
+    s.snapshots.brightspace!.syllabusSources = [{ ou: '1', kind: 'visit', url: 'https://purdue.simplesyllabus.com/doc/1', title: 'Syllabus', modified: null }];
+    expect(dueVisits(s, now, 'auto', ['https://*/*'])).toEqual([
+      { key: 'syllabus:1', title: 'Syllabus', courseId: 'brightspace:1', launchUrl: 'https://purdue.simplesyllabus.com/doc/1', platform: 'simplesyllabus', mode: 'syllabus' },
+    ]);
+  });
+  it('leaves syllabus files to the background reader', () => {
+    const s = store([]);
+    s.snapshots.brightspace!.syllabusSources = [{ ou: '1', kind: 'pdf', url: `${B}/s.pdf`, title: 'Syllabus', modified: null }];
+    expect(dueVisits(s, now, 'auto', ['https://*/*'])).toEqual([]);
+  });
+});

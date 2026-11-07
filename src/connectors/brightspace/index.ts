@@ -1,6 +1,7 @@
 import { AuthError, getJson } from '../http';
 import { createLimiter } from '../limit';
-import type { Connector, ConnectorResult, RawItem, RawLink } from '../../core/types';
+import type { Connector, ConnectorResult, RawItem, RawLink, SyllabusSource } from '../../core/types';
+import { tocSyllabusSources } from '../../syllabus/sources';
 import {
   urls,
   type CalendarEvent,
@@ -61,6 +62,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       const items: RawItem[] = [];
       const links: RawLink[] = [];
       const partial: string[] = [];
+      const syllabusSources: SyllabusSource[] = [];
 
       // Each endpoint fails on its own: a broken content page or one 403 must not hide the course's deadlines.
       const perCourse = ous.map(async (ou) => {
@@ -101,6 +103,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
         quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
         links.push(...tocLinks(toc, ou, base));
         items.push(...tocItems(toc, ou, base));
+        syllabusSources.push(...tocSyllabusSources(toc, ou, base));
         if (failed) partial.push(ou);
       });
 
@@ -122,7 +125,8 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
 
       await Promise.all([...perCourse, calendar]);
       partial.sort();
-      return { ok: true, courses, items, links, partial };
+      syllabusSources.sort((a, b) => a.ou.localeCompare(b.ou));
+      return { ok: true, courses, items, links, partial, syllabusSources };
     } catch (e) {
       if (e instanceof AuthError) return { ok: false, reason: 'not_logged_in', detail: e.message };
       return { ok: false, reason: 'network', detail: String(e) };

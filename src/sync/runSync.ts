@@ -31,7 +31,7 @@ export function runSync(connectors: Connector[], now: () => Date = () => new Dat
         const keep = new Set(r.partial);
         const items = [...r.items, ...(prev?.items ?? []).filter((i) => keep.has(i.sourceCourseId) && !r.items.some((n) => n.sourceItemId === i.sourceItemId))];
         const links = [...r.links, ...(prev?.links ?? []).filter((l) => keep.has(l.sourceCourseId) && !r.links.some((n) => n.url === l.url && n.sourceCourseId === l.sourceCourseId))];
-        await saveSnapshot(id, { syncedAt: at, courses: r.courses, items, links, partial: r.partial });
+        await saveSnapshot(id, { syncedAt: at, courses: r.courses, items, links, partial: r.partial, ...(r.syllabusSources ? { syllabusSources: r.syllabusSources } : {}) });
         await recordSyncSuccess(id, at);
         report[id] = 'ok';
       } else {

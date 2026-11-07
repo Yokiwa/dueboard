@@ -24,7 +24,9 @@ export interface SyncAndVisitDeps {
   sync: () => Promise<SyncReport>;
   granted: () => Promise<string[]>;
   visit: (targets: VisitTarget[]) => Promise<VisitOutcome[]>;
-  save: (patch: Pick<StoreShape, 'captured' | 'visitState'>) => Promise<void>;
+  save: (patch: Partial<StoreShape>) => Promise<void>;
+  /** Reads syllabus files and checks course navigation bars; returns what changed. */
+  syllabus?: (store: StoreShape) => Promise<Pick<StoreShape, 'syllabus' | 'syllabusNav'>>;
   resyncPearson: () => Promise<SyncReport>;
   now: () => Date;
 }
@@ -36,6 +38,14 @@ export interface SyncAndVisitDeps {
 export async function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
   const report = await deps.sync();
   if (report.brightspace === 'not_logged_in') return report;
+  if (deps.syllabus) {
+    const before = await deps.load();
+    const patch = await deps.syllabus(before);
+    if (Object.keys(patch.syllabus).length || Object.keys(patch.syllabusNav).length) {
+      const latest = await deps.load();
+      await deps.save({ syllabus: { ...latest.syllabus, ...patch.syllabus }, syllabusNav: { ...latest.syllabusNav, ...patch.syllabusNav } });
+    }
+  }
   const store = await deps.load();
   const targets = dueVisits(store, deps.now(), trigger, await deps.granted());
   if (targets.length === 0) return report;

@@ -67,3 +67,24 @@ describe('syncAndVisit', () => {
     expect(report.pearson).toBe('ok');
   });
 });
+
+describe('syncAndVisit: syllabus step', () => {
+  it('reads syllabi after the sync and saves what changed', async () => {
+    const calls: string[] = [];
+    const syllabus = vi.fn(async () => {
+      calls.push('syllabus');
+      return { syllabus: { '1': { source: 'u', kind: 'pdf' as const, readAt: now.toISOString(), modified: null, rows: [] } }, syllabusNav: {} };
+    });
+    const { d, saved } = deps(migrate({}), [], { syllabus, sync: vi.fn(async () => (calls.push('sync'), { brightspace: 'ok' as const })) });
+    await syncAndVisit(d, 'auto');
+    expect(calls).toEqual(['sync', 'syllabus']);
+    expect(saved[0]).toEqual({ syllabus: { '1': expect.objectContaining({ source: 'u' }) }, syllabusNav: {} });
+  });
+
+  it('skips the syllabus step while signed out of Brightspace', async () => {
+    const syllabus = vi.fn(async () => ({ syllabus: {}, syllabusNav: {} }));
+    const { d } = deps(migrate({}), [], { syllabus, sync: vi.fn(async () => ({ brightspace: 'not_logged_in' as const })) });
+    await syncAndVisit(d, 'auto');
+    expect(syllabus).not.toHaveBeenCalled();
+  });
+});

@@ -7,6 +7,7 @@ import { loadStore, patchStore, saveCaptured, setVisitProgress } from '../storag
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
+import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
 import { syncAndVisit, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
@@ -42,6 +43,7 @@ const syncNow = (trigger: Trigger = 'auto') =>
         },
         save: (patch) => patchStore(patch),
         resyncPearson: () => runSync([CONNECTORS.pearson()]),
+        syllabus: (store) => refreshSyllabi(store, new Date(), fetch.bind(globalThis), parsers.syllabus),
         now: () => new Date(),
       },
       trigger,
@@ -52,7 +54,11 @@ const syncNow = (trigger: Trigger = 'auto') =>
 /** A visit window a crashed run left open is closed on the next start. */
 const closeOldVisitWindow = async () => closeLeftover((await loadStore()).visitState.windowId, visitApi);
 
-export default defineBackground(() => {
+export default defineBackground({
+  // Firefox's event page can load modules on demand, so pdf.js stays out of it until a syllabus PDF is read.
+  // Chrome's service worker stays a classic script (it has no dynamic imports to split).
+  type: import.meta.env.FIREFOX ? 'module' : undefined,
+  main: () => {
   const ensureAlarm = async () => {
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };
@@ -96,4 +102,5 @@ export default defineBackground(() => {
     pending.then(sendResponse, (e) => sendResponse({ error: String(e) }));
     return true; // keep the channel open for the async answer
   });
+},
 });

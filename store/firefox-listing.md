@@ -48,5 +48,5 @@ https://yokiwa.github.io/dueboard/privacy.html
 
 ## Notes for reviewers
 Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`.
-The two UNSAFE_VAR_ASSIGNMENT warnings are in React DOM's bundled code; DueBoard never writes innerHTML.
+The UNSAFE_VAR_ASSIGNMENT warnings are in bundled React DOM and pdf.js (pdf.worker.min.mjs ships unmodified from pdfjs-dist); DueBoard never writes innerHTML.
 Optional host permission `https://*/*` is requested one site at a time, only after a click on an "Allow" button that names the homework platform found in the student's courses. It lets DueBoard read the due date on that platform's assignment pages.

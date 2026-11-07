@@ -19,3 +19,13 @@ describe('pickParsers', () => {
     expect(p.pearson).toBe(offscreenParsePearson);
   });
 });
+
+describe('pickParsers: syllabus readers', () => {
+  it('reads syllabus HTML in place on Firefox', async () => {
+    expect(await pickParsers(true).syllabus.html('<p>Oct 14 Exam 2</p>')).toEqual(['Oct 14 Exam 2']);
+  });
+  it('sends syllabus files to the offscreen document on Chrome', async () => {
+    const { offscreenSyllabusReaders } = await import('../../src/sync/offscreenParser');
+    expect(pickParsers(false).syllabus).toBe(offscreenSyllabusReaders);
+  });
+});

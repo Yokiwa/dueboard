@@ -1,6 +1,7 @@
 import { buildDashboard } from '../core/dashboard';
+import { syllabusDue } from '../syllabus/sources';
 import { launchLinks } from '../core/platforms';
-import { platformByTitle } from '../core/platformRegistry';
+import { platformByHost, platformByTitle } from '../core/platformRegistry';
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
@@ -89,7 +90,15 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
     ranked.push({ target, rank: n });
   }
   ranked.sort((a, b) => a.rank - b.rank);
-  const out = ranked.slice(0, MAX_VISITS).map((r) => r.target);
+  const syllabi = syllabusDue(store, now)
+    .filter((src) => src.kind === 'visit')
+    .map((src): VisitTarget => {
+      const t: VisitTarget = { key: `syllabus:${src.ou}`, title: src.title, courseId: `brightspace:${src.ou}`, launchUrl: src.url, mode: 'syllabus' };
+      const def = platformByHost(new URL(src.url).hostname);
+      if (def) t.platform = def.id;
+      return t;
+    });
+  const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
   const session = pearsonSession(store);
   return session ? [session, ...out] : out;
 }

@@ -1,16 +1,32 @@
 import { platformByHost } from '../core/platformRegistry';
 import type { CapturedDue, StoreShape } from '../core/types';
+import { courseTerm, syllabusFromLines } from '../syllabus/read';
 import type { VisitOutcome, VisitTarget } from './schedule';
 
 /** Folds a visit run's outcomes into the captured dates and the visit state. Pure. */
-export function applyOutcomes(store: StoreShape, targets: VisitTarget[], outcomes: VisitOutcome[], now: Date): Pick<StoreShape, 'captured' | 'visitState'> {
+export function applyOutcomes(
+  store: StoreShape,
+  targets: VisitTarget[],
+  outcomes: VisitOutcome[],
+  now: Date,
+): Pick<StoreShape, 'captured' | 'visitState' | 'syllabus'> {
   const at = now.toISOString();
   const captured = { ...store.captured };
+  const syllabus = { ...store.syllabus };
   const needsPermission = [...store.visitState.needsPermission];
   const byKey = new Map(targets.map((t) => [t.key, t]));
 
   for (const o of outcomes) {
     const target = byKey.get(o.key);
+    if (target?.mode === 'syllabus') {
+      const ou = o.key.slice('syllabus:'.length);
+      const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: null };
+      const course = store.snapshots.brightspace?.courses.find((c) => c.sourceCourseId === ou) ?? {};
+      if (o.status === 'text') syllabus[ou] = syllabusFromLines(src, o.lines, courseTerm(course, now), now);
+      else if (o.status !== 'signed_out') syllabus[ou] = { ...syllabusFromLines(src, [], courseTerm(course, now), now), rows: store.syllabus[ou]?.rows ?? [] };
+      if (o.status === 'needs_permission' && !needsPermission.includes(o.host)) needsPermission.push(o.host);
+      continue;
+    }
     if (!target || target.mode !== 'due') continue;
     const prev = captured[o.key];
     const base: CapturedDue = prev
@@ -40,5 +56,5 @@ export function applyOutcomes(store: StoreShape, targets: VisitTarget[], outcome
         break;
     }
   }
-  return { captured, visitState: { ...store.visitState, needsPermission, lastRun: at } };
+  return { captured, syllabus, visitState: { ...store.visitState, needsPermission, lastRun: at } };
 }

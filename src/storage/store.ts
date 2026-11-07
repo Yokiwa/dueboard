@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { normalizeTitle } from '../core/courseCode';
 import { DEFAULT_SETTINGS, type CapturedDue, type CourseLink, type ManualItem, type Settings, type SourceId, type Snapshot, type StoreShape, type VisitState } from '../core/types';
 
-const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured', 'visitState'] as const;
+const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured', 'visitState', 'syllabus', 'syllabusNav'] as const;
 
 function obj(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -78,6 +78,8 @@ export function migrate(raw: unknown): StoreShape {
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
     captured: migrateCaptured(r.captured),
     visitState: migrateVisitState(r.visitState),
+    syllabus: obj(r.syllabus) as StoreShape['syllabus'],
+    syllabusNav: obj(r.syllabusNav) as StoreShape['syllabusNav'],
   };
 }
 

@@ -1,8 +1,9 @@
 import { browser } from 'wxt/browser';
 import { domGradescopeParser, GradescopeParseError, type GradescopeParser } from '../connectors/gradescope/parse';
 import { parsePearson, PearsonParseError, type PearsonPage } from '../connectors/pearson/parse';
+import type { LineReaders } from '../syllabus/read';
 
-type OffscreenReply = { data: unknown } | { error: string; errorName: string };
+export type OffscreenReply = { data: unknown } | { error: string; errorName: string };
 
 /** Runs inside the offscreen document, where DOMParser exists. */
 export function handleOffscreenMessage(msg: unknown): OffscreenReply | undefined {
@@ -16,6 +17,13 @@ export function handleOffscreenMessage(msg: unknown): OffscreenReply | undefined
   } catch (e) {
     return { error: (e as Error).message, errorName: (e as Error).name };
   }
+}
+
+function toBase64(bytes: ArrayBuffer): string {
+  const u = new Uint8Array(bytes);
+  let bin = '';
+  for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
+  return btoa(bin);
 }
 
 /** A GradescopeParser for the service worker: forwards HTML to the offscreen document and unwraps the answer. */
@@ -48,7 +56,11 @@ export async function ensureOffscreenDocument(): Promise<void> {
   });
   if (existing.length > 0) return;
   creating ??= browser.offscreen
-    .createDocument({ url, reasons: [browser.offscreen.Reason.DOM_PARSER], justification: 'Parse Gradescope pages into assignments' })
+    .createDocument({
+      url,
+      reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS],
+      justification: 'Parse Gradescope, Pearson and syllabus pages into assignments',
+    })
     .finally(() => {
       creating = null;
     });
@@ -65,3 +77,16 @@ export async function offscreenParsePearson(html: string): Promise<PearsonPage> 
   if ('error' in reply) throw reply.errorName === 'PearsonParseError' ? new PearsonParseError(reply.error) : new Error(reply.error);
   return reply.data as PearsonPage;
 }
+
+async function askOffscreen(msg: Record<string, unknown>): Promise<string[]> {
+  await ensureOffscreenDocument();
+  const reply = (await browser.runtime.sendMessage({ target: 'offscreen', ...msg })) as OffscreenReply | undefined;
+  if (!reply || 'error' in reply) return [];
+  return reply.data as string[];
+}
+
+/** Syllabus readers for Chrome's service worker; files travel to the offscreen document (PDF bytes as base64). */
+export const offscreenSyllabusReaders: LineReaders = {
+  html: (text) => askOffscreen({ kind: 'syllabusHtml', html: text }),
+  pdf: (bytes) => askOffscreen({ kind: 'syllabusPdf', base64: toBase64(bytes) }),
+};

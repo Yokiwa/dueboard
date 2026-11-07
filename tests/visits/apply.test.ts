@@ -57,3 +57,19 @@ describe('applyOutcomes', () => {
     expect(r.visitState.lastRun).toBe(now.toISOString());
   });
 });
+
+describe('applyOutcomes: syllabus visits', () => {
+  const st: VisitTarget = { key: 'syllabus:1', title: 'Syllabus', courseId: 'brightspace:1', launchUrl: 'https://purdue.simplesyllabus.com/doc/1', mode: 'syllabus' };
+  const base = () =>
+    migrate({ snapshots: { brightspace: { syncedAt: 'x', partial: [], items: [], links: [], courses: [{ source: 'brightspace', sourceCourseId: '1', name: 'MA', code: 'MA 16100', url: 'u', start: '2026-08-20T04:00:00.000Z', end: '2026-12-20T04:59:00.000Z' }] } } });
+
+  it('stores rows read from the page', () => {
+    const r = applyOutcomes(base(), [st], [{ key: 'syllabus:1', status: 'text', host: 'purdue.simplesyllabus.com', lines: ['Week 7 | Oct 14 | Exam 2'] }], now);
+    expect(r.syllabus?.['1']).toMatchObject({ source: st.launchUrl, kind: 'visit', readAt: now.toISOString(), rows: [{ title: 'Exam 2' }] });
+  });
+  it('marks a failed or blocked syllabus visit unreadable so it waits a week', () => {
+    const r = applyOutcomes(base(), [st], [{ key: 'syllabus:1', status: 'needs_permission', host: 'purdue.simplesyllabus.com' }], now);
+    expect(r.syllabus?.['1']).toMatchObject({ error: 'unreadable', readAt: now.toISOString() });
+    expect(r.visitState.needsPermission).toEqual(['purdue.simplesyllabus.com']);
+  });
+});

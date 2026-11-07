@@ -1,13 +1,9 @@
 import { normalizeTitle } from '../core/courseCode';
 import { findDate } from '../core/dueText';
 
-export interface SyllabusRow {
-  title: string;
-  dueAt: string;
-  allDay: boolean;
-  /** The source line, at most 120 characters. */
-  excerpt: string;
-}
+import type { SyllabusRow } from '../core/types';
+
+export type { SyllabusRow };
 export interface Term {
   start: Date;
   end: Date;

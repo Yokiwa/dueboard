@@ -37,7 +37,7 @@ export interface RawLink {
 
 export type ConnectorFailureReason = 'not_logged_in' | 'network' | 'parse_error';
 export type ConnectorResult =
-  | { ok: true; courses: RawCourse[]; items: RawItem[]; links: RawLink[]; partial: string[] /* sourceCourseIds that failed */ }
+  | { ok: true; courses: RawCourse[]; items: RawItem[]; links: RawLink[]; partial: string[] /* sourceCourseIds that failed */; syllabusSources?: SyllabusSource[] }
   | { ok: false; reason: ConnectorFailureReason; detail?: string };
 export interface Connector {
   id: SourceId;
@@ -50,6 +50,35 @@ export interface Snapshot {
   items: RawItem[];
   links: RawLink[];
   partial: string[];
+  /** Brightspace only: syllabus files and launches found in course content. */
+  syllabusSources?: SyllabusSource[];
+}
+
+/** A syllabus DueBoard can read for one course: a file in Content, or a launch (Simple Syllabus) read by a visit. */
+export interface SyllabusSource {
+  ou: string;
+  kind: 'pdf' | 'html' | 'visit';
+  url: string;
+  title: string;
+  /** Brightspace LastModifiedDate, when known. */
+  modified: string | null;
+}
+/** One dated row found in a syllabus. */
+export interface SyllabusRow {
+  title: string;
+  dueAt: string;
+  allDay: boolean;
+  /** The source line, at most 120 characters. */
+  excerpt: string;
+}
+export interface CourseSyllabus {
+  /** The source's URL. */
+  source: string;
+  kind: SyllabusSource['kind'];
+  readAt: string;
+  modified: string | null;
+  rows: SyllabusRow[];
+  error?: 'unreadable';
 }
 
 export interface Course {
@@ -159,4 +188,8 @@ export interface StoreShape {
   /** Keyed by itemKey, else "title:" + normalizeTitle(title). */
   captured: Record<string, CapturedDue>;
   visitState: VisitState;
+  /** Syllabus rows read per Brightspace course (ou). */
+  syllabus: Record<string, CourseSyllabus>;
+  /** Weekly check of each course's navigation bar for a "Syllabus" launch (ou → result). */
+  syllabusNav: Record<string, { url: string | null; checkedAt: string }>;
 }

@@ -20,7 +20,7 @@ Check it first:
 npm run lint:firefox
 ```
 
-Expected: `errors 0`. Two `UNSAFE_VAR_ASSIGNMENT` warnings come from React's own library code (its `dangerouslySetInnerHTML` support); DueBoard's code never writes `innerHTML`. You can mention this in the reviewer notes.
+Expected: `errors 0`. The `UNSAFE_VAR_ASSIGNMENT` warnings come from bundled libraries: React (its `dangerouslySetInnerHTML` support) and Mozilla's pdf.js (used to read syllabus PDFs; its worker file ships unmodified). DueBoard's own code never writes `innerHTML`. You can mention this in the reviewer notes.
 
 ## Test it in Firefox before submitting (about 5 minutes)
 
@@ -47,7 +47,7 @@ The build environment can't run Firefox, so do this check once on a real compute
 1. **Submit a New Add-on** → **On this site** (a public listing).
 2. Upload `dueboard-<version>-firefox.zip`. Choose **Firefox** (desktop). Android is optional.
 3. **Source code:** answer **Yes** and upload `dueboard-<version>-sources.zip`. In the notes for reviewers, write:
-   > Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`. The two innerHTML warnings are in React DOM's bundled code; DueBoard never writes innerHTML.
+   > Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`. The innerHTML warnings are in bundled React DOM and pdf.js (pdf.worker.min.mjs ships unmodified from pdfjs-dist); DueBoard never writes innerHTML.
 4. **Listing:** copy each field from `store/firefox-listing.md`. Upload the screenshots in `store/screenshots/`.
 5. **Privacy policy:** https://yokiwa.github.io/dueboard/privacy.html
 6. **Data collection:** DueBoard collects none. The manifest already declares this (`data_collection_permissions: none`).

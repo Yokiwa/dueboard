@@ -345,3 +345,18 @@ describe('wider homework detection in course content', () => {
     ]);
   });
 });
+
+describe('syllabus sources in course content', () => {
+  it('lists syllabus files and launches found in each course', async () => {
+    const toc = { Modules: [{ Title: 'Start Here', Modules: [], Topics: [
+      { TopicId: 9, Title: 'Course Syllabus', Url: '/content/enforced/102-MA/syllabus.pdf', TypeIdentifier: 'File', LastModifiedDate: '2026-08-20T00:00:00.000Z' },
+      { TopicId: 10, Title: 'Lecture 1', Url: '/content/enforced/102-MA/l1.pdf', TypeIdentifier: 'File' },
+    ] }] };
+    const { result } = await run(routes({ [`${LE}/102/content/toc`]: { body: toc } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.syllabusSources).toEqual([
+      { ou: '101', kind: 'pdf', url: `${B}/content/enforced/101-CS18000/syllabus.pdf`, title: 'Syllabus', modified: null },
+      { ou: '102', kind: 'pdf', url: `${B}/content/enforced/102-MA/syllabus.pdf`, title: 'Course Syllabus', modified: '2026-08-20T00:00:00.000Z' },
+    ]);
+  });
+});
