@@ -1,7 +1,22 @@
-import { classifyLink } from './links';
+import { BS_BASE, classifyLink } from './links';
+import { platformByTitle, platformByHost } from './platformRegistry';
 import { ALL_SOURCES, type SourceId, type StoreShape } from './types';
 
-const LABELS: Partial<Record<string, SourceId>> = { Gradescope: 'gradescope', Pearson: 'pearson' };
+/** Registry ids that are DueBoard sources (read by background requests). */
+const SOURCE_IDS: Partial<Record<string, SourceId>> = { gradescope: 'gradescope', pearson: 'pearson' };
+
+/** The source a Brightspace link launches, if it is one DueBoard reads by background requests. */
+function sourceOf(title: string, url: string): SourceId | undefined {
+  if (!classifyLink(title, url)) return undefined;
+  let host = '';
+  try {
+    host = new URL(url, BS_BASE).hostname;
+  } catch {
+    return undefined;
+  }
+  const def = host === new URL(BS_BASE).hostname ? platformByTitle(title) : platformByHost(host);
+  return def ? SOURCE_IDS[def.id] : undefined;
+}
 
 /**
  * Platforms a student's Brightspace courses link to. Brightspace is the one thing every student signs in to,
@@ -10,7 +25,7 @@ const LABELS: Partial<Record<string, SourceId>> = { Gradescope: 'gradescope', Pe
 export function platformsInBrightspace(store: StoreShape): SourceId[] {
   const found = new Set<SourceId>();
   for (const l of store.snapshots.brightspace?.links ?? []) {
-    const src = LABELS[classifyLink(l.title, l.url)?.label ?? ''];
+    const src = sourceOf(l.title, l.url);
     if (src) found.add(src);
   }
   return ALL_SOURCES.filter((s) => found.has(s));
@@ -24,7 +39,6 @@ export function relevantSources(store: StoreShape): SourceId[] {
   );
 }
 
-const BS_BASE = 'https://purdue.brightspace.com';
 
 /**
  * For each platform, the first course-content link that launches it from Brightspace (absolute URL).
@@ -34,7 +48,7 @@ const BS_BASE = 'https://purdue.brightspace.com';
 export function launchLinks(store: StoreShape): Partial<Record<SourceId, string>> {
   const out: Partial<Record<SourceId, string>> = {};
   for (const l of store.snapshots.brightspace?.links ?? []) {
-    const src = LABELS[classifyLink(l.title, l.url)?.label ?? ''];
+    const src = sourceOf(l.title, l.url);
     if (!src || out[src]) continue;
     const url = new URL(l.url, BS_BASE);
     if (url.origin === BS_BASE) out[src] = url.href;
