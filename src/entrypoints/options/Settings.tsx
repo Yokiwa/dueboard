@@ -4,12 +4,15 @@ import { ArrowUpRight, Check } from '@phosphor-icons/react';
 import { BrandMark } from '../../ui/components/BrandMark';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
-import { setCourseColor, setCourseVisible, setMerge } from '../../storage/store';
+import { saveSettings, setCourseColor, setCourseVisible, setMerge } from '../../storage/store';
+import { grantedPlatforms } from '../../core/permissions';
+import { useGranted } from '../../ui/hooks/useGranted';
+import { secondaryBtn } from '../../ui/forms';
 import { FEEDBACK_URL } from '../../ui/config';
 import { field, label } from '../../ui/forms';
 import { useStore } from '../../ui/hooks/useStore';
 import { useT } from '../../ui/i18n';
-import type { StoreShape } from '../../core/types';
+import type { StoreShape, VisitMode } from '../../core/types';
 
 const card = 'db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm';
 const h2 = 'm-0 heading-6';
@@ -96,6 +99,8 @@ function Body({ store }: { store: StoreShape }) {
           })}
         </section>
 
+        <ReadingPlatforms store={store} />
+
         <section className={card}>
           <h2 className={h2}>{t('settings.help')}</h2>
           <div className="flex flex-wrap gap-6">
@@ -115,6 +120,50 @@ function Body({ store }: { store: StoreShape }) {
         </section>
       </main>
     </div>
+  );
+}
+
+function ReadingPlatforms({ store }: { store: StoreShape }) {
+  const t = useT();
+  const id = useId();
+  const granted = useGranted();
+  const platforms = granted ? grantedPlatforms(granted) : [];
+  return (
+    <section className={card}>
+      <h2 className={h2}>{t('settings.reading')}</h2>
+      <p className={hint}>{t('settings.readingHint')}</p>
+      <label className={label} htmlFor={`${id}-visits`}>
+        {t('settings.visits')}
+        <select id={`${id}-visits`} className={field} value={store.settings.visits} onChange={(e) => void saveSettings({ visits: e.target.value as VisitMode })}>
+          <option value="auto">{t('settings.visits.auto')}</option>
+          <option value="manual">{t('settings.visits.manual')}</option>
+          <option value="off">{t('settings.visits.off')}</option>
+        </select>
+      </label>
+      <div className="flex flex-col gap-2">
+        <span className="caption-3 text-db-muted">{t('settings.access')}</span>
+        {platforms.length === 0 && <p className={hint}>{t('settings.noAccess')}</p>}
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {platforms.map((p) => (
+            <li key={p.key} className="flex items-center justify-between gap-3 body-5">
+              {p.label}
+              <button
+                type="button"
+                aria-label={t('settings.remove', { name: p.label })}
+                className={secondaryBtn}
+                onClick={() => void browser.permissions.remove({ origins: p.origins }).catch(() => false)}
+              >
+                {t('settings.removeLabel')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <label className="flex items-center gap-3 body-5">
+        <input type="checkbox" checked={store.settings.syllabus} onChange={(e) => void saveSettings({ syllabus: e.target.checked })} />
+        {t('settings.syllabus')}
+      </label>
+    </section>
   );
 }
 

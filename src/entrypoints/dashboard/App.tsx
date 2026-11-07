@@ -5,6 +5,10 @@ import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
 import { SourceBanners } from '../../ui/components/SourceBanners';
+import { PlatformAccess } from '../../ui/components/PermissionBanner';
+import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
+import { useGranted } from '../../ui/hooks/useGranted';
+import { useVisitProgress } from '../../ui/hooks/useVisitProgress';
 import { StatChips } from '../../ui/components/StatChips';
 import { ViewTabs, type View } from '../../ui/components/ViewTabs';
 import { useDashboard } from '../../ui/hooks/useDashboard';
@@ -35,6 +39,8 @@ export function App() {
   const { dashboard, store, syncing, refresh } = useDashboard();
   const now = useNow(1000);
   const [view, setView] = useView();
+  const granted = useGranted();
+  const progress = useVisitProgress();
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
     return (
@@ -47,10 +53,12 @@ export function App() {
   return (
     <DoneToastProvider>
         <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
-          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh}>
+          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh}>
             <StatChips within48={counts.within48} week={counts.week} />
           </Header>
+          {granted && <SiteAccessBanner granted={granted} />}
           <SourceBanners store={store} now={now} />
+          {granted && <PlatformAccess store={store} granted={granted} now={now} />}
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <ViewBody key={view} view={view} dashboard={dashboard} now={now} />
         </AppShell>

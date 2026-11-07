@@ -37,3 +37,16 @@ describe('popup', () => {
     expect(screen.getByText('Nothing to do. Enjoy the break.')).toBeTruthy();
   });
 });
+
+describe('popup visit progress', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('says when platform pages are being read', async () => {
+    await saveSnapshot('brightspace', { syncedAt: new Date().toISOString(), courses: [], items: [], links: [], partial: [] });
+    const { setVisitProgress } = await import('../../src/storage/store');
+    render(<PopupApp />);
+    await setVisitProgress({ done: 2, total: 5 });
+    await waitFor(() => expect(screen.getByText('Reading 2 of 5 platform pages…')).toBeTruthy());
+    await setVisitProgress(null);
+    await waitFor(() => expect(screen.queryByText(/platform pages/)).toBeNull());
+  });
+});

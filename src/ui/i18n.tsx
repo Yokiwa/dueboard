@@ -131,6 +131,24 @@ const messages = {
   'settings.privacy': 'All data stays on your computer. DueBoard is not an official Purdue product.',
   'settings.version': (v: Vars) => `Version ${v.v}`,
   'error.fallback': 'Something went wrong. Please reload the page.',
+  'access.ask': (v: Vars) => `DueBoard found ${v.names} in your courses. Allow it to read their due dates?`,
+  'access.allow': 'Allow',
+  'access.later': 'Not now',
+  'access.missing': (v: Vars) => `DueBoard can't reach ${v.names}. Allow access to keep syncing.`,
+  'settings.reading': 'Reading platforms',
+  'settings.readingHint':
+    'DueBoard opens homework links from Brightspace in a minimized window, reads the due date and closes it. It never clicks or submits anything.',
+  'settings.visits': 'Read platforms in a minimized window',
+  'settings.visits.auto': 'Automatically',
+  'settings.visits.manual': 'Only when I click Refresh',
+  'settings.visits.off': 'Never',
+  'settings.access': 'Platform access',
+  'settings.noAccess': 'No platforms allowed yet.',
+  'settings.remove': (v: Vars) => `Remove ${v.name}`,
+  'settings.removeLabel': 'Remove',
+  'settings.syllabus': 'Syllabus suggestions',
+  'item.readFrom': (v: Vars) => `Read from ${v.platform}`,
+  'sync.visiting': (v: Vars) => `Reading ${v.done} of ${v.total} platform pages…`,
 } satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof messages;

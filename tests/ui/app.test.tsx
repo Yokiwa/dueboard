@@ -72,3 +72,23 @@ describe('dashboard App', () => {
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy());
   });
 });
+
+describe('dashboard App: site access', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+    localStorage.clear();
+  });
+
+  it('asks for platforms the courses use, and for missing required access', async () => {
+    const { browser } = await import('wxt/browser');
+    (browser.permissions as unknown as { getAll: unknown }).getAll = vi.fn(async () => ({ origins: ['https://purdue.brightspace.com/*'], permissions: [] }));
+    await seed();
+    const { loadStore } = await import('../../src/storage/store');
+    const s = await loadStore();
+    s.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'ALEKS', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=A' }];
+    await patchStore({ snapshots: s.snapshots });
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('DueBoard found ALEKS in your courses. Allow it to read their due dates?')).toBeTruthy());
+    expect(screen.getByText("DueBoard can't reach Gradescope and Pearson. Allow access to keep syncing.")).toBeTruthy();
+  });
+});

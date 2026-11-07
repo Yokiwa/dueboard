@@ -1,6 +1,9 @@
 import { buildDashboard } from '../core/dashboard';
 import { launchLinks } from '../core/platforms';
-import { hostMatches, platformByTitle } from '../core/platformRegistry';
+import { platformByTitle } from '../core/platformRegistry';
+import { originAllowed } from '../core/permissions';
+
+export { originAllowed };
 import type { CapturedDue, RawItem, StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
 
@@ -28,16 +31,6 @@ export type VisitOutcome =
 
 const H = 3_600_000;
 export const MAX_VISITS = 25;
-
-/** Whether the granted origin patterns (permissions.getAll().origins) cover a host. */
-export function originAllowed(granted: string[], hostname: string): boolean {
-  return granted.some((pattern) => {
-    if (pattern === '<all_urls>') return true;
-    const m = /^(?:\*|https?):\/\/([^/]+)\//.exec(pattern);
-    if (!m) return false;
-    return m[1] === '*' || hostMatches(m[1]!, hostname);
-  });
-}
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {

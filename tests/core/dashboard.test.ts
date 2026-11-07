@@ -543,7 +543,7 @@ describe('dates read on platform visits', () => {
     const d = buildDashboard(i, now);
     const a = d.items.find((x) => x.sourceKeys.includes('brightspace:topic:1'))!;
     const b = d.items.find((x) => x.sourceKeys.includes('brightspace:topic:2'))!;
-    expect(a).toMatchObject({ dueAt: '2026-11-10T04:59:00.000Z', dueFrom: 'platform', dueEvidence: "Read from ALEKS: 'Due: 11/9/2026 11:59 PM'" });
+    expect(a).toMatchObject({ dueAt: '2026-11-10T04:59:00.000Z', dueFrom: 'platform', duePlatform: 'ALEKS', dueEvidence: "Read from ALEKS: 'Due: 11/9/2026 11:59 PM'" });
     expect(b.dueAt).toBeNull();
     expect(b.dueFrom).toBeUndefined();
   });

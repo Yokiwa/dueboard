@@ -78,6 +78,8 @@ export interface Item {
   doneByUser: boolean;
   /** Set only when a platform page (visit or page capture) supplied the date. */
   dueFrom?: 'platform';
+  /** The platform's name, for "Read from ALEKS". */
+  duePlatform?: string;
   /** "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'" */
   dueEvidence?: string;
 }

@@ -11,12 +11,14 @@ import { BrandMark } from '../../ui/components/BrandMark';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
 import { DevTools } from '../../ui/components/DevTools';
+import { useVisitProgress } from '../../ui/hooks/useVisitProgress';
 
 const LIMIT = 5;
 
 function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; store: StoreShape }) {
   const t = useT();
   const next = dashboard.nextDue;
+  const progress = useVisitProgress();
   const upcoming = dashboard.items.filter((i) => !i.doneByUser && !i.submitted && i.dueAt && i.id !== next?.id && Date.parse(i.dueAt) > now.getTime()).slice(0, LIMIT);
   return (
     <div className="flex w-[380px] flex-col gap-4 bg-db-bg p-4">
@@ -24,6 +26,7 @@ function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; stor
         <BrandMark className="size-5" />
         DueBoard
       </span>
+      {progress && <p className="m-0 caption-2 text-db-muted">{t('sync.visiting', { done: progress.done, total: progress.total })}</p>}
       <NextDueBanner item={next} course={dashboard.courses.find((c) => c.id === next?.courseId)} now={now} />
       {upcoming.length > 0 ? (
         <ul className="m-0 list-none rounded-2xl border border-db-border bg-db-surface px-4 py-1 shadow-sm">

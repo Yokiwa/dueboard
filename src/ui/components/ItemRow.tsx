@@ -20,7 +20,11 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
         >
           {item.title}
         </a>
-        <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
+        {item.dueFrom === 'platform' ? (
+          <span className="caption-5 text-db-faint" title={item.dueEvidence}>{`${t('item.readFrom', { platform: item.duePlatform ?? '' })} · ${when}`}</span>
+        ) : (
+          <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
+        )}
       </div>
       <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
     </div>

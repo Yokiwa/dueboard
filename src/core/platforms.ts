@@ -1,12 +1,12 @@
 import { BS_BASE, classifyLink } from './links';
-import { platformByTitle, platformByHost } from './platformRegistry';
+import { platformByTitle, platformByHost, type PlatformDef } from './platformRegistry';
 import { ALL_SOURCES, type SourceId, type StoreShape } from './types';
 
 /** Registry ids that are DueBoard sources (read by background requests). */
 const SOURCE_IDS: Partial<Record<string, SourceId>> = { gradescope: 'gradescope', pearson: 'pearson' };
 
-/** The source a Brightspace link launches, if it is one DueBoard reads by background requests. */
-function sourceOf(title: string, url: string): SourceId | undefined {
+/** The registry platform a Brightspace content link points to or launches, if any. */
+export function platformOfLink(title: string, url: string): PlatformDef | undefined {
   if (!classifyLink(title, url)) return undefined;
   let host = '';
   try {
@@ -14,7 +14,12 @@ function sourceOf(title: string, url: string): SourceId | undefined {
   } catch {
     return undefined;
   }
-  const def = host === new URL(BS_BASE).hostname ? platformByTitle(title) : platformByHost(host);
+  return host === new URL(BS_BASE).hostname ? platformByTitle(title) : platformByHost(host);
+}
+
+/** The source a Brightspace link launches, if it is one DueBoard reads by background requests. */
+function sourceOf(title: string, url: string): SourceId | undefined {
+  const def = platformOfLink(title, url);
   return def ? SOURCE_IDS[def.id] : undefined;
 }
 

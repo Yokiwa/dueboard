@@ -215,6 +215,7 @@ function fillFromCaptured(m: Item, captured: StoreShape['captured'] | undefined)
   m.dueAt = c.dueAt;
   m.dueFrom = 'platform';
   const label = platformById(c.platform)?.label ?? c.platform;
+  m.duePlatform = label;
   if (c.evidence) m.dueEvidence = `Read from ${label}: '${c.evidence}'`;
   else m.dueEvidence = `Read from ${label}`;
 }
