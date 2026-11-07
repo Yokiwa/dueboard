@@ -14,3 +14,10 @@ describe('background message router', () => {
     expect(route({ target: 'offscreen', type: 'probe' })).toBeUndefined();
   });
 });
+
+describe('router passes the sender', () => {
+  it('handlers receive who sent the message', async () => {
+    const route = createRouter({ captureDue: async (_m, sender) => sender?.url });
+    await expect(route({ type: 'captureDue' }, { url: 'https://education.wiley.com/x' })).resolves.toBe('https://education.wiley.com/x');
+  });
+});

@@ -3,7 +3,8 @@ import { handleInstalled } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
-import { loadStore } from '../storage/store';
+import { loadStore, saveCapturedDue } from '../storage/store';
+import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { offscreenParser, offscreenParsePearson } from '../sync/offscreenParser';
 import { createPearsonConnector } from '../connectors/pearson';
@@ -48,10 +49,15 @@ export default defineBackground(() => {
     },
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
+    captureDue: async (msg, sender) => {
+      const c = acceptCapture(msg, sender?.url, new Date());
+      if (c) await saveCapturedDue(c);
+      return Boolean(c);
+    },
   });
 
-  browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    const pending = route(msg);
+  browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    const pending = route(msg, { url: sender.url });
     if (!pending) return undefined;
     pending.then(sendResponse, (e) => sendResponse({ error: String(e) }));
     return true; // keep the channel open for the async answer

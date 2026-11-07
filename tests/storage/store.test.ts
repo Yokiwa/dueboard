@@ -12,6 +12,7 @@ import {
   onStoreChange,
   addManualItem,
   setCourseVisible,
+  saveCapturedDue,
   removeManualItem,
   addManualLink,
   removeManualLink,
@@ -115,5 +116,11 @@ describe('store', () => {
     expect((await loadStore()).userState).toMatchObject({ hidden: {}, shown: { 'brightspace:51': true } });
     await setCourseVisible('brightspace:51', false);
     expect((await loadStore()).userState).toMatchObject({ hidden: { 'brightspace:51': true }, shown: {} });
+  });
+
+  it('saveCapturedDue keys by normalized title and overwrites with the newest', async () => {
+    await saveCapturedDue({ title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: 'a' });
+    await saveCapturedDue({ title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-11T04:59:00.000Z', platform: 'wiley', capturedAt: 'b' });
+    expect((await loadStore()).captured).toEqual({ phys172hhw11fa26: { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-11T04:59:00.000Z', platform: 'wiley', capturedAt: 'b' } });
   });
 });

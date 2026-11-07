@@ -337,3 +337,7 @@ interface CourseLink {
 - **同一课程代码的多个 Brightspace 课程（LEC + REC）合并成一张卡片**，优先以 LEC 为主。
 - **课程内容里的作业入口变成作业**：标题含 “HW + 数字 / Homework + 数字” 的外部工具（LTI）条目，排除 “Copy of / study purposes / practice / solutions”。日期取条目自带的截止日期，否则与日历里同名事件合并取日期。
 - 识别 Macmillan Achieve 入口。
+
+### 1.3.0（2026-11）
+- **WileyPLUS“打开时顺便记下”**：`education.wiley.com` 上的内容脚本在学生打开作业页时，读取页面标题（h1）和 “Due Monday, Nov 9 at 11:59 PM (EST)” 这一行（年份取离今天最近的一年，时区按缩写换算），发给后台。后台只接受来自 `education.wiley.com`、标题 ≤300 字、日期在一年以内的消息，按规范化标题存进 `captured`。`buildDashboard` 为没有日期的同名作业（例如课程内容里的 “PHYS 172H - HW11 - FA26”）补上日期；已有日期的不覆盖。局限：作业至少要打开过一次。
+- Pearson 请求不跟随重定向（被转去登录页时报告 not_logged_in）；同步失败提示可展开“详情”。

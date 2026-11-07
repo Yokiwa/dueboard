@@ -23,6 +23,8 @@ export interface DashboardInput {
   manualItems: ManualItem[];
   manualLinks: CourseLink[];
   userState: UserState;
+  /** Due dates read from platform pages the student opened, keyed by normalized title. */
+  captured?: StoreShape['captured'];
 }
 export interface Dashboard {
   courses: Course[];
@@ -215,6 +217,7 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   }
   for (const m of merged) {
     m.id = m.sourceKeys[0]!;
+    if (!m.dueAt) m.dueAt = input.captured?.[normalizeTitle(m.title)]?.dueAt ?? null;
     // A MyLab session expires; the Brightspace launch link always gets the student back in.
     const launch = m.sources.includes('pearson') ? pearsonLaunch.get(m.courseId) : undefined;
     if (launch) m.url = launch;

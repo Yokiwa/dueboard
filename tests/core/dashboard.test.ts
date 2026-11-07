@@ -502,3 +502,23 @@ describe('Pearson', () => {
     expect(d.items[0]!.courseId).toBe('pearson:14285764');
   });
 });
+
+describe('dates captured on platform pages', () => {
+  it('fill in an undated item with the same title; dated items keep their own date', () => {
+    const i = input({
+      snapshots: {
+        brightspace: snap([bsCourse('20', 'Fall 2026 PHYS 17200-H01 LEC', 'PHYS 17200')], [
+          item({ source: 'brightspace', sourceItemId: 'topic:501', sourceCourseId: '20', title: 'PHYS 172H - HW11 - FA26', dueAt: null }),
+          item({ source: 'brightspace', sourceItemId: 'topic:502', sourceCourseId: '20', title: 'PHYS 172H - HW10 - FA26', dueAt: iso('2026-11-03T23:59:00-05:00') }),
+        ]),
+      },
+    });
+    i.captured = {
+      'phys172hhw11fa26': { title: 'PHYS 172H - HW11 - FA26', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wiley', capturedAt: 'x' },
+      'phys172hhw10fa26': { title: 'PHYS 172H - HW10 - FA26', dueAt: '2026-12-01T04:59:00.000Z', platform: 'wiley', capturedAt: 'x' },
+    };
+    const d = buildDashboard(i, now);
+    expect(d.items.find((x) => x.title === 'PHYS 172H - HW11 - FA26')!.dueAt).toBe('2026-11-10T04:59:00.000Z');
+    expect(d.items.find((x) => x.title === 'PHYS 172H - HW10 - FA26')!.dueAt).toBe(iso('2026-11-03T23:59:00-05:00'));
+  });
+});

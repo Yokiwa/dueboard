@@ -1,7 +1,8 @@
 import { browser } from 'wxt/browser';
-import type { CourseLink, ManualItem, Settings, SourceId, Snapshot, StoreShape } from '../core/types';
+import { normalizeTitle } from '../core/courseCode';
+import type { CapturedDue, CourseLink, ManualItem, Settings, SourceId, Snapshot, StoreShape } from '../core/types';
 
-const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta'] as const;
+const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured'] as const;
 
 function obj(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -31,6 +32,7 @@ export function migrate(raw: unknown): StoreShape {
       language: st.language === 'zh' || st.language === 'en' ? st.language : 'auto',
     },
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
+    captured: obj(r.captured) as StoreShape['captured'],
   };
 }
 
@@ -137,4 +139,9 @@ export async function setMerge(gradescopeKey: string, target: string | null): Pr
   if (target) next[gradescopeKey] = target;
   else delete next[gradescopeKey];
   await patchStore({ userState: { ...userState, merges: next } });
+}
+
+export async function saveCapturedDue(c: CapturedDue): Promise<void> {
+  const { captured } = await loadStore();
+  await patchStore({ captured: { ...captured, [normalizeTitle(c.title)]: c } });
 }

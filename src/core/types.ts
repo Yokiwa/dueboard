@@ -102,6 +102,14 @@ export interface SyncMeta {
   lastSuccess?: string;
   lastError?: { at: string; reason: string; detail?: string };
 }
+/** A due date read from a platform page the student opened (e.g. a WileyPLUS assignment). */
+export interface CapturedDue {
+  title: string;
+  dueAt: string;
+  platform: 'wiley';
+  capturedAt: string;
+}
+
 export interface StoreShape {
   schemaVersion: 1;
   snapshots: Partial<Record<SourceId, Snapshot>>;
@@ -110,4 +118,6 @@ export interface StoreShape {
   userState: UserState;
   settings: Settings;
   syncMeta: Partial<Record<SourceId, SyncMeta>>;
+  /** keyed by normalizeTitle(title) */
+  captured: Record<string, CapturedDue>;
 }

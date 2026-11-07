@@ -40,6 +40,7 @@ Show the user's own assignments, deadlines and course resource links from Bright
 - activeTab, scripting: only when the user clicks “Export this page” in the popup, read the current tab and save it as a local file to help add support for another homework platform.
 - Host permission https://purdue.brightspace.com/*: read the user's own courses, assignments, quizzes, calendar and course content listing.
 - Host permission https://www.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
+- Content script on https://education.wiley.com/*: when the user opens a WileyPLUS assignment, read only its title and due-date line so the dashboard can show that deadline; never clicks or changes anything.
 - Host permission https://mylab.pearson.com/*: only when the user's courses use Pearson MyLab, read their assignment list and due dates.
 
 ### Remote code
