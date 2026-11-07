@@ -1,4 +1,5 @@
 import { ALL_SOURCES, type SourceId, type StoreShape } from '../../core/types';
+import { relevantSources } from '../../core/platforms';
 import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
 import { useT } from '../i18n';
@@ -15,7 +16,8 @@ const LAUNCHED: SourceId[] = ['pearson'];
 /** One line per platform whose most recent sync attempt failed. */
 export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreShape; now: Date; launchUrls?: Partial<Record<SourceId, string>> }) {
   const t = useT();
-  const rows = ALL_SOURCES.flatMap((src) => {
+  const relevant = relevantSources(store);
+  const rows = ALL_SOURCES.filter((src) => relevant.includes(src)).flatMap((src) => {
     const meta = store.syncMeta[src];
     const err = meta?.lastError;
     if (!err) return [];

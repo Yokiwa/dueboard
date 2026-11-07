@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowUpRight, CheckCircle, LockSimple, WarningCircle } from '@phosphor-icons/react';
 import type { SyncReport } from '../../sync/runSync';
-import { SOURCES, type SourceId } from '../../core/types';
+import { ALL_SOURCES, type SourceId } from '../../core/types';
 import { sendToBackground } from '../messaging';
 import { useT } from '../i18n';
 import { primaryBtn, secondaryBtn } from '../forms';
@@ -28,7 +28,6 @@ export function Onboarding() {
 
   const steps = [
     { text: t('onb.step1'), action: <a className={secondaryBtn} href="https://purdue.brightspace.com/d2l/home" target="_blank" rel="noopener noreferrer">{t('onb.openBs')}<ArrowUpRight aria-hidden="true" size={14} weight="bold" /></a> },
-    { text: t('onb.step2'), action: <a className={secondaryBtn} href="https://www.gradescope.com/" target="_blank" rel="noopener noreferrer">{t('onb.openGs')}<ArrowUpRight aria-hidden="true" size={14} weight="bold" /></a> },
     { text: t('onb.step3'), action: <button type="button" className={primaryBtn} onClick={start} disabled={syncing}>{syncing ? t('onb.syncing') : t('onb.start')}</button> },
   ];
 
@@ -57,7 +56,8 @@ export function Onboarding() {
         </ol>
         {report && (
           <ul role="status" className="m-0 flex list-none flex-col gap-2 p-0">
-            {SOURCES.filter((s) => report[s]).map((s) => {
+            {/* Brightspace always; other platforms only when they were found and read. */}
+            {ALL_SOURCES.filter((s) => report[s] && (s === 'brightspace' || report[s] === 'ok')).map((s) => {
               const r = report[s]!;
               const name = NAMES[s];
               const text = r === 'ok' ? t('onb.ok', { name }) : r === 'not_logged_in' ? t('onb.notLoggedIn', { name }) : t('onb.failed', { name, reason: r });

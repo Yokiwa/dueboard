@@ -8,7 +8,7 @@ import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { offscreenParser, offscreenParsePearson } from '../sync/offscreenParser';
 import { createPearsonConnector } from '../connectors/pearson';
-import { activeSourceIds } from '../background/sources';
+import { syncWithDiscovery } from '../background/syncFlow';
 import type { Connector, SourceId } from '../core/types';
 import { withKeepAlive } from '../sync/keepAlive';
 
@@ -19,10 +19,11 @@ const CONNECTORS: Record<SourceId, () => Connector> = {
   gradescope: () => createGradescopeConnector({ parser: offscreenParser }),
   pearson: () => createPearsonConnector({ parse: offscreenParsePearson }),
 };
-const syncNow = async () => {
-  const ids = activeSourceIds(await loadStore());
-  return withKeepAlive(runSync(ids.map((id) => CONNECTORS[id]())), () => browser.runtime.getPlatformInfo());
-};
+const syncNow = () =>
+  withKeepAlive(
+    syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
+    () => browser.runtime.getPlatformInfo(),
+  );
 
 export default defineBackground(() => {
   const ensureAlarm = async () => {

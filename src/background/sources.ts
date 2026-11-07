@@ -1,10 +1,13 @@
-import { classifyLink } from '../core/links';
+import { relevantSources } from '../core/platforms';
 import type { SourceId, StoreShape } from '../core/types';
 
-/** Which platforms to sync: Brightspace and Gradescope always; Pearson once a course links to it (or it synced before). */
+/**
+ * Which platforms to sync. Brightspace always. Gradescope is always checked quietly, because many courses use it
+ * without linking it from Brightspace (a signed-out result is never shown unless it is relevant). Pearson only
+ * once a course links to it or it has returned data.
+ */
 export function activeSourceIds(store: StoreShape): SourceId[] {
   const ids: SourceId[] = ['brightspace', 'gradescope'];
-  const linksPearson = (store.snapshots.brightspace?.links ?? []).some((l) => classifyLink(l.title, l.url)?.label === 'Pearson');
-  if (linksPearson || store.snapshots.pearson || store.syncMeta.pearson) ids.push('pearson');
+  if (relevantSources(store).includes('pearson')) ids.push('pearson');
   return ids;
 }
