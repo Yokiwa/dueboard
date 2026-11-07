@@ -21,3 +21,10 @@ describe('router passes the sender', () => {
     await expect(route({ type: 'captureDue' }, { url: 'https://education.wiley.com/x' })).resolves.toBe('https://education.wiley.com/x');
   });
 });
+
+describe('router passes the sending tab', () => {
+  it('handlers receive the tab id (finder messages are matched to the visit tab)', async () => {
+    const route = createRouter({ visitFound: async (_m, sender) => sender?.tab?.id });
+    await expect(route({ type: 'visitFound' }, { url: 'https://www.aleks.com/x', tab: { id: 5 } })).resolves.toBe(5);
+  });
+});

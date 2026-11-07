@@ -163,3 +163,15 @@ describe('store', () => {
     expect((await loadStore()).visitState).toEqual({ windowId: 7, needsPermission: ['learn.example.com'], snoozed: {} });
   });
 });
+
+describe('visit progress', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('is stored and cleared', async () => {
+    const { setVisitProgress, getVisitProgress } = await import('../../src/storage/store');
+    expect(await getVisitProgress()).toBeNull();
+    await setVisitProgress({ done: 3, total: 8 });
+    expect(await getVisitProgress()).toEqual({ done: 3, total: 8 });
+    await setVisitProgress(null);
+    expect(await getVisitProgress()).toBeNull();
+  });
+});

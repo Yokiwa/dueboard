@@ -52,7 +52,7 @@ describe('dashboard App', () => {
     expect(screen.queryByText(/Gradescope|Pearson|Wiley/)).toBeNull();
     vi.mocked(sendToBackground).mockResolvedValueOnce({ brightspace: 'not_logged_in', gradescope: 'not_logged_in' });
     fireEvent.click(screen.getByRole('button', { name: 'Start sync' }));
-    expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync' });
+    expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync', trigger: 'manual' });
     await waitFor(() => expect(screen.getByText('Brightspace: not signed in yet')).toBeTruthy());
     expect(screen.queryByText(/Gradescope/)).toBeNull();
   });

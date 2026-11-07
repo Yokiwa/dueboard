@@ -40,13 +40,13 @@ describe('useDashboard', () => {
     await waitFor(() => expect(screen.getByTestId('courses').textContent).toBe('1'));
   });
 
-  it("refresh button sends {type:'sync'} and shows syncing state", async () => {
+  it("refresh button sends a manual sync and shows syncing state", async () => {
     let finish: (v: unknown) => void = () => {};
     render(<Harness />);
     await waitFor(() => expect(screen.getByTestId('syncing').textContent).toBe('false'));
     vi.mocked(sendToBackground).mockImplementationOnce(() => new Promise((r) => (finish = r)));
     fireEvent.click(screen.getByRole('button', { name: 'refresh' }));
-    expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync' });
+    expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync', trigger: 'manual' });
     expect(screen.getByTestId('syncing').textContent).toBe('true');
     await act(async () => finish({}));
     expect(screen.getByTestId('syncing').textContent).toBe('false');

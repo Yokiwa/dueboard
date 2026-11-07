@@ -200,3 +200,16 @@ export async function patchVisitState(patch: Partial<VisitState>): Promise<void>
   for (const k of Object.keys(patch) as (keyof VisitState)[]) if (patch[k] === undefined) delete next[k];
   await patchStore({ visitState: next });
 }
+
+/** Progress of a visit run, for the "Reading 3 of 8 platform pages…" line; null when no run is going. */
+export interface VisitProgress {
+  done: number;
+  total: number;
+}
+export async function setVisitProgress(p: VisitProgress | null): Promise<void> {
+  await browser.storage.local.set({ visitProgress: p });
+}
+export async function getVisitProgress(): Promise<VisitProgress | null> {
+  const r = (await browser.storage.local.get('visitProgress')) as { visitProgress?: VisitProgress | null };
+  return r.visitProgress ?? null;
+}

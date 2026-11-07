@@ -20,7 +20,7 @@ export function Onboarding() {
   const start = async () => {
     setSyncing(true);
     try {
-      setReport(await sendToBackground<SyncReport>({ type: 'sync' }));
+      setReport(await sendToBackground<SyncReport>({ type: 'sync', trigger: 'manual' }));
     } finally {
       setSyncing(false);
     }

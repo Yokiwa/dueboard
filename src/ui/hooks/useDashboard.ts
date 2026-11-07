@@ -32,7 +32,7 @@ export function useDashboard(): DashboardState {
 
   const refresh = useCallback(() => {
     setSyncing(true);
-    sendToBackground({ type: 'sync' })
+    sendToBackground({ type: 'sync', trigger: 'manual' })
       .catch(() => undefined)
       .finally(() => setSyncing(false));
   }, []);
