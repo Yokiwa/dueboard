@@ -1,6 +1,6 @@
 /** Shared Tailwind classes for the small manual-entry forms. */
 export const field =
-  'db-press min-h-10 rounded-lg border border-db-border bg-db-surface px-3 body-6 text-db-text hover:border-db-faint focus-visible:border-db-ring';
+  'db-press min-h-10 rounded-lg border border-db-control bg-db-surface px-3 body-6 text-db-text hover:border-db-text focus-visible:border-db-ring';
 export const label = 'flex flex-col gap-2 caption-3 text-db-muted';
 /** Main button: 8px by 12px padding, Button-sm text, ink fill. */
 export const primaryBtn =

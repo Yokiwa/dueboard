@@ -2,6 +2,7 @@ import { dueCounts } from '../../core/dashboard';
 import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
+import { DashboardSkeleton } from '../../ui/components/Skeleton';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
 import { SourceBanners } from '../../ui/components/SourceBanners';
@@ -37,7 +38,7 @@ export function App() {
   const now = useNow(1000);
   const [view, setView] = useView();
   const lang = resolveLang(store?.settings.language ?? 'auto', navigator.language);
-  if (!store || !dashboard) return null;
+  if (!store || !dashboard) return <DashboardSkeleton />;
   if (Object.keys(store.snapshots).length === 0) {
     return (
       <LangProvider lang={lang}>

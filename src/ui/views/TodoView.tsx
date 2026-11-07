@@ -3,7 +3,8 @@ import { differenceInCalendarDays } from 'date-fns';
 import type { Dashboard } from '../../core/dashboard';
 import type { Course, Item } from '../../core/types';
 import { removeManualItem, toggleDone } from '../../storage/store';
-import { useT, type MessageKey } from '../i18n';
+import { formatDueAt } from '../../core/time';
+import { useLang, useT, type MessageKey } from '../i18n';
 import { DueBadge } from '../components/DueBadge';
 import { ManualItemForm } from '../components/ManualItemForm';
 import { CaretRight, CheckCircle, Plus, X } from '@phosphor-icons/react';
@@ -32,6 +33,7 @@ function groupOf(i: Item, now: Date): Group {
 
 function Row({ item, course, now }: { item: Item; course: Course | undefined; now: Date }) {
   const t = useT();
+  const lang = useLang();
   const done = item.doneByUser || item.submitted;
   return (
     <li className="flex items-center gap-3 border-t border-db-border-soft py-3 first:border-t-0">
@@ -54,7 +56,15 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         >
           {item.title}
         </a>
-        <span className="caption-5 text-db-faint">{course?.code}</span>
+        <span className="flex min-w-0 items-center gap-1 caption-5 text-db-faint">
+          <span className="shrink-0">{course?.code}</span>
+          {item.dueAt && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="truncate">{formatDueAt(new Date(item.dueAt), now, lang)}</span>
+            </>
+          )}
+        </span>
       </div>
       <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
       {item.type === 'manual' && (
@@ -81,10 +91,12 @@ export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }
   const isArchived = (i: Item) => (i.doneByUser || i.submitted) && i.dueAt !== null && Date.parse(i.dueAt) <= now.getTime();
   const completed = sorted.filter(isArchived);
   const open = sorted.filter((i) => !isArchived(i));
+  const pending = open.filter((i) => !i.doneByUser && !i.submitted).length;
 
   return (
     <section className="db-rise flex flex-col gap-6 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm">
-      <div className="flex justify-end">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
+        <span className="body-5 text-db-muted">{pending > 0 ? t('todo.openCount', { n: pending }) : ''}</span>
         {!adding && (
           <button type="button" className={primaryBtn} onClick={() => setAdding(true)}>
             <Plus aria-hidden="true" size={16} weight="bold" />

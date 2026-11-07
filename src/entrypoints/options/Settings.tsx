@@ -2,6 +2,7 @@ import { useId, useMemo } from 'react';
 import { browser } from 'wxt/browser';
 import { ArrowUpRight, Check } from '@phosphor-icons/react';
 import { BrandMark } from '../../ui/components/BrandMark';
+import { SettingsSkeleton } from '../../ui/components/Skeleton';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
 import type { Settings as SettingsShape } from '../../core/types';
@@ -57,7 +58,7 @@ function Body({ store }: { store: StoreShape }) {
           <p className={hint}>{sorted.length ? t('settings.coursesHint') : t('settings.noCourses')}</p>
           <ul className="m-0 flex list-none flex-col p-0">
             {sorted.map((c) => (
-              <li key={c.id} aria-label={c.code} className="flex flex-wrap items-center justify-between gap-3 border-t border-db-border-soft py-3 first:border-t-0">
+              <li key={c.id} aria-label={c.code} className="flex flex-col gap-3 border-t border-db-border-soft py-4 first:border-t-0 first:pt-0">
                 <label className="flex min-w-0 cursor-pointer items-center gap-2 body-6">
                   <input
                     type="checkbox"
@@ -67,9 +68,9 @@ function Body({ store }: { store: StoreShape }) {
                     className="size-4"
                   />
                   <span className="body-4">{c.code}</span>
-                  <span className="truncate text-db-faint">{displayName(c)}</span>
+                  <span className="min-w-0 truncate text-db-faint">{displayName(c)}</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 pl-6">
                   {PALETTE.map((color, i) => (
                     <button
                       key={color}
@@ -137,7 +138,7 @@ function Body({ store }: { store: StoreShape }) {
 
 export function Settings() {
   const store = useStore();
-  if (!store) return null;
+  if (!store) return <SettingsSkeleton />;
   return (
     <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
       <Body store={store} />

@@ -5,6 +5,7 @@ import type { Course, Item } from '../../core/types';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { iconBtn, secondaryBtn } from '../forms';
 import { useLang, useT } from '../i18n';
+import { tint } from '../tint';
 import { dayKey, itemsByDay, monthCells, weekDays } from './calendarGrid';
 
 type Mode = 'week' | 'month';
@@ -21,13 +22,16 @@ function Chip({ item, course, lang }: { item: Item; course: Course | undefined; 
       rel="noopener noreferrer"
       data-done={String(done)}
       title={course ? `${course.code} · ${item.title}` : item.title}
-      className={`db-press flex min-w-0 items-center gap-1 rounded-md bg-db-subtle px-2 py-1 caption-4 hover:bg-db-hover ${
-        done ? 'text-db-faint line-through' : 'text-db-text no-underline'
+      style={{ background: tint(course?.color, done ? 6 : 14) }}
+      className={`db-press flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1 no-underline hover:ring-1 hover:ring-db-control ${
+        done ? 'text-db-faint' : 'text-db-text'
       }`}
     >
-      <span data-testid="chip-dot" aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
-      <span className="shrink-0 font-mono caption-5 text-db-faint tabular-nums">{time}</span>
-      <span className="truncate">{item.title}</span>
+      <span className="flex items-center gap-1 caption-5 text-db-muted tabular-nums">
+        <span data-testid="chip-dot" aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
+        {time}
+      </span>
+      <span className={`truncate caption-4 ${done ? 'line-through' : ''}`}>{item.title}</span>
     </a>
   );
 }

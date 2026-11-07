@@ -11,6 +11,7 @@ import { BrandMark } from '../../ui/components/BrandMark';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
 import { DevTools } from '../../ui/components/DevTools';
+import { PopupSkeleton } from '../../ui/components/Skeleton';
 
 const LIMIT = 5;
 
@@ -48,7 +49,7 @@ function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; stor
 export function PopupApp() {
   const { dashboard, store } = useDashboard();
   const now = useNow(1000);
-  if (!store || !dashboard) return null;
+  if (!store || !dashboard) return <PopupSkeleton />;
   return (
     <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
       <DoneToastProvider>

@@ -27,7 +27,9 @@
   --color-db-text: #141413;
   --color-db-text-2: #33332f;
   --color-db-muted: #57574f;
-  --color-db-faint: #74746b;
+  --color-db-faint: #6a6a62;
+  /* Boundaries of inputs and checkboxes: at least 3:1 against their surface. */
+  --color-db-control: #8c8c84;
 
   /* Brand and controls */
   --color-db-accent: #2563eb;
@@ -51,12 +53,16 @@
   --color-db-normal-bg: #efefec;
   --color-db-normal-fg: #3d3d38;
 
-  /* Next deadline card */
-  --color-db-banner-bg: #ffffff;
-  --color-db-banner-border: #e4e4e0;
-  --color-db-banner-label: #b4231a;
-  --color-db-banner-sub: #57574f;
-  --color-db-countdown: #b4231a;
+  /* Next deadline card: a dark feature card in both themes, so it reads apart from every other card. */
+  --color-db-banner-bg: #141413;
+  --color-db-banner-border: #141413;
+  --color-db-banner-fg: #f4f4f2;
+  --color-db-banner-sub: #a8a8a0;
+  --color-db-banner-line: rgb(255 255 255 / 0.18);
+  --color-db-banner-hover: rgb(255 255 255 / 0.1);
+  --color-db-countdown: #ff9b91;
+  --color-db-countdown-soon: #f5c46b;
+  --color-db-countdown-normal: #f4f4f2;
 
   /* Alerts */
   --color-db-alert-bg: #fdf1f0;
@@ -65,20 +71,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-db-bg: #131209;
+    --color-db-bg: #181818;
     --color-db-surface: #1f1f1f;
     --color-db-subtle: #272727;
     --color-db-raised: #272727;
-    --color-db-glass: rgb(24 24 24 / 0.72);
+    --color-db-glass: rgb(31 31 31 / 0.72);
     --color-db-border: #313131;
     --color-db-border-soft: #272727;
-    --color-db-track: #181818;
+    --color-db-track: #000000;
     --color-db-hover: #313131;
 
     --color-db-text: #f4f4f2;
     --color-db-text-2: #dadad6;
     --color-db-muted: #b0b0a8;
     --color-db-faint: #8e8e86;
+    --color-db-control: #77776f;
 
     --color-db-accent: #7ba2ff;
     --color-db-accent-soft: #1d2a4a;
@@ -99,11 +106,9 @@
     --color-db-normal-bg: #313131;
     --color-db-normal-fg: #dadad6;
 
-    --color-db-banner-bg: #1f1f1f;
+    --color-db-banner-bg: #272727;
     --color-db-banner-border: #313131;
-    --color-db-banner-label: #ff9b91;
     --color-db-banner-sub: #b0b0a8;
-    --color-db-countdown: #ff9b91;
 
     --color-db-alert-bg: #2a1716;
     --color-db-alert-border: #4a2622;
@@ -255,13 +260,69 @@ p {
   text-wrap: pretty;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-db-ring);
-  outline-offset: 2px;
+/* In the base layer so a utility (e.g. focus-visible:outline-db-banner-fg) can recolor it on dark surfaces. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-db-ring);
+    outline-offset: 2px;
+  }
 }
 
+/* Custom checkbox: keeps the native input (role, keyboard, form behavior), only the look changes. */
 input[type='checkbox'] {
-  accent-color: var(--color-db-accent);
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  margin: 0;
+  border: 1.5px solid var(--color-db-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-db-surface);
+  cursor: pointer;
+  transition:
+    background-color 300ms var(--ease-db),
+    border-color 300ms var(--ease-db),
+    transform 300ms var(--ease-db);
+}
+input[type='checkbox']::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: var(--color-db-on-accent);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0);
+  transition: transform 300ms var(--ease-db);
+}
+input[type='checkbox']:hover:not(:disabled) {
+  border-color: var(--color-db-accent);
+}
+input[type='checkbox']:active:not(:disabled) {
+  transform: scale(0.9);
+}
+input[type='checkbox']:checked {
+  border-color: var(--color-db-accent);
+  background: var(--color-db-accent);
+}
+input[type='checkbox']:checked::after {
+  transform: scale(1);
+}
+input[type='checkbox']:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Skeleton placeholder shaped like the real layout while storage loads. */
+@utility db-skeleton {
+  background: var(--color-db-track);
+  animation: db-shimmer 1.6s var(--ease-db) infinite alternate;
+}
+@keyframes db-shimmer {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
 }
 
 ::selection {

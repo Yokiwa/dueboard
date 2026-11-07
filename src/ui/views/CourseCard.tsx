@@ -1,6 +1,7 @@
 import { displayName } from '../../core/courseName';
 import type { Course, CourseLink, Item } from '../../core/types';
 import { useT } from '../i18n';
+import { tint } from '../tint';
 import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
 import { toggleDone } from '../../storage/store';
@@ -38,9 +39,9 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
         <span className="flex min-w-0 flex-col gap-1">
         {name ? (
           <>
-            <span className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 self-start rounded-md px-2 py-0.5 caption-3 text-db-text" style={{ background: tint(course.color, 16) }}>
               <span data-testid="course-dot" className="size-2 rounded-full" style={{ background: course.color }} aria-hidden="true" />
-              <span className="caption-3 tracking-wide text-db-muted">{course.code}</span>
+              {course.code}
             </span>
             <span className="title-2 text-db-text">{name}</span>
           </>

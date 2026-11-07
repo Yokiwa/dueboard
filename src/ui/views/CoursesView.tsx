@@ -26,7 +26,7 @@ export function CoursesView({ dashboard, now }: { dashboard: Dashboard; now: Dat
   }
   return (
     <>
-      <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))]">
+      <div className="grid items-start gap-6 [grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))]">
         {dashboard.courses.map((c) => (
           <CourseCard
             key={c.id}
