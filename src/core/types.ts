@@ -142,6 +142,8 @@ export interface CapturedDue {
   misses?: number;
   /** Visits in a row that failed (timeout, window closed). */
   failures?: number;
+  /** The visit landed on this host without site access; wait until access is granted. */
+  blocked?: string;
 }
 
 export interface StoreShape {
