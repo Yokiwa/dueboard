@@ -1,4 +1,6 @@
 import { ALL_SOURCES, type SourceId, type StoreShape } from '../../core/types';
+import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
+import { primaryBtn } from '../forms';
 import { useT } from '../i18n';
 
 const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope', pearson: 'Pearson' };
@@ -23,13 +25,12 @@ export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreSha
       const launched = LAUNCHED.includes(src);
       const target = (launched && launchUrls[src]) || LOGIN_URLS[src];
       return [
-        <div key={src} role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-alert-border bg-db-alert-bg px-4 py-3">
-          <span className="text-sm font-medium text-db-urgent-fg">{launched ? t('source.reopen', { name }) : t('source.relogin', { name })}</span>
-          <button
-            type="button"
-            onClick={() => window.open(target, '_blank', 'noopener')}
-            className="min-h-10 cursor-pointer rounded-lg border-0 bg-db-ink px-4 text-sm font-semibold text-db-on-ink"
-          >
+        <div key={src} role="alert" className="db-rise flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-alert-border bg-db-alert-bg py-2 pr-2 pl-4">
+          <span className="flex items-center gap-2 body-5 text-db-urgent-fg">
+            <WarningCircle aria-hidden="true" size={18} weight="fill" className="shrink-0" />
+            {launched ? t('source.reopen', { name }) : t('source.relogin', { name })}
+          </span>
+          <button type="button" onClick={() => window.open(target, '_blank', 'noopener')} className={primaryBtn}>
             {launched ? t('source.openPlatform', { name }) : t('source.loginButton')}
           </button>
         </div>,
@@ -38,11 +39,14 @@ export function SourceBanners({ store, now, launchUrls = {} }: { store: StoreSha
     const snap = store.snapshots[src];
     const text = snap ? t('source.stale', { name, ago: t('ago', { iso: snap.syncedAt, now }) }) : t('source.failed', { name });
     return [
-      <div key={src} role="status" className="rounded-xl border border-db-border bg-db-surface px-4 py-3 text-sm text-db-muted">
-        <span>{text}</span>
-        <details className="mt-1 text-xs text-db-faint">
-          <summary className="cursor-pointer">{t('source.details')}</summary>
-          <code className="mt-1 block break-all whitespace-pre-wrap">{`${err.reason}${err.detail ? ` — ${err.detail}` : ''} (${t('ago', { iso: err.at, now })})`}</code>
+      <div key={src} role="status" className="rounded-xl border border-db-border bg-db-surface px-4 py-3 body-6 text-db-muted">
+        <span className="flex items-center gap-2">
+          <ArrowsClockwise aria-hidden="true" size={16} className="shrink-0 text-db-faint" />
+          {text}
+        </span>
+        <details className="mt-2 caption-5 text-db-faint">
+          <summary className="db-press cursor-pointer rounded-sm hover:text-db-muted">{t('source.details')}</summary>
+          <code className="mt-2 block rounded-md bg-db-subtle p-2 font-mono break-all whitespace-pre-wrap">{`${err.reason}${err.detail ? ` — ${err.detail}` : ''} (${t('ago', { iso: err.at, now })})`}</code>
         </details>
       </div>,
     ];

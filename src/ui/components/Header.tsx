@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react';
 import { format } from 'date-fns';
+import { ArrowClockwise } from '@phosphor-icons/react';
+import { secondaryBtn } from '../forms';
 import { useLang, useT } from '../i18n';
 
 const WEEKDAYS_ZH = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -9,6 +12,8 @@ export interface HeaderProps {
   lastSynced: string | null;
   syncing: boolean;
   onRefresh(): void;
+  /** Optional row under the heading (the dashboard puts the stat chips here). */
+  children?: ReactNode;
 }
 
 function greetingKey(now: Date) {
@@ -18,26 +23,31 @@ function greetingKey(now: Date) {
   return 'greeting.evening' as const;
 }
 
-export function Header({ now, pendingWeek, lastSynced, syncing, onRefresh }: HeaderProps) {
+export function Header({ now, pendingWeek, lastSynced, syncing, onRefresh, children }: HeaderProps) {
   const lang = useLang();
   const t = useT();
   const date = lang === 'zh' ? `${format(now, 'M月d日')} ${WEEKDAYS_ZH[now.getDay()]}` : format(now, 'EEEE, MMMM d');
   const greet = t(greetingKey(now));
   const title = pendingWeek > 0 ? t('header.pendingWeek', { greet, n: pendingWeek }) : t('header.noneWeek', { greet });
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm text-db-muted">{date}</span>
-        <h1 className="m-0 text-[28px] font-bold tracking-tight">{title}</h1>
+    <header className="db-rise flex flex-wrap items-end justify-between gap-6">
+      <div className="flex min-w-0 max-w-[680px] flex-col gap-3">
+        <span className="body-5 text-db-muted">{date}</span>
+        <h1 className="m-0 heading-4 tracking-tight sm:heading-3">
+          <span className="hero-text">{title}</span>
+        </h1>
+        {children}
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[13px] text-db-muted">{lastSynced ? t('sync.synced', { ago: t('ago', { iso: lastSynced, now }) }) : t('sync.never')}</span>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={syncing}
-          className="min-h-11 cursor-pointer rounded-[10px] border border-db-border bg-db-surface px-4 text-sm font-medium text-db-text disabled:cursor-default disabled:text-db-faint"
-        >
+        <span className="flex items-center gap-2 caption-2 text-db-muted">
+          <span
+            aria-hidden="true"
+            className={`size-2 shrink-0 rounded-full ${syncing ? 'animate-pulse bg-db-accent' : lastSynced ? 'bg-db-ok' : 'bg-db-faint'}`}
+          />
+          {lastSynced ? t('sync.synced', { ago: t('ago', { iso: lastSynced, now }) }) : t('sync.never')}
+        </span>
+        <button type="button" onClick={onRefresh} disabled={syncing} className={secondaryBtn}>
+          <ArrowClockwise aria-hidden="true" size={16} weight="bold" />
           {syncing ? t('sync.syncing') : t('refresh')}
         </button>
       </div>

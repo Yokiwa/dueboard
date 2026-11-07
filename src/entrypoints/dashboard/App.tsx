@@ -51,15 +51,13 @@ export function App() {
   return (
     <LangProvider lang={lang}>
       <DoneToastProvider>
-        <AppShell>
-          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh} />
+        <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
+          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh}>
+            <StatChips within48={counts.within48} week={counts.week} />
+          </Header>
           <SourceBanners store={store} now={now} launchUrls={{ pearson: dashboard.links.find((l) => l.label === 'Pearson')?.url }} />
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <ViewTabs view={view} onChange={setView} />
-            <StatChips within48={counts.within48} week={counts.week} />
-          </div>
-          <ViewBody view={view} dashboard={dashboard} now={now} />
+          <ViewBody key={view} view={view} dashboard={dashboard} now={now} />
         </AppShell>
       </DoneToastProvider>
     </LangProvider>

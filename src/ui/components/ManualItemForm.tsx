@@ -59,7 +59,7 @@ export function ManualItemForm({ courses, courseId, onDone }: ManualItemFormProp
         </label>
       </div>
       {error && (
-        <p role="alert" className="m-0 text-sm text-db-urgent-fg">
+        <p role="alert" className="m-0 body-5 text-db-urgent-fg">
           {error}
         </p>
       )}

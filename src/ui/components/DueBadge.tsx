@@ -30,7 +30,7 @@ export function DueBadge({ dueAt, done, submitted = false, now }: DueBadgeProps)
     [tone, label] = [urgency(d, now), relativeDue(d, now, lang)];
   }
   return (
-    <span data-tone={tone} className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap ${TONE_CLASS[tone]}`}>
+    <span data-tone={tone} className={`shrink-0 rounded-md px-2 py-1 caption-3 whitespace-nowrap tabular-nums ${TONE_CLASS[tone]}`}>
       {label}
     </span>
   );
