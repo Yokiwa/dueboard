@@ -1,5 +1,7 @@
 export interface Sender {
   url?: string;
+  tab?: { id?: number };
+  frameId?: number;
 }
 export type Handlers = Record<string, (msg: Record<string, unknown>, sender?: Sender) => Promise<unknown>>;
 
