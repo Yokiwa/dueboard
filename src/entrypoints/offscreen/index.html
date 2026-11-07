@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <title>DueBoard parser</title>
+    <!-- Chrome only: Firefox parses in its background page and has no offscreen API. -->
+    <meta name="manifest.include" content="['chrome']" />
   </head>
   <body>
     <script type="module" src="./main.ts"></script>

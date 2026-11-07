@@ -6,7 +6,7 @@ import { collectFixtures, probe } from '../diagnostics/probe';
 import { loadStore, saveCaptured } from '../storage/store';
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
-import { offscreenParser, offscreenParsePearson } from '../sync/offscreenParser';
+import { parsers } from '../sync/parsers';
 import { createPearsonConnector } from '../connectors/pearson';
 import { syncWithDiscovery } from '../background/syncFlow';
 import type { Connector, SourceId } from '../core/types';
@@ -16,8 +16,8 @@ const ALARM = 'dueboard-sync';
 
 const CONNECTORS: Record<SourceId, () => Connector> = {
   brightspace: () => createBrightspaceConnector(),
-  gradescope: () => createGradescopeConnector({ parser: offscreenParser }),
-  pearson: () => createPearsonConnector({ parse: offscreenParsePearson }),
+  gradescope: () => createGradescopeConnector({ parser: parsers.gradescope }),
+  pearson: () => createPearsonConnector({ parse: parsers.pearson }),
 };
 const syncNow = () =>
   withKeepAlive(
