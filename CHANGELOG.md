@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0 — 2026-11
+
+- **Due dates from any homework platform.** For homework that Brightspace launches on another platform (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and others, including ones DueBoard doesn't know), DueBoard opens the Brightspace link in a minimized window, reads the page's "Due …" line and closes it. It never clicks or submits anything. New homework is read once, and dates are rechecked daily. Settings: "Automatically", "Only when I click Refresh" or "Never"
+- **Platform access asked per platform.** A bar names the platforms found in your courses and asks to allow reading their due dates; access can be removed in Settings
+- **Pearson stays signed in.** When the Pearson session expires, DueBoard reopens it through Brightspace and reads it again, instead of asking you to
+- **Syllabus suggestions.** Dated work found in your syllabus (Simple Syllabus, or a PDF or web page in Content) appears under "From syllabus" in the to-do list and course details, with Add and Hide
+- **Firefox version** (Firefox 140 or newer), built from the same code; coming to Firefox Add-ons
+- Every date read on a platform page says where it came from ("Read from ALEKS")
+- Two syncs that overlap (for example a page load and a Refresh click) now share one run
+
 ## 1.0.2 — 2026-11
 
 - Homework launched from Brightspace content is now found for any platform, not only known ones: numbered work (HW 3, Project #2, Lab 5, Quiz 4, Problem Set 1…), "Chapter 7 Quiz"-style titles, and every launch inside a Homework or Assignments module. Platform home pages, practice copies, solutions and registration links are left out

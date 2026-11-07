@@ -361,3 +361,6 @@ Pre-release iterations during the author's trial, then the public release.
 - **Redesigned UI** (new visual style, icon set and layout).
 - **English only:** the Chinese interface and the language setting were removed.
 - **Brightspace is the only sign-in.** The welcome page asks only for Brightspace. Platforms are discovered from the student's Brightspace courses (`platformsInBrightspace`). Gradescope is checked quietly every sync, because many courses use it without linking it from Brightspace; Pearson is synced only once a course links it. Sign-in prompts appear only for platforms a course links to or that returned data (`relevantSources`). A platform discovered by a Brightspace sync is synced in the same run.
+
+### 1.1.0
+- Designed in [the 1.1 design](2026-11-07-dueboard-1.1-design.md): due dates from any homework platform through launch visits in a minimized window (platform registry, universal and dedicated finders, visit schedule, per-platform optional site access), Pearson session refresh through Brightspace, syllabus suggestions (Simple Syllabus, PDF and HTML files), and a Firefox build. Implementation notes and every decision taken during the build are in the 1.1 plan and its ledger.

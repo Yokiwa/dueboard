@@ -25,12 +25,28 @@
         <li><code>purdue.brightspace.com</code>: your courses, assignments, quizzes, calendar events and course content listing;</li>
         <li><code>www.gradescope.com</code>: your courses, assignments, due dates and submission status, if you are signed in;</li>
         <li><code>mylab.pearson.com</code> (only if one of your courses links to Pearson MyLab): your assignment list and due dates;</li>
-        <li><code>education.wiley.com</code>: when you open a WileyPLUS assignment yourself, only the assignment title and its “Due …” line.</li>
+        <li><code>education.wiley.com</code>: when you open a WileyPLUS assignment yourself, only the assignment title and its “Due …” line;</li>
+        <li>homework platforms your courses use (for example WileyPLUS, ALEKS, InQuizitive, WebAssign), only after you allow each one: the assignment page DueBoard opens through your Brightspace homework link, and on it only the page heading and its due date (see below);</li>
+        <li>your course syllabus, if Brightspace has one: a syllabus file in course content (PDF or web page) or the Simple Syllabus page, to find dated work.</li>
       </ul>
-      <p>DueBoard only sends read (GET) requests. It never changes, submits or deletes anything on these sites, and it never sees or stores your password.</p>
+      <p>DueBoard's own requests only read. It never changes, submits or deletes anything on these sites, and it never sees or stores your password.</p>
+
+      <h2>Reading platform pages</h2>
+      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link in a minimized browser window, the same way you would. Brightspace signs you in to the platform as it always does when you click the link. DueBoard then reads the page's heading and its “Due …” line, and closes the window. It never clicks, types or submits anything on the platform.</p>
+      <ul>
+        <li>This happens for new homework without a date and once a day to catch changes. You can choose “Only when I click Refresh” or “Never” in Settings.</li>
+        <li>These pages appear in your browser history, like pages you open yourself.</li>
+        <li>What DueBoard reads stays in your browser like everything else.</li>
+      </ul>
+
+      <h2>Optional site access</h2>
+      <p>DueBoard needs your browser's permission to read a platform's pages. It asks only after it finds that platform in your courses, by name, and only when you click “Allow”. You can remove access for any platform in DueBoard's Settings or in your browser's extension settings.</p>
+
+      <h2>Syllabus files</h2>
+      <p>DueBoard downloads syllabus files from your Brightspace course content with your existing session and reads them in your browser to find dated work. The dates are shown only as suggestions; nothing is added until you click “Add”.</p>
 
       <h2>Where data is stored</h2>
-      <p>Everything DueBoard reads, plus the assignments, links and choices you add, is stored only in your browser's extension storage (<code>chrome.storage.local</code>). DueBoard has no server and sends nothing to its author or to third parties. Uninstalling DueBoard deletes this data.</p>
+      <p>Everything DueBoard reads, plus the assignments, links and choices you add, is stored only in your browser's extension storage (<code>storage.local</code> in Chrome, Edge and Firefox). DueBoard has no server and sends nothing to its author or to third parties. Uninstalling DueBoard deletes this data.</p>
 
       <h2>Developer tools</h2>
       <p>The “Developer tools” section in the toolbar popup reads the page you are viewing (or DueBoard's saved course links) only when you click its button, removes emails and similar details, and downloads the result to your own computer. DueBoard never sends that file anywhere; sharing it is up to you.</p>
@@ -41,7 +57,7 @@
       <h2>Contact</h2>
       <p>Questions? Open an issue on <a href="https://github.com/Yokiwa/dueboard/issues">GitHub</a>.</p>
     </main>
-    <footer>DueBoard is a student project and is not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson or Wiley.</footer>
+    <footer>DueBoard is a student project and is not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson, Wiley or any other platform it reads.</footer>
   </div>
 </body>
 </html>

@@ -25,13 +25,17 @@ Click the DueBoard icon to see the next deadline and upcoming work; click **Open
 The only account DueBoard needs is Brightspace. It finds your homework platforms from your courses:
 
 - **Gradescope** — read automatically while you are signed in to Gradescope.
-- **Pearson MyLab** — read automatically. If DueBoard says the Pearson session expired, open Pearson once from your course in Brightspace.
-- **WileyPLUS** — open an assignment page once and DueBoard notes its due date.
+- **Pearson MyLab** — read automatically. If the Pearson session expired, DueBoard reopens it through Brightspace by itself.
+- **WileyPLUS, ALEKS, InQuizitive and other platforms** — the first time DueBoard finds one in your courses, a bar asks to allow it. After that DueBoard opens new homework links in a minimized window, reads the due date and closes it. Opening an assignment yourself also works.
 
 ## Update to a new version
 
 1. Unzip the new release and **replace** the files in the same folder.
 2. Open `chrome://extensions` and click the reload (circular arrow) button on the DueBoard card.
+
+## Firefox
+
+DueBoard for Firefox is coming to Firefox Add-ons. Testers can follow [Guide 05](05-firefox.md).
 
 ## Common problems
 
