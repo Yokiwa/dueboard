@@ -2,61 +2,75 @@
 
 <h1 align="center">DueBoard</h1>
 
-<p align="center">点一下工具栏图标，就能看到所有课程的作业、截止日期和教材入口。<br>
-All your Brightspace and Gradescope deadlines on one page.</p>
+<p align="center">Every assignment, deadline and course platform from Brightspace — on one page.</p>
 
-<p align="center"><img src="docs/assets/screenshot-zh.png" width="720" alt="DueBoard 课程卡片视图"></p>
+<p align="center"><img src="docs/assets/screenshot.png" width="760" alt="DueBoard course cards with a live countdown to the next deadline"></p>
 
-> DueBoard 是学生自己做的项目，**不是普渡大学（Purdue University）的官方产品**。
-> DueBoard is a student project and is **not affiliated with Purdue University**.
+> DueBoard is a student-built, open-source project and is **not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson or Wiley**.
 
-## 它能做什么
+## Why
 
-- **一个页面看全部**：每门课一张卡片，显示接下来要交的作业和倒计时，以及 Brightspace、Gradescope、教材、讨论区等平台的一键入口。
-- **下一个截止**：页面顶部永远显示最近的一个截止，带实时倒计时和“去提交”按钮。
-- **日历和待办**：周视图 / 月视图一眼看出哪天作业扎堆；待办清单可以勾选“已完成”。
-- **自动同步**：借用你浏览器里已有的登录状态，每 30 分钟从 Brightspace 和 Gradescope 读取一次。WebAssign 等平台的作业如果老师放进了 Brightspace 日历，也会自动出现；其余的可以手动添加。
+At Purdue every course lives in Brightspace, but homework is spread across Gradescope, Pearson MyLab, WileyPLUS, Macmillan Achieve and more — each with its own login and its own list of due dates. DueBoard collects them so you can see what is due next without clicking through every course.
 
-## 安装
+## What it does
 
-- **Chrome 应用商店**：上架后会在这里放链接。
-- **手动安装测试版**：从 [Releases](../../releases) 下载 zip，按照 [指南 01](docs/guide/01-加载插件.md) 操作。
+- **One sign-in.** You only sign in to Brightspace. DueBoard reads your courses and discovers which homework platforms they use.
+- **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
+- **Next deadline.** The nearest deadline sits on top with a live countdown, an *Open* button and a *Done* button.
+- **Calendar and to-do views.** Week and month views; a to-do list you can tick off. Submitted work is ticked automatically where the platform reports it.
+- **Automatic sync** every 30 minutes, using the sessions already in your browser.
 
-目前支持 `purdue.brightspace.com`、`www.gradescope.com` 和 Pearson MyLab（`mylab.pearson.com`）。其他平台（Achieve、WileyPLUS 等）的作业，如果放在了 Brightspace 课程内容里，也会显示。
+### Where due dates come from
 
-## 隐私
+| Platform | How DueBoard gets the due date |
+|---|---|
+| Brightspace | Assignments, quizzes, calendar events and dated content items, read directly |
+| Gradescope | Read from your Gradescope course pages when you are signed in |
+| Pearson MyLab | Read from MyLab when a course links to Pearson; open it once from Brightspace if the session expired |
+| WileyPLUS | Noted when you open an assignment page (each assignment needs to be opened once) |
+| Achieve and other platforms | Shown when the platform puts its dates into Brightspace (most do) |
+| Anything else | Add it by hand; it stays until you remove it |
 
-- 所有数据只保存在你自己的浏览器里，**不上传、不收集、不分析**。
-- 不接触你的密码，只复用浏览器已经登录的状态；只发送读取请求（GET）。
-- 卸载插件后，所有数据随之删除。
-- 详见 [隐私政策](docs/privacy.html)。
+## Install
 
-## 开发
+- **Chrome Web Store:** link coming soon.
+- **Manual install:** download the zip from [Releases](../../releases) and follow [docs/guide/01-install.md](docs/guide/01-install.md).
 
-需要 Node.js 22。
+DueBoard currently supports `purdue.brightspace.com`.
+
+## Privacy
+
+- Everything stays in your browser. Nothing is uploaded, collected or analyzed.
+- DueBoard never sees your password; it only reuses sessions your browser already has, and only sends read requests.
+- Uninstalling removes all data.
+- Details: [privacy policy](docs/privacy.html).
+
+## Development
+
+Requires Node.js 22.
 
 ```bash
 npm install
 ```
 
 ```bash
-npm run dev      # 启动开发模式（自动打开带插件的 Chrome）
+npm run dev      # start Chrome with the extension in development mode
 ```
 
 ```bash
-npm test         # 运行测试
+npm test         # run the test suite
 ```
 
 ```bash
-npm run zip      # 打包成可以上传商店的 zip
+npm run zip      # build the zip for the Chrome Web Store
 ```
 
-代码结构和设计说明见 `docs/superpowers/specs/`（设计文档）和 `docs/superpowers/plans/`（开发计划）。
+Design notes and the original implementation plan are in [`docs/superpowers/`](docs/superpowers/). Guides for installing, exporting sample pages, publishing and the beta are in [`docs/guide/`](docs/guide/).
 
-## 反馈
+## Feedback
 
-发现作业漏了、时间不对，或者有功能建议，欢迎在 [Issues](../../issues) 里提出。
+Missing assignments, wrong dates or a homework platform DueBoard doesn't know yet? Please open an [issue](../../issues).
 
-## 许可
+## License
 
 [MIT](LICENSE)

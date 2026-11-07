@@ -1,56 +1,18 @@
-# 更新记录 / Changelog
-
-## 1.3.0 — 2026-11
-
-- 新增：打开 WileyPLUS 作业页时，DueBoard 会顺便记下它的截止日期，物理 HW 会带着日期和倒计时出现在卡片上（每项作业需要至少打开过一次）
-
-## 1.2.1 — 2026-11
-
-- 同步失败的提示可以展开 “详情”，看到具体原因
-- Pearson 把请求转到登录页时，提示 “请从 Brightspace 重新打开一次”，而不是笼统的 “同步失败”
-
-## 1.2.0 — 2026-11
-
-- 新增：直接读取 Pearson MyLab 的作业和截止日期（数学课），显示在对应课程卡片上
-- Pearson 登录过期时提示 “从 Brightspace 重新打开一次”，点按钮即可
-- 同一门课的大课（LEC）和习题课（REC）合并成一张卡片
-- 课程内容里的作业入口（例如物理的 HW01–HW11、化学的 HW）现在会作为作业出现，可以直接点开
-- 识别 Macmillan Achieve 入口
-
-## 1.1.1 — 2026-11
-
-- 工具栏弹窗底部新增 “开发者工具”：导出当前页面、导出课程链接（用于支持 Pearson、Wiley 等平台）
-
-## 1.1.0 — 2026-11
-
-- 不再替换新标签页：点工具栏图标 → “打开完整面板” 进入；第一次安装时会自动打开一次
-- 卡片和待办里勾选的作业原地打勾，不再消失；可以随时取消
-- 没有截止日期的旧测验不再出现在卡片上（课程详情和待办清单里仍可看到）
-- 迎新、培训等不是课程的条目默认隐藏，需要时可在设置里勾选显示
-- 课程标题去掉 “331 332 333” 这类班级编号
-- 识别 WileyPLUS，以及 Brightspace 里更多形式的 Pearson / Wiley 等平台入口，卡片上会出现对应按钮
-
-## 1.0.2 — 2026-11
-
-- “下一个截止”横条新增 “✓ 完成” 按钮：标记后横条自动换成下一个截止
-- 课程卡片和课程详情里，每项作业前都有勾选框，可以直接标记完成或取消
-- 标记完成后，底部会出现 5 秒的 “撤销” 提示，点错了可以撤回
-
-## 1.0.1 — 2026-11
-
-- 修复：课程内容里设了截止日期的作业（例如 Macmillan Achieve），点 “Open” 会打开 Brightspace 的 500 错误页。现在会直接打开这项作业的内容页
-- 卡片标题更简洁：去掉学期、课程代码、“Merge”“LEC” 等后缀
-- 卡片底部只放平台入口；课程资料里的视频等链接移到课程详情里
+# Changelog
 
 ## 1.0.0 — 2026-11
 
-第一个正式版本 / First release.
+First public release.
 
-- 新标签页面板：课程卡片、日历（周 / 月）、待办清单三个视图
-- “下一个截止”横条，带实时倒计时
-- 自动读取 Brightspace 的课程、作业、测验、日历截止事件和课程资料链接
-- 自动读取 Gradescope 的作业、截止时间和提交状态
-- 同一项作业在两个平台出现时自动合并
-- 手动添加作业和链接；勾选“已完成”
-- 工具栏弹窗、设置页（隐藏课程、课程颜色、中英文切换、新标签页模式、手动合并课程）
-- 所有数据只保存在本地浏览器
+- Dashboard page opened from the toolbar: course cards, calendar (week / month) and to-do views, plus a "Next deadline" banner with a live countdown, *Open* and *Done* buttons
+- Sign in to Brightspace only; DueBoard discovers each course's homework platforms from its content
+- Reads Brightspace assignments, quizzes, calendar events, dated content items and homework launches
+- Reads Gradescope assignments, due dates and submission status
+- Reads Pearson MyLab assignments and due dates for courses that link to Pearson
+- Notes WileyPLUS due dates when an assignment page is opened
+- Shortcut buttons for Gradescope, Pearson, WileyPLUS, Achieve, WebAssign, McGraw-Hill Connect, Cengage, zyBooks, Piazza and Ed
+- Tick items done (stays ticked in place), add assignments and links by hand
+- Lecture and recitation sections of one course share a card; non-course Brightspace entries are hidden by default
+- Settings: show / hide courses, course colors, merge Gradescope courses
+- Toolbar popup with the next deadline and upcoming work; developer tools to export a page for adding new platforms
+- All data stays in the browser
