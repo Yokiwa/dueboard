@@ -149,6 +149,14 @@ const messages = {
   'settings.syllabus': 'Syllabus suggestions',
   'item.readFrom': (v: Vars) => `Read from ${v.platform}`,
   'sync.visiting': (v: Vars) => `Reading ${v.done} of ${v.total} platform pages…`,
+  'syllabus.title': 'From syllabus',
+  'syllabus.hint': 'Found in your syllabus. Add the ones that are real deadlines.',
+  'syllabus.add': (v: Vars) => `Add ${v.title}`,
+  'syllabus.hide': (v: Vars) => `Hide ${v.title}`,
+  'syllabus.addLabel': 'Add',
+  'syllabus.hideLabel': 'Hide',
+  'syllabus.from': (v: Vars) => `From ${v.source}: '${v.excerpt}'`,
+  'syllabus.unreadable': "Syllabus couldn't be read",
 } satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof messages;

@@ -134,6 +134,8 @@ export interface UserState {
   shown: Record<string, true>;
   /** "gradescope:<id>" → Course.id of the Brightspace course it should merge into */
   merges: Record<string, string>;
+  /** Syllabus suggestions the student hid (Suggestion.key). */
+  syllabusHidden: Record<string, true>;
 }
 export type VisitMode = 'auto' | 'manual' | 'off';
 export interface Settings {

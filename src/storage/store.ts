@@ -73,6 +73,7 @@ export function migrate(raw: unknown): StoreShape {
       hidden: obj(us.hidden) as Record<string, true>,
       shown: obj(us.shown) as Record<string, true>,
       merges: obj(us.merges) as Record<string, string>,
+      syllabusHidden: obj(us.syllabusHidden) as Record<string, true>,
     },
     settings: migrateSettings(r.settings),
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
@@ -214,4 +215,9 @@ export async function setVisitProgress(p: VisitProgress | null): Promise<void> {
 export async function getVisitProgress(): Promise<VisitProgress | null> {
   const r = (await browser.storage.local.get('visitProgress')) as { visitProgress?: VisitProgress | null };
   return r.visitProgress ?? null;
+}
+
+export async function hideSuggestion(key: string): Promise<void> {
+  const { userState } = await loadStore();
+  await patchStore({ userState: { ...userState, syllabusHidden: { ...userState.syllabusHidden, [key]: true } } });
 }

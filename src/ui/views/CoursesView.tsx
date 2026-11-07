@@ -8,8 +8,9 @@ import { Books } from '@phosphor-icons/react';
 import { useT } from '../i18n';
 import { CourseCard } from './CourseCard';
 import { CourseDetail } from './CourseDetail';
+import type { SyllabusView } from '../components/SyllabusSuggestions';
 
-export function CoursesView({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
+export function CoursesView({ dashboard, now, syllabus }: { dashboard: Dashboard; now: Date; syllabus?: SyllabusView }) {
   const t = useT();
   const [openId, setOpenId] = useState<string | null>(null);
   const open = dashboard.courses.find((c) => c.id === openId);
@@ -44,6 +45,8 @@ export function CoursesView({ dashboard, now }: { dashboard: Dashboard; now: Dat
           items={itemsOf(open.id)}
           links={dashboard.links.filter((l) => l.courseId === open.id)}
           now={now}
+          suggestions={syllabus?.suggestions.filter((s) => s.courseId === open.id)}
+          syllabusUnreadable={syllabus?.unreadable.includes(open.id)}
           onClose={() => setOpenId(null)}
         />
       )}

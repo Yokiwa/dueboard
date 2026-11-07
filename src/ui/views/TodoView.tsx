@@ -8,6 +8,7 @@ import { DueBadge } from '../components/DueBadge';
 import { ManualItemForm } from '../components/ManualItemForm';
 import { CaretRight, CheckCircle, Plus, X } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
+import { SyllabusSuggestions, type SyllabusView } from '../components/SyllabusSuggestions';
 
 type Group = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'noDue';
 const GROUPS: [Group, MessageKey][] = [
@@ -71,7 +72,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
   );
 }
 
-export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
+export function TodoView({ dashboard, now, syllabus }: { dashboard: Dashboard; now: Date; syllabus?: SyllabusView }) {
   const t = useT();
   const [adding, setAdding] = useState(false);
   const courseOf = new Map(dashboard.courses.map((c) => [c.id, c]));
@@ -93,7 +94,7 @@ export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }
         )}
       </div>
       {adding && <ManualItemForm courses={dashboard.courses} onDone={() => setAdding(false)} />}
-      {open.length === 0 && completed.length === 0 && (
+      {open.length === 0 && completed.length === 0 && !syllabus?.suggestions.length && (
         <div className="flex flex-col items-center gap-4 py-12 text-center">
           <span aria-hidden="true" className="inline-flex size-12 items-center justify-center rounded-2xl bg-db-accent-soft text-db-accent">
             <CheckCircle size={24} weight="fill" />
@@ -118,6 +119,7 @@ export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }
           </section>
         );
       })}
+      {syllabus && <SyllabusSuggestions suggestions={syllabus.suggestions} courses={dashboard.courses} />}
       {completed.length > 0 && (
         <details className="group rounded-lg">
           <summary className="db-press flex cursor-pointer list-none items-center gap-2 rounded-sm caption-3 text-db-muted hover:text-db-text [&::-webkit-details-marker]:hidden">

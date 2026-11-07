@@ -18,6 +18,8 @@ import { CoursesView } from '../../ui/views/CoursesView';
 import { CalendarView } from '../../ui/views/CalendarView';
 import { TodoView } from '../../ui/views/TodoView';
 import type { Dashboard } from '../../core/dashboard';
+import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
+import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
 import type { StoreShape } from '../../core/types';
 
 /** Oldest successful sync across platforms that have synced at least once. */
@@ -29,10 +31,10 @@ export function lastSynced(store: StoreShape): string | null {
   return times[0] ?? null;
 }
 
-function ViewBody({ view, dashboard, now }: { view: View; dashboard: Dashboard; now: Date }) {
-  if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} />;
+function ViewBody({ view, dashboard, now, syllabus }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView }) {
+  if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
-  return <TodoView dashboard={dashboard} now={now} />;
+  return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;
 }
 
 export function App() {
@@ -60,7 +62,13 @@ export function App() {
           <SourceBanners store={store} now={now} />
           {granted && <PlatformAccess store={store} granted={granted} now={now} />}
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
-          <ViewBody key={view} view={view} dashboard={dashboard} now={now} />
+          <ViewBody
+            key={view}
+            view={view}
+            dashboard={dashboard}
+            now={now}
+            syllabus={{ suggestions: syllabusSuggestions(store, dashboard, now), unreadable: unreadableSyllabi(store, dashboard) }}
+          />
         </AppShell>
     </DoneToastProvider>
   );

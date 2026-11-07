@@ -10,6 +10,8 @@ import type { Course, CourseLink, Item, LinkCategory } from '../../core/types';
 import { useT, type MessageKey } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
+import { SyllabusSuggestions } from '../components/SyllabusSuggestions';
+import type { Suggestion } from '../../core/syllabusSuggestions';
 
 const CATEGORIES: [LinkCategory, MessageKey][] = [
   ['lms', 'cat.lms'],
@@ -25,10 +27,13 @@ export interface CourseDetailProps {
   items: Item[];
   links: CourseLink[];
   now: Date;
+  /** This course's syllabus suggestions. */
+  suggestions?: Suggestion[];
+  syllabusUnreadable?: boolean;
   onClose(): void;
 }
 
-export function CourseDetail({ course, items, links, now, onClose }: CourseDetailProps) {
+export function CourseDetail({ course, items, links, now, suggestions = [], syllabusUnreadable = false, onClose }: CourseDetailProps) {
   const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = `detail-${course.id}`;
@@ -110,6 +115,9 @@ export function CourseDetail({ course, items, links, now, onClose }: CourseDetai
             </ul>
           )}
         </section>
+
+        <SyllabusSuggestions suggestions={suggestions} courses={[course]} showCourse={false} />
+        {syllabusUnreadable && <p className="m-0 caption-5 text-db-faint">{t('syllabus.unreadable')}</p>}
 
         {links.length > 0 && (
           <section className="flex flex-col gap-3">

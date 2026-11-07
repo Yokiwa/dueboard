@@ -34,7 +34,7 @@ describe('store', () => {
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
-    expect(s.userState).toEqual({ done: {}, colors: {}, hidden: {}, shown: {}, merges: {} });
+    expect(s.userState).toEqual({ done: {}, colors: {}, hidden: {}, shown: {}, merges: {}, syllabusHidden: {} });
     expect(s.syncMeta).toEqual({});
   });
 
@@ -75,7 +75,7 @@ describe('store', () => {
     const m = migrate({ settings: { language: 'zh', newtabMode: 'blank' }, userState: { done: { 'x:1': true } } });
     expect(m.schemaVersion).toBe(1);
     expect(m.settings).toEqual(DEFAULT_SETTINGS); // old language setting is dropped
-    expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, shown: {}, merges: {} });
+    expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, shown: {}, merges: {}, syllabusHidden: {} });
     expect(m.snapshots).toEqual({});
   });
 
