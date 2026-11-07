@@ -114,21 +114,30 @@ export function tocLinks(toc: Toc, ou: string, base = 'https://purdue.brightspac
   return out;
 }
 
-const HOMEWORK_TITLE = /\b(hw|homework)\s*_?\d+/i;
-const NOT_WORK = /^copy of\b|study purposes|practice|solutions?\b|answer key/i;
+/** A kind of graded work followed by a number: "HW 3", "Problem Set 3", "Assignment 4", "Lab 5", "Project #2", "Worksheet 7". */
+const WORK_NUMBERED = /\b(hw|homework|assignments?|problem\s*sets?|psets?|labs?|quiz(?:zes)?|projects?|worksheets?|exercises?)\s*[-_#:]?\s*\d+/i;
+/** A unit then a kind of work: "Chapter 6 Quiz", "Week 3 Homework". */
+const UNIT_THEN_WORK = /\b(chapter|ch\.?|week|wk|unit|module|lesson|section)\s*\d+\b.*\b(quiz|homework|hw|assignment|problem\s*set|worksheet|lab)\b/i;
+/** Modules whose launches are all homework, whatever their titles. */
+const WORK_MODULE = /\b(homework|hw|assignments?|problem\s*sets?)\b/i;
+const NOT_WORK = /^copy of\b|study purposes|practice|solutions?\b|answer key|\bhome\b|\baccess\b|resources|registration|purchase|instructions|getting started|course tools?/i;
 const LAUNCH = /\/lti\/|quickLink.*[?&]type=lti/i;
 
 /**
- * Content topics that launch a homework platform (e.g. "PHYS 172H - HW11 - FA26" opening WileyPLUS) become items,
- * so homework that lives outside Brightspace still shows up. They open through their content page; the date is the
- * topic's due date when Brightspace has one (otherwise a calendar event with the same title supplies it).
+ * Content topics that launch a homework platform become items, so homework that lives outside Brightspace still
+ * shows up — whatever the platform. A launch counts when its title names numbered work ("Problem Set 3",
+ * "Chapter 6 Quiz") or when it sits in a Homework / Assignments module. Platform home links, practice copies and
+ * solutions don't count. Items open through their content page; the date is the topic's own due date when
+ * Brightspace has one (otherwise a calendar event or a page capture with the same title supplies it).
  */
 export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
   const out: RawItem[] = [];
-  const walk = (m: TocModule) => {
+  const walk = (m: TocModule, inWorkModule: boolean) => {
+    const workHere = inWorkModule || WORK_MODULE.test(m.Title ?? '');
     for (const t of m.Topics ?? []) {
       if (t.TopicId === undefined || !t.Url || !LAUNCH.test(t.Url)) continue;
-      if (!HOMEWORK_TITLE.test(t.Title) || NOT_WORK.test(t.Title)) continue;
+      if (NOT_WORK.test(t.Title)) continue;
+      if (!workHere && !WORK_NUMBERED.test(t.Title) && !UNIT_THEN_WORK.test(t.Title)) continue;
       out.push({
         source: 'brightspace',
         sourceItemId: `topic:${t.TopicId}`,
@@ -140,8 +149,8 @@ export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
         submitted: false,
       });
     }
-    for (const child of m.Modules ?? []) walk(child);
+    for (const child of m.Modules ?? []) walk(child, workHere);
   };
-  for (const m of toc.Modules ?? []) walk(m);
+  for (const m of toc.Modules ?? []) walk(m, false);
   return out;
 }

@@ -305,3 +305,42 @@ describe('homework launches in course content become items', () => {
     expect(topics.find((i) => i.sourceItemId === 'topic:502')!.dueAt).toBe('2026-11-04T04:59:00.000Z');
   });
 });
+
+describe('wider homework detection in course content', () => {
+  const lti = (n: number) => `/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rCode=ABC-${n}`;
+  const topic = (id: number, Title: string, Url = lti(id)) => ({ TopicId: id, Title, Url, TypeIdentifier: 'Link' });
+  const toc = {
+    Modules: [
+      { Title: 'Week 5', Modules: [], Topics: [
+        topic(1, 'Problem Set 3'),
+        topic(2, 'Assignment 4: Vectors'),
+        topic(3, 'Lab 5 Pre-lab'),
+        topic(4, 'Chapter 6 Quiz'),
+        topic(5, 'Project #2 checkpoint'),
+        topic(6, 'Worksheet 7'),
+        topic(7, 'Lecture 12 video'),
+        topic(8, 'Lab 5 instructions', '/content/enforced/102/lab5.pdf'),
+        topic(9, 'Practice Quiz 6'),
+        topic(10, 'Week 5 slides'),
+      ] },
+      { Title: 'Homework', Modules: [{ Title: 'Unit 2', Modules: [], Topics: [topic(20, 'Kinematics in 2D'), topic(21, 'Access Pearson'), topic(22, 'Unit 2 solutions')] }], Topics: [topic(23, 'Energy and work')] },
+      { Title: 'Course Tools', Modules: [], Topics: [topic(30, 'Kaltura Media'), topic(31, 'Wiley Course Resources - LTI 1.3')] },
+    ],
+  };
+
+  it('picks up launches titled like work (assignment, problem set, lab, quiz, project, worksheet + number) and launches inside Homework / Assignments modules', async () => {
+    const { result } = await run(routes({ [`${LE}/102/content/toc`]: { body: toc } }));
+    if (!result.ok) throw new Error('expected ok');
+    const titles = result.items.filter((i) => i.sourceItemId.startsWith('topic:')).map((i) => i.title).sort();
+    expect(titles).toEqual([
+      'Assignment 4: Vectors',
+      'Chapter 6 Quiz',
+      'Energy and work',
+      'Kinematics in 2D',
+      'Lab 5 Pre-lab',
+      'Problem Set 3',
+      'Project #2 checkpoint',
+      'Worksheet 7',
+    ]);
+  });
+});
