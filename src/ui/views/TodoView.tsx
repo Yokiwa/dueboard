@@ -55,7 +55,11 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         >
           {item.title}
         </a>
-        <span className="caption-5 text-db-faint">{course?.code}</span>
+        {item.dueFrom === 'platform' ? (
+          <span className="caption-5 text-db-faint" title={item.dueEvidence}>{`${course?.code ?? ''} · ${t('item.readFrom', { platform: item.duePlatform ?? '' })}`}</span>
+        ) : (
+          <span className="caption-5 text-db-faint">{course?.code}</span>
+        )}
       </div>
       <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
       {item.type === 'manual' && (

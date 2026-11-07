@@ -24,7 +24,7 @@ export interface DashboardInput {
   manualItems: ManualItem[];
   manualLinks: CourseLink[];
   userState: UserState;
-  /** Due dates read from platform pages the student opened, keyed by normalized title. */
+  /** Due dates read on platform pages (visits, or pages the student opened). */
   captured?: StoreShape['captured'];
 }
 export interface Dashboard {

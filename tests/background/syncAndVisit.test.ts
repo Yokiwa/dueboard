@@ -88,3 +88,29 @@ describe('syncAndVisit: syllabus step', () => {
     expect(syllabus).not.toHaveBeenCalled();
   });
 });
+
+describe('syncAndVisit: one run at a time', () => {
+  it('a sync requested while another runs joins it instead of opening a second visit window', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const visit = vi.fn(async () => {
+      await gate;
+      return [] as VisitOutcome[];
+    });
+    const { d } = deps(withHomework(), [], { visit });
+    const a = syncAndVisit(d, 'auto');
+    const b = syncAndVisit(d, 'manual');
+    await new Promise((r) => setTimeout(r, 10));
+    release();
+    await Promise.all([a, b]);
+    expect(d.sync).toHaveBeenCalledTimes(1);
+    expect(visit).toHaveBeenCalledTimes(1);
+  });
+
+  it('a later sync after the first finished runs normally', async () => {
+    const { d } = deps(withHomework());
+    await syncAndVisit(d, 'auto');
+    await syncAndVisit(d, 'auto');
+    expect(d.sync).toHaveBeenCalledTimes(2);
+  });
+});

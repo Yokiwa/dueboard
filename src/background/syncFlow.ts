@@ -35,7 +35,20 @@ export interface SyncAndVisitDeps {
  * A full sync: read every source, then open the homework launches that still need a date (spec 3.2), then — if a
  * visit restored the Pearson session — read Pearson again. Visits are skipped while Brightspace is signed out.
  */
-export async function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
+let running: Promise<SyncReport> | null = null;
+
+/**
+ * One full sync at a time: a sync asked for while another runs (the 30-minute alarm, a page load, a Refresh click)
+ * joins it, so there is never more than one visit window.
+ */
+export function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
+  running ??= fullSync(deps, trigger).finally(() => {
+    running = null;
+  });
+  return running;
+}
+
+async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger): Promise<SyncReport> {
   const report = await deps.sync();
   if (report.brightspace === 'not_logged_in') return report;
   if (deps.syllabus) {

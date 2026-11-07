@@ -113,3 +113,31 @@ describe('Settings: reading platforms', () => {
     await waitFor(async () => expect((await loadStore()).settings.syllabus).toBe(false));
   });
 });
+
+describe('date origin in the to-do list', () => {
+  it('shows where a platform date was read next to the course', async () => {
+    const { TodoView } = await import('../../src/ui/views/TodoView');
+    const item: Item = {
+      id: 'brightspace:topic:1', courseId: 'brightspace:1', title: 'Homework 7', type: 'assignment', dueAt: '2026-11-11T04:59:00.000Z', url: 'u',
+      sources: ['brightspace'], sourceKeys: ['brightspace:topic:1'], submitted: false, doneByUser: false,
+      dueFrom: 'platform', duePlatform: 'ALEKS', dueEvidence: "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'",
+    };
+    const course = { id: 'brightspace:1', code: 'MA 16100', name: 'MA 16100', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
+    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
+    const caption = screen.getByText('MA 16100 · Read from ALEKS');
+    expect(caption.getAttribute('title')).toBe("Read from ALEKS: 'Due: 11/10/2026 11:59 PM'");
+  });
+});
+
+describe('next-deadline banner names the platform a date was read from', () => {
+  it('says ALEKS, not Brightspace', async () => {
+    const { NextDueBanner } = await import('../../src/ui/components/NextDueBanner');
+    const item: Item = {
+      id: 'brightspace:topic:1', courseId: 'brightspace:1', title: 'Homework 7', type: 'assignment', dueAt: '2026-11-11T04:59:00.000Z', url: 'u',
+      sources: ['brightspace'], sourceKeys: ['brightspace:topic:1'], submitted: false, doneByUser: false, dueFrom: 'platform', duePlatform: 'ALEKS',
+    };
+    render(<NextDueBanner item={item} course={undefined} now={now} />);
+    expect(screen.getByText(/^ALEKS · /)).toBeTruthy();
+    expect(screen.queryByText(/^Brightspace · /)).toBeNull();
+  });
+});
