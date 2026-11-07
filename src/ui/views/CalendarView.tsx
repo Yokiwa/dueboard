@@ -4,16 +4,16 @@ import type { Dashboard } from '../../core/dashboard';
 import type { Course, Item } from '../../core/types';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { iconBtn, secondaryBtn } from '../forms';
-import { useLang, useT } from '../i18n';
+import { useT } from '../i18n';
 import { dayKey, itemsByDay, monthCells, weekDays } from './calendarGrid';
 
 type Mode = 'week' | 'month';
-const WEEKDAY = { zh: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] };
+const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_LIMIT = 3;
 
-function Chip({ item, course, lang }: { item: Item; course: Course | undefined; lang: 'zh' | 'en' }) {
+function Chip({ item, course }: { item: Item; course: Course | undefined }) {
   const done = item.doneByUser || item.submitted;
-  const time = format(new Date(item.dueAt!), lang === 'zh' ? 'HH:mm' : 'h:mm a');
+  const time = format(new Date(item.dueAt!), 'h:mm a');
   return (
     <a
       href={item.url}
@@ -33,7 +33,6 @@ function Chip({ item, course, lang }: { item: Item; course: Course | undefined; 
 }
 
 export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
-  const lang = useLang();
   const t = useT();
   const [mode, setMode] = useState<Mode>('week');
   const [anchor, setAnchor] = useState(now);
@@ -43,14 +42,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
   const days = mode === 'week' ? weekDays(anchor) : monthCells(anchor);
   const first = days[0]!;
   const last = days[6]!;
-  const title =
-    mode === 'week'
-      ? lang === 'zh'
-        ? `${format(first, 'M月d日')} – ${format(last, 'M月d日')}`
-        : `${format(first, 'MMM d')} – ${format(last, 'MMM d')}`
-      : lang === 'zh'
-        ? format(anchor, 'yyyy年M月')
-        : format(anchor, 'MMMM yyyy');
+  const title = mode === 'week' ? `${format(first, 'MMM d')} – ${format(last, 'MMM d')}` : format(anchor, 'MMMM yyyy');
   const step = (dir: 1 | -1) => setAnchor((a) => (mode === 'week' ? addWeeks(a, dir) : addMonths(a, dir)));
   const rows = mode === 'week' ? [days] : Array.from({ length: 6 }, (_, r) => days.slice(r * 7, r * 7 + 7));
 
@@ -89,7 +81,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
       <div className="overflow-x-auto">
         <div role="grid" className="min-w-[700px]">
           <div role="row" className="grid grid-cols-7 gap-1 pb-2">
-            {WEEKDAY[lang].map((w) => (
+            {WEEKDAY.map((w) => (
               <span key={w} role="columnheader" className="px-2 caption-3 text-db-faint">
                 {w}
               </span>
@@ -106,7 +98,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                   <div
                     key={dayKey(day)}
                     role="gridcell"
-                    aria-label={lang === 'zh' ? format(day, 'M月d日') : format(day, 'MMM d')}
+                    aria-label={format(day, 'MMM d')}
                     aria-current={isToday ? 'date' : undefined}
                     className={`flex flex-col gap-1 rounded-xl border p-2 ${mode === 'week' ? 'min-h-48' : 'min-h-24'} ${
                       isToday ? 'border-db-accent bg-db-accent-soft' : 'border-db-border-soft'
@@ -120,7 +112,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                       {format(day, 'd')}
                     </span>
                     {shown.map((it) => (
-                      <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} lang={lang} />
+                      <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} />
                     ))}
                     {list.length > shown.length && <span className="px-2 caption-4 text-db-faint">{`+${list.length - shown.length}`}</span>}
                   </div>

@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { LangProvider } from '../../src/ui/i18n';
 
-export function renderIn(lang: 'zh' | 'en', ui: ReactElement) {
-  return render(<LangProvider lang={lang}>{ui}</LangProvider>);
+/** The UI is English-only; the first argument is kept so existing calls read the same. */
+export function renderIn(_lang: 'en', ui: ReactElement) {
+  return render(ui);
 }

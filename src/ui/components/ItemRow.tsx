@@ -1,14 +1,13 @@
 import { formatDueAt } from '../../core/time';
 import type { Item } from '../../core/types';
-import { useLang, useT } from '../i18n';
+import { useT } from '../i18n';
 import { sourceLabel } from '../sourceLabel';
 import { DueBadge } from './DueBadge';
 
 /** Title + "source · due time" on the left, countdown badge on the right. The title links to the item. */
 export function ItemRow({ item, now }: { item: Item; now: Date }) {
-  const lang = useLang();
   const t = useT();
-  const when = item.dueAt ? formatDueAt(new Date(item.dueAt), now, lang) : t('badge.noDue');
+  const when = item.dueAt ? formatDueAt(new Date(item.dueAt), now) : t('badge.noDue');
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-0.5">

@@ -18,7 +18,7 @@ describe('normalizeTitle', () => {
   it.each([
     ['Project 3 - Due', 'project3'],
     ['HW #4 (due)', 'hw4'],
-    ['作业 1：函数', '作业1函数'],
+    ['Tâche 1 : fonctions', 'tâche1fonctions'],
     ['Due Diligence Essay', 'duediligenceessay'],
   ])('%s → %s', (title, norm) => {
     expect(normalizeTitle(title)).toBe(norm);

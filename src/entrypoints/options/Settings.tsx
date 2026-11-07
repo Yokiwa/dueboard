@@ -4,12 +4,11 @@ import { ArrowUpRight, Check } from '@phosphor-icons/react';
 import { BrandMark } from '../../ui/components/BrandMark';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
-import type { Settings as SettingsShape } from '../../core/types';
-import { setCourseColor, setCourseVisible, setMerge, updateSettings } from '../../storage/store';
+import { setCourseColor, setCourseVisible, setMerge } from '../../storage/store';
 import { FEEDBACK_URL } from '../../ui/config';
 import { field, label } from '../../ui/forms';
 import { useStore } from '../../ui/hooks/useStore';
-import { LangProvider, resolveLang, useT } from '../../ui/i18n';
+import { useT } from '../../ui/i18n';
 import type { StoreShape } from '../../core/types';
 
 const card = 'db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm';
@@ -35,22 +34,6 @@ function Body({ store }: { store: StoreShape }) {
             <span className="hero-text">{t('settings.title')}</span>
           </h1>
         </div>
-
-        <section className={card}>
-          <label className={label} htmlFor={`${id}-lang`}>
-            {t('settings.language')}
-            <select
-              id={`${id}-lang`}
-              className={field}
-              value={store.settings.language}
-              onChange={(e) => void updateSettings({ language: e.target.value as SettingsShape['language'] })}
-            >
-              <option value="auto">{t('lang.auto')}</option>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-        </section>
 
         <section className={card}>
           <h2 className={h2}>{t('settings.courses')}</h2>
@@ -139,8 +122,6 @@ export function Settings() {
   const store = useStore();
   if (!store) return null;
   return (
-    <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
-      <Body store={store} />
-    </LangProvider>
+    <Body store={store} />
   );
 }

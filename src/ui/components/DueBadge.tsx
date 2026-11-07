@@ -1,5 +1,5 @@
 import { relativeDue, urgency } from '../../core/time';
-import { useLang, useT } from '../i18n';
+import { useT } from '../i18n';
 
 type Tone = 'overdue' | 'urgent' | 'soon' | 'normal' | 'done';
 const TONE_CLASS: Record<Tone, string> = {
@@ -18,7 +18,6 @@ export interface DueBadgeProps {
 }
 
 export function DueBadge({ dueAt, done, submitted = false, now }: DueBadgeProps) {
-  const lang = useLang();
   const t = useT();
   let tone: Tone;
   let label: string;
@@ -27,7 +26,7 @@ export function DueBadge({ dueAt, done, submitted = false, now }: DueBadgeProps)
   else if (!dueAt) [tone, label] = ['normal', t('badge.noDue')];
   else {
     const d = new Date(dueAt);
-    [tone, label] = [urgency(d, now), relativeDue(d, now, lang)];
+    [tone, label] = [urgency(d, now), relativeDue(d, now)];
   }
   return (
     <span data-tone={tone} className={`shrink-0 rounded-md px-2 py-1 caption-3 whitespace-nowrap tabular-nums ${TONE_CLASS[tone]}`}>

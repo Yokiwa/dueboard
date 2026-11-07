@@ -2,9 +2,8 @@ import type { ReactNode } from 'react';
 import { format } from 'date-fns';
 import { ArrowClockwise } from '@phosphor-icons/react';
 import { secondaryBtn } from '../forms';
-import { useLang, useT } from '../i18n';
+import { useT } from '../i18n';
 
-const WEEKDAYS_ZH = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
 export interface HeaderProps {
   now: Date;
@@ -24,9 +23,8 @@ function greetingKey(now: Date) {
 }
 
 export function Header({ now, pendingWeek, lastSynced, syncing, onRefresh, children }: HeaderProps) {
-  const lang = useLang();
   const t = useT();
-  const date = lang === 'zh' ? `${format(now, 'M月d日')} ${WEEKDAYS_ZH[now.getDay()]}` : format(now, 'EEEE, MMMM d');
+  const date = format(now, 'EEEE, MMMM d');
   const greet = t(greetingKey(now));
   const title = pendingWeek > 0 ? t('header.pendingWeek', { greet, n: pendingWeek }) : t('header.noneWeek', { greet });
   return (

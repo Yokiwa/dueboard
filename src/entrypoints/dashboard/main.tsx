@@ -6,7 +6,7 @@ import { ErrorBoundary } from '../../ui/components/ErrorBoundary';
 import { App } from './App';
 
 createRoot(document.getElementById('root')!).render(
-  <ErrorBoundary fallback="页面出错了，请刷新重试。 Something went wrong — please reload.">
+  <ErrorBoundary fallback="Something went wrong — please reload the page.">
     <App />
   </ErrorBoundary>,
 );

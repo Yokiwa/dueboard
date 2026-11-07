@@ -27,7 +27,7 @@ describe('store', () => {
   it('loadStore on empty storage returns defaults', async () => {
     const s = await loadStore();
     expect(s.schemaVersion).toBe(1);
-    expect(s.settings).toEqual({ language: 'auto' });
+    expect(s.settings).toEqual({});
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
@@ -62,22 +62,22 @@ describe('store', () => {
   });
 
   it('patchStore merges top-level keys', async () => {
-    await patchStore({ settings: { language: 'en' } });
+    await patchStore({ manualLinks: [{ courseId: 'c', label: 'L', url: 'https://x', category: 'other', source: 'manual' }] });
     const s = await loadStore();
-    expect(s.settings.language).toBe('en');
+    expect(s.manualLinks).toHaveLength(1);
     expect(s.manualItems).toEqual([]);
   });
 
   it('migrate fills missing keys from partial data', () => {
     const m = migrate({ settings: { language: 'zh', newtabMode: 'blank' }, userState: { done: { 'x:1': true } } });
     expect(m.schemaVersion).toBe(1);
-    expect(m.settings).toEqual({ language: 'zh' });
+    expect(m.settings).toEqual({}); // old language setting is dropped
     expect(m.userState).toEqual({ done: { 'x:1': true }, colors: {}, hidden: {}, shown: {}, merges: {} });
     expect(m.snapshots).toEqual({});
   });
 
   it('migrate tolerates garbage', () => {
-    expect(migrate(null).settings.language).toBe('auto');
+    expect(migrate(null).settings).toEqual({});
     expect(migrate('x').manualItems).toEqual([]);
   });
 

@@ -22,45 +22,45 @@ const d = dash({
 
 describe('CalendarView', () => {
   it('starts in week view showing this week with today marked', () => {
-    renderIn('zh', <CalendarView dashboard={d} now={NOW} />);
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('11月1日 – 11月7日');
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Nov 1 – Nov 7');
     const today = screen.getByRole('gridcell', { current: 'date' });
     expect(within(today).getByText('Project 3')).toBeTruthy();
     expect(within(today).getByText('Quiz 6')).toBeTruthy();
   });
 
   it('item chip uses course color, shows time, and opens url', () => {
-    renderIn('zh', <CalendarView dashboard={d} now={NOW} />);
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
     const chip = screen.getByRole('link', { name: /Project 3/ }) as HTMLAnchorElement;
     expect(chip.href).toBe('https://x/i1');
     expect(chip.target).toBe('_blank');
-    expect(chip.textContent).toContain('23:59');
+    expect(chip.textContent).toContain('11:59 PM');
     const dot = chip.querySelector('[data-testid="chip-dot"]') as HTMLElement;
     expect(dot.style.background.toLowerCase()).toMatch(/#ea580c|rgb\(234, 88, 12\)/);
   });
 
   it('submitted or done items are marked', () => {
-    renderIn('zh', <CalendarView dashboard={d} now={NOW} />);
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
     expect(screen.getByRole('link', { name: /Quiz 6/ }).getAttribute('data-done')).toBe('true');
   });
 
   it('week/month toggle and prev/next/today buttons', () => {
-    renderIn('zh', <CalendarView dashboard={d} now={NOW} />);
-    fireEvent.click(screen.getByRole('button', { name: '下一周' }));
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('11月8日 – 11月14日');
-    fireEvent.click(screen.getByRole('button', { name: '今天' }));
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('11月1日 – 11月7日');
-    fireEvent.click(screen.getByRole('button', { name: '月' }));
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('2026年11月');
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Nov 8 – Nov 14');
+    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Nov 1 – Nov 7');
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('November 2026');
     expect(screen.getAllByRole('gridcell')).toHaveLength(42);
-    fireEvent.click(screen.getByRole('button', { name: '上个月' }));
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('2026年10月');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('October 2026');
   });
 
   it('day with more than 3 items shows +N in month view', () => {
-    renderIn('zh', <CalendarView dashboard={d} now={NOW} />);
-    fireEvent.click(screen.getByRole('button', { name: '月' }));
-    const cell = screen.getByRole('gridcell', { name: '11月20日' });
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+    const cell = screen.getByRole('gridcell', { name: 'Nov 20' });
     expect(within(cell).getAllByRole('link')).toHaveLength(3);
     expect(within(cell).getByText('+2')).toBeTruthy();
   });

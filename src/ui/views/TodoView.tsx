@@ -77,7 +77,7 @@ export function TodoView({ dashboard, now }: { dashboard: Dashboard; now: Date }
   const courseOf = new Map(dashboard.courses.map((c) => [c.id, c]));
   const byDue = (a: Item, b: Item) => (a.dueAt ? Date.parse(a.dueAt) : Infinity) - (b.dueAt ? Date.parse(b.dueAt) : Infinity);
   const sorted = [...dashboard.items].sort(byDue);
-  // Finished items stay in their group (ticked) until their due time passes; then they fold into "已完成".
+  // Finished items stay in their group (ticked) until their due time passes; then they fold into "Completed".
   const isArchived = (i: Item) => (i.doneByUser || i.submitted) && i.dueAt !== null && Date.parse(i.dueAt) <= now.getTime();
   const completed = sorted.filter(isArchived);
   const open = sorted.filter((i) => !isArchived(i));

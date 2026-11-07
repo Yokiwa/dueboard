@@ -1,11 +1,9 @@
-import { createContext, useCallback, useContext, type ReactNode } from 'react';
-import type { Lang } from '../core/time';
+import { useCallback } from 'react';
 
 type Vars = Record<string, string | number | Date>;
 type Message = string | ((v: Vars) => string);
 
 const MIN = 60_000;
-const agoZh = (v: Vars) => fmtAgo(v, (n, u) => (u === 'now' ? '刚刚' : `${n} ${{ m: '分钟', h: '小时', d: '天' }[u]}前`));
 const agoEn = (v: Vars) => fmtAgo(v, (n, u) => (u === 'now' ? 'just now' : `${n} ${{ m: 'min', h: 'h', d: u === 'd' && n === 1 ? 'day' : 'days' }[u]} ago`));
 function fmtAgo(v: Vars, word: (n: number, unit: 'now' | 'm' | 'h' | 'd') => string): string {
   const diff = (v.now as Date).getTime() - Date.parse(String(v.iso));
@@ -15,139 +13,13 @@ function fmtAgo(v: Vars, word: (n: number, unit: 'now' | 'm' | 'h' | 'd') => str
   return word(Math.floor(diff / (24 * 60 * MIN)), 'd');
 }
 
-const zh = {
-  'greeting.morning': '早上好',
-  'greeting.afternoon': '下午好',
-  'greeting.evening': '晚上好',
-  'header.pendingWeek': (v: Vars) => `${v.greet}，本周还有 ${v.n} 项待交`,
-  'header.noneWeek': (v: Vars) => `${v.greet}，本周没有待交作业`,
-  'sync.synced': (v: Vars) => `已同步 · ${v.ago}`,
-  'sync.never': '尚未同步',
-  'sync.syncing': '同步中…',
-  refresh: '刷新',
-  ago: agoZh,
-  'banner.label': '下一个截止',
-  'banner.submit': '去提交',
-  'banner.done': '✓ 完成',
-  'done.mark': (v: Vars) => `标记完成：${v.title}`,
-  'toast.done': (v: Vars) => `已标记完成：${v.title}`,
-  'toast.undo': '撤销',
-  'tabs.courses': '课程',
-  'tabs.calendar': '日历',
-  'tabs.todo': '待办',
-  'tabs.label': '视图',
-  'chips.within48': (v: Vars) => `48 小时内 ${v.n} 项`,
-  'chips.week': (v: Vars) => `本周 ${v.n} 项`,
-  'source.relogin': (v: Vars) => `${v.name} 需要重新登录`,
-  'source.loginButton': '去登录',
-  'source.reopen': (v: Vars) => `${v.name} 的登录已过期，请从 Brightspace 重新打开一次`,
-  'source.openPlatform': (v: Vars) => `打开 ${v.name}`,
-  'source.stale': (v: Vars) => `${v.name} 同步失败 · 显示的是 ${v.ago}的数据`,
-  'source.failed': (v: Vars) => `${v.name} 同步失败`,
-  'source.manual': '手动添加',
-  'source.details': '详情',
-  'badge.done': '已完成',
-  'badge.submitted': '已提交',
-  'badge.noDue': '无截止日期',
-  'cal.week': '周',
-  'cal.month': '月',
-  'cal.today': '今天',
-  'cal.prevWeek': '上一周',
-  'cal.nextWeek': '下一周',
-  'cal.prevMonth': '上个月',
-  'cal.nextMonth': '下个月',
-  'cal.mode': '日历范围',
-  'todo.overdue': '已逾期',
-  'todo.today': '今天',
-  'todo.tomorrow': '明天',
-  'todo.week': '本周',
-  'todo.later': '以后',
-  'todo.noDue': '无截止日期',
-  'todo.completed': (v: Vars) => `已完成（${v.n}）`,
-  'todo.empty': '没有待办，好好休息一下。',
-  'todo.add': '添加作业',
-  'todo.delete': (v: Vars) => `删除 ${v.title}`,
-  'form.course': '课程',
-  'form.pickCourse': '选择课程',
-  'form.title': '标题',
-  'form.due': '截止时间（可选）',
-  'form.url': '链接（可选）',
-  'form.save': '保存',
-  'form.cancel': '取消',
-  'form.needTitle': '请选择课程并填写标题',
-  'link.add': '添加链接',
-  'link.label': '名称',
-  'link.url': '网址',
-  'link.category': '类型',
-  'link.needLabel': '请填写名称',
-  'link.badUrl': '请输入以 http:// 或 https:// 开头的网址',
-  'link.delete': (v: Vars) => `删除链接 ${v.label}`,
-  'course.empty': '近期没有待交作业',
-  'course.links': '快捷入口',
-  'course.partial': '部分数据未同步',
-  'course.more': (v: Vars) => `还有 ${v.n} 项`,
-  'course.open': (v: Vars) => `查看 ${v.code} 详情`,
-  'courses.none': '还没有课程。同步完成后，你的课程会出现在这里。',
-  'detail.items': '作业',
-  'detail.noItems': '这门课还没有作业',
-  'detail.links': '资料与平台',
-  'detail.close': '关闭',
-  'cat.lms': '课程平台',
-  'cat.homework': '作业平台',
-  'cat.textbook': '教材',
-  'cat.discussion': '讨论区',
-  'cat.website': '课程网站',
-  'cat.other': '其他',
-  'onb.title': '欢迎使用 DueBoard',
-  'onb.intro': '只需三步，就能在一个页面看到所有作业和截止日期。',
-  'onb.step1': '在这个浏览器里登录 Brightspace',
-  'onb.openBs': '打开 Brightspace',
-  'onb.step2': '登录 Gradescope（你的课用到的话）',
-  'onb.openGs': '打开 Gradescope',
-  'onb.step3': '回到这里，开始第一次同步',
-  'onb.start': '开始同步',
-  'onb.syncing': '正在同步…',
-  'onb.ok': (v: Vars) => `${v.name}：已读取`,
-  'onb.notLoggedIn': (v: Vars) => `${v.name}：还没登录`,
-  'onb.failed': (v: Vars) => `${v.name}：读取失败（${v.reason}）`,
-  'onb.privacy': '所有数据只保存在你的电脑上，不会上传到任何地方。',
-  'popup.open': '打开完整面板',
-  'dev.title': '开发者工具',
-  'dev.hint': '帮助开发新平台时使用。文件会下载到你的电脑上，发送前请先打开检查。',
-  'dev.exportPage': '导出当前页面',
-  'dev.exportLinks': '导出课程链接',
-  'dev.failed': '这个页面无法导出',
-  'dev.saved': (v: Vars) => `已下载：${v.name}`,
-  'settings.title': 'DueBoard 设置',
-  'settings.language': '界面语言',
-  'lang.auto': '跟随浏览器',
-  'settings.courses': '课程',
-  'settings.coursesHint': '取消勾选可以隐藏不想看到的课程；点色块可以换颜色。',
-  'settings.show': (v: Vars) => `显示 ${v.code}`,
-  'settings.color': (v: Vars) => `${v.code} 颜色 ${v.n}`,
-  'settings.noCourses': '还没有课程，先完成第一次同步。',
-  'settings.merge': '合并 Gradescope 课程',
-  'settings.mergeHint': '如果某门 Gradescope 课程没有自动和 Brightspace 课程对上，可以在这里手动合并。',
-  'settings.mergeInto': (v: Vars) => `${v.name} 合并到`,
-  'settings.noMerge': '不合并',
-  'settings.noGs': '没有 Gradescope 课程。',
-  'settings.help': '帮助',
-  'settings.feedback': '反馈问题或建议',
-  'settings.diagnostics': '诊断工具',
-  'settings.privacy': '所有数据只保存在你的电脑上。DueBoard 不是普渡大学的官方产品。',
-  'settings.version': (v: Vars) => `版本 ${v.v}`,
-  'error.fallback': '页面出错了，请刷新重试。',
-} satisfies Record<string, Message>;
-
-export type MessageKey = keyof typeof zh;
-
-const en: Record<MessageKey, Message> = {
+const messages = {
   'greeting.morning': 'Good morning',
   'greeting.afternoon': 'Good afternoon',
   'greeting.evening': 'Good evening',
-  'header.pendingWeek': (v) => `${v.greet}, ${v.n} due this week`,
-  'header.noneWeek': (v) => `${v.greet}, nothing due this week`,
-  'sync.synced': (v) => `Synced · ${v.ago}`,
+  'header.pendingWeek': (v: Vars) => `${v.greet}, ${v.n} due this week`,
+  'header.noneWeek': (v: Vars) => `${v.greet}, nothing due this week`,
+  'sync.synced': (v: Vars) => `Synced · ${v.ago}`,
   'sync.never': 'Not synced yet',
   'sync.syncing': 'Syncing…',
   refresh: 'Refresh',
@@ -155,21 +27,21 @@ const en: Record<MessageKey, Message> = {
   'banner.label': 'NEXT DEADLINE',
   'banner.submit': 'Open',
   'banner.done': '✓ Done',
-  'done.mark': (v) => `Mark done: ${v.title}`,
-  'toast.done': (v) => `Marked done: ${v.title}`,
+  'done.mark': (v: Vars) => `Mark done: ${v.title}`,
+  'toast.done': (v: Vars) => `Marked done: ${v.title}`,
   'toast.undo': 'Undo',
   'tabs.courses': 'Courses',
   'tabs.calendar': 'Calendar',
   'tabs.todo': 'To-do',
   'tabs.label': 'View',
-  'chips.within48': (v) => `${v.n} due in 48 h`,
-  'chips.week': (v) => `${v.n} this week`,
-  'source.relogin': (v) => `${v.name} needs you to sign in again`,
+  'chips.within48': (v: Vars) => `${v.n} due in 48 h`,
+  'chips.week': (v: Vars) => `${v.n} this week`,
+  'source.relogin': (v: Vars) => `${v.name} needs you to sign in again`,
   'source.loginButton': 'Sign in',
-  'source.reopen': (v) => `${v.name} session expired — open it once from Brightspace`,
-  'source.openPlatform': (v) => `Open ${v.name}`,
-  'source.stale': (v) => `${v.name} sync failed · showing data from ${v.ago}`,
-  'source.failed': (v) => `${v.name} sync failed`,
+  'source.reopen': (v: Vars) => `${v.name} session expired — open it once from Brightspace`,
+  'source.openPlatform': (v: Vars) => `Open ${v.name}`,
+  'source.stale': (v: Vars) => `${v.name} sync failed · showing data from ${v.ago}`,
+  'source.failed': (v: Vars) => `${v.name} sync failed`,
   'source.manual': 'Added by you',
   'source.details': 'Details',
   'badge.done': 'Done',
@@ -189,10 +61,10 @@ const en: Record<MessageKey, Message> = {
   'todo.week': 'This week',
   'todo.later': 'Later',
   'todo.noDue': 'No due date',
-  'todo.completed': (v) => `Completed (${v.n})`,
+  'todo.completed': (v: Vars) => `Completed (${v.n})`,
   'todo.empty': 'Nothing to do. Enjoy the break.',
   'todo.add': 'Add assignment',
-  'todo.delete': (v) => `Delete ${v.title}`,
+  'todo.delete': (v: Vars) => `Delete ${v.title}`,
   'form.course': 'Course',
   'form.pickCourse': 'Choose a course',
   'form.title': 'Title',
@@ -207,12 +79,12 @@ const en: Record<MessageKey, Message> = {
   'link.category': 'Type',
   'link.needLabel': 'Enter a name',
   'link.badUrl': 'Enter a URL starting with http:// or https://',
-  'link.delete': (v) => `Delete link ${v.label}`,
+  'link.delete': (v: Vars) => `Delete link ${v.label}`,
   'course.empty': 'Nothing due soon',
   'course.links': 'Shortcuts',
   'course.partial': 'Some data did not sync',
-  'course.more': (v) => `${v.n} more`,
-  'course.open': (v) => `Open ${v.code} details`,
+  'course.more': (v: Vars) => `${v.n} more`,
+  'course.open': (v: Vars) => `Open ${v.code} details`,
   'courses.none': 'No courses yet. They will appear here after the first sync.',
   'detail.items': 'Assignments',
   'detail.noItems': 'No assignments in this course yet',
@@ -233,9 +105,9 @@ const en: Record<MessageKey, Message> = {
   'onb.step3': 'Come back here and run the first sync',
   'onb.start': 'Start sync',
   'onb.syncing': 'Syncing…',
-  'onb.ok': (v) => `${v.name}: read`,
-  'onb.notLoggedIn': (v) => `${v.name}: not signed in yet`,
-  'onb.failed': (v) => `${v.name}: failed (${v.reason})`,
+  'onb.ok': (v: Vars) => `${v.name}: read`,
+  'onb.notLoggedIn': (v: Vars) => `${v.name}: not signed in yet`,
+  'onb.failed': (v: Vars) => `${v.name}: failed (${v.reason})`,
   'onb.privacy': 'Everything stays on your computer. Nothing is uploaded.',
   'popup.open': 'Open full dashboard',
   'dev.title': 'Developer tools',
@@ -243,49 +115,34 @@ const en: Record<MessageKey, Message> = {
   'dev.exportPage': 'Export this page',
   'dev.exportLinks': 'Export course links',
   'dev.failed': 'This page cannot be exported',
-  'dev.saved': (v) => `Downloaded: ${v.name}`,
+  'dev.saved': (v: Vars) => `Downloaded: ${v.name}`,
   'settings.title': 'DueBoard settings',
-  'settings.language': 'Language',
-  'lang.auto': 'Same as browser',
   'settings.courses': 'Courses',
   'settings.coursesHint': 'Uncheck a course to hide it; click a swatch to change its color.',
-  'settings.show': (v) => `Show ${v.code}`,
-  'settings.color': (v) => `${v.code} color ${v.n}`,
+  'settings.show': (v: Vars) => `Show ${v.code}`,
+  'settings.color': (v: Vars) => `${v.code} color ${v.n}`,
   'settings.noCourses': 'No courses yet. Run the first sync.',
   'settings.merge': 'Merge Gradescope courses',
   'settings.mergeHint': 'If a Gradescope course did not match its Brightspace course automatically, merge it here.',
-  'settings.mergeInto': (v) => `Merge ${v.name} into`,
+  'settings.mergeInto': (v: Vars) => `Merge ${v.name} into`,
   'settings.noMerge': 'Keep separate',
   'settings.noGs': 'No Gradescope courses.',
   'settings.help': 'Help',
   'settings.feedback': 'Send feedback',
   'settings.diagnostics': 'Diagnostics',
   'settings.privacy': 'All data stays on your computer. DueBoard is not an official Purdue product.',
-  'settings.version': (v) => `Version ${v.v}`,
+  'settings.version': (v: Vars) => `Version ${v.v}`,
   'error.fallback': 'Something went wrong. Please reload the page.',
-};
+} satisfies Record<string, Message>;
 
-export const messages: Record<Lang, Record<MessageKey, Message>> = { zh, en };
+export type MessageKey = keyof typeof messages;
 
-export function translate(lang: Lang, key: MessageKey, vars: Vars = {}): string {
-  const m = messages[lang][key];
+export function translate(key: MessageKey, vars: Vars = {}): string {
+  const m: Message = messages[key];
   return typeof m === 'function' ? m(vars) : m;
 }
 
-export function resolveLang(setting: 'auto' | Lang, navigatorLanguage: string): Lang {
-  if (setting !== 'auto') return setting;
-  return navigatorLanguage.toLowerCase().startsWith('zh') ? 'zh' : 'en';
-}
-
-const LangContext = createContext<Lang>('zh');
-
-export function LangProvider({ lang, children }: { lang: Lang; children: ReactNode }) {
-  return <LangContext.Provider value={lang}>{children}</LangContext.Provider>;
-}
-
-export const useLang = () => useContext(LangContext);
-
+/** All UI text lives here (English). Kept as a hook so components stay unchanged if another language returns. */
 export function useT() {
-  const lang = useLang();
-  return useCallback((key: MessageKey, vars?: Vars) => translate(lang, key, vars), [lang]);
+  return useCallback((key: MessageKey, vars?: Vars) => translate(key, vars), []);
 }

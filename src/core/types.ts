@@ -95,9 +95,8 @@ export interface UserState {
   /** "gradescope:<id>" → Course.id of the Brightspace course it should merge into */
   merges: Record<string, string>;
 }
-export interface Settings {
-  language: 'auto' | 'zh' | 'en';
-}
+/** User preferences (none yet besides per-course choices in UserState). */
+export type Settings = Record<string, never>;
 export interface SyncMeta {
   lastSuccess?: string;
   lastError?: { at: string; reason: string; detail?: string };

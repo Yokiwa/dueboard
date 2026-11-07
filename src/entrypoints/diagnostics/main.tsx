@@ -15,8 +15,8 @@ const box: React.CSSProperties = {
 function Row({ name, r }: { name: string; r: ProbeResult }) {
   return (
     <li>
-      <strong>{name}</strong>：{r.ok ? '✅ 可以读取' : '❌ 读取失败'}（HTTP {r.status}
-      {r.redirectedTo ? `，被跳转到 ${r.redirectedTo}` : ''}）
+      <strong>{name}</strong>: {r.ok ? '✅ readable' : '❌ not readable'} (HTTP {r.status}
+      {r.redirectedTo ? `, redirected to ${r.redirectedTo}` : ''})
       {!r.ok && <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, background: '#F3F4F6', padding: 8 }}>{r.note}</pre>}
     </li>
   );
@@ -36,13 +36,13 @@ function App() {
   const [syncNote, setSyncNote] = useState('');
   const runSyncNow = async () => {
     setBusy(true);
-    setSyncNote('正在同步……');
+    setSyncNote('Syncing…');
     const report = (await browser.runtime.sendMessage({ type: 'sync' })) as Record<string, string>;
     const s = await loadStore();
     const lines = (['brightspace', 'gradescope'] as const).map((src) => {
       const snap = s.snapshots[src];
-      const status = report[src] === 'ok' ? '✅' : `❌ ${report[src] ?? '未运行'}`;
-      return `${src}: ${status}，${snap?.courses.length ?? 0} 门课，${snap?.items.length ?? 0} 项作业/事件，${snap?.links.length ?? 0} 个链接${snap?.partial.length ? `，${snap.partial.length} 门课部分失败` : ''}`;
+      const status = report[src] === 'ok' ? '✅' : `❌ ${report[src] ?? 'not run'}`;
+      return `${src}: ${status}, ${snap?.courses.length ?? 0} courses, ${snap?.items.length ?? 0} items, ${snap?.links.length ?? 0} links${snap?.partial.length ? `, ${snap.partial.length} courses partly failed` : ''}`;
     });
     setSyncNote(lines.join('\n'));
     setBusy(false);
@@ -50,7 +50,7 @@ function App() {
 
   const runExport = async () => {
     setBusy(true);
-    setExportNote('正在收集，大约需要 10 秒……');
+    setExportNote('Collecting… about 10 seconds.');
     const bundle = (await browser.runtime.sendMessage({ type: 'collectFixtures' })) as FixtureBundle;
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -59,25 +59,25 @@ function App() {
     a.click();
     setExportNote(
       bundle.errors.length
-        ? `已下载，但有 ${bundle.errors.length} 个接口失败：\n${bundle.errors.join('\n')}`
-        : '已下载 dueboard-fixtures.json。发送前请先打开检查一遍，确认里面没有你的名字、学号或邮箱。',
+        ? `Downloaded, but ${bundle.errors.length} requests failed:\n${bundle.errors.join('\n')}`
+        : 'Downloaded dueboard-fixtures.json. Open it and check that your name, student ID and email are not in it before sending.',
     );
     setBusy(false);
   };
 
   return (
     <main style={box}>
-      <h1>DueBoard 诊断工具</h1>
-      <p>请先在这个浏览器里登录 Brightspace 和 Gradescope，然后点下面的按钮。</p>
+      <h1>DueBoard diagnostics</h1>
+      <p>Sign in to Brightspace in this browser first, then use the buttons below.</p>
       <p>
         <button type="button" onClick={runProbe} disabled={busy}>
-          1. 检查能否读取
+          1. Check access
         </button>{' '}
         <button type="button" onClick={runExport} disabled={busy}>
-          2. 导出示例数据
+          2. Export sample data
         </button>{' '}
         <button type="button" onClick={runSyncNow} disabled={busy}>
-          3. 立即同步
+          3. Sync now
         </button>
       </p>
       {report && (

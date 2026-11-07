@@ -1,25 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { translate, resolveLang, messages } from '../../src/ui/i18n';
+import { translate } from '../../src/ui/i18n';
 
 describe('i18n', () => {
   it('fills variables', () => {
-    expect(translate('zh', 'chips.within48', { n: 3 })).toBe('48 小时内 3 项');
-    expect(translate('en', 'chips.within48', { n: 3 })).toBe('3 due in 48 h');
-  });
-  it('every key exists in both languages', () => {
-    expect(Object.keys(messages.en).sort()).toEqual(Object.keys(messages.zh).sort());
-  });
-  it('auto follows navigator language', () => {
-    expect(resolveLang('auto', 'zh-CN')).toBe('zh');
-    expect(resolveLang('auto', 'en-US')).toBe('en');
-    expect(resolveLang('en', 'zh-CN')).toBe('en');
+    expect(translate('chips.within48', { n: 3 })).toBe('3 due in 48 h');
+    expect(translate('header.pendingWeek', { greet: 'Good morning', n: 2 })).toBe('Good morning, 2 due this week');
   });
   it('ago formatting', () => {
     const now = new Date('2026-11-04T17:00:00Z');
     const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
-    expect(translate('zh', 'ago', { iso: ago(20_000), now })).toBe('刚刚');
-    expect(translate('zh', 'ago', { iso: ago(5 * 60_000), now })).toBe('5 分钟前');
-    expect(translate('en', 'ago', { iso: ago(2 * 3600_000), now })).toBe('2 h ago');
-    expect(translate('zh', 'ago', { iso: ago(3 * 86400_000), now })).toBe('3 天前');
+    expect(translate('ago', { iso: ago(20_000), now })).toBe('just now');
+    expect(translate('ago', { iso: ago(5 * 60_000), now })).toBe('5 min ago');
+    expect(translate('ago', { iso: ago(2 * 3600_000), now })).toBe('2 h ago');
+    expect(translate('ago', { iso: ago(86400_000), now })).toBe('1 day ago');
+    expect(translate('ago', { iso: ago(3 * 86400_000), now })).toBe('3 days ago');
   });
 });

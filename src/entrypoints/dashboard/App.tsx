@@ -13,7 +13,6 @@ import { useView } from '../../ui/hooks/useView';
 import { CoursesView } from '../../ui/views/CoursesView';
 import { CalendarView } from '../../ui/views/CalendarView';
 import { TodoView } from '../../ui/views/TodoView';
-import { LangProvider, resolveLang } from '../../ui/i18n';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
 
@@ -36,21 +35,17 @@ export function App() {
   const { dashboard, store, syncing, refresh } = useDashboard();
   const now = useNow(1000);
   const [view, setView] = useView();
-  const lang = resolveLang(store?.settings.language ?? 'auto', navigator.language);
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
     return (
-      <LangProvider lang={lang}>
-        <Onboarding />
-      </LangProvider>
+      <Onboarding />
     );
   }
 
   const counts = dueCounts(dashboard.items, now);
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);
   return (
-    <LangProvider lang={lang}>
-      <DoneToastProvider>
+    <DoneToastProvider>
         <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
           <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} onRefresh={refresh}>
             <StatChips within48={counts.within48} week={counts.week} />
@@ -59,7 +54,6 @@ export function App() {
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <ViewBody key={view} view={view} dashboard={dashboard} now={now} />
         </AppShell>
-      </DoneToastProvider>
-    </LangProvider>
+    </DoneToastProvider>
   );
 }

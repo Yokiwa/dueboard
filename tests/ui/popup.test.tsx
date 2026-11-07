@@ -12,8 +12,7 @@ const inHours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString()
 describe('popup', () => {
   beforeEach(() => fakeBrowser.reset());
 
-  it('shows next due banner, 5 nearest items, 打开完整面板 button', async () => {
-    await patchStore({ settings: { language: 'zh' } });
+  it('shows next due banner, 5 nearest items, Open full dashboard button', async () => {
     await saveSnapshot('brightspace', {
       syncedAt: new Date().toISOString(),
       courses: [{ source: 'brightspace', sourceCourseId: '1', name: 'CS 18000', code: 'CS 18000', url: 'u' }],
@@ -28,12 +27,11 @@ describe('popup', () => {
     render(<PopupApp />);
     await waitFor(() => expect(screen.getByText('CS 18000 · HW 0')).toBeTruthy());
     expect(screen.getAllByTestId('popup-item').map((el) => el.querySelector('[data-title]')?.textContent)).toEqual(['HW 1', 'HW 2', 'HW 3', 'HW 4', 'HW 5']);
-    fireEvent.click(screen.getByRole('button', { name: '打开完整面板' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open full dashboard' }));
     expect(create).toHaveBeenCalledWith({ url: browser.runtime.getURL('/dashboard.html') });
   });
 
   it('empty state still offers the full dashboard', async () => {
-    await patchStore({ settings: { language: 'en' } });
     render(<PopupApp />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open full dashboard' })).toBeTruthy());
     expect(screen.getByText('Nothing to do. Enjoy the break.')).toBeTruthy();

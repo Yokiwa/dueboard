@@ -1,6 +1,6 @@
 import { browser } from 'wxt/browser';
 import { normalizeTitle } from '../core/courseCode';
-import type { CapturedDue, CourseLink, ManualItem, Settings, SourceId, Snapshot, StoreShape } from '../core/types';
+import type { CapturedDue, CourseLink, ManualItem, SourceId, Snapshot, StoreShape } from '../core/types';
 
 const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured'] as const;
 
@@ -15,7 +15,6 @@ function arr<T>(v: unknown): T[] {
 export function migrate(raw: unknown): StoreShape {
   const r = obj(raw);
   const us = obj(r.userState);
-  const st = obj(r.settings);
   return {
     schemaVersion: 1,
     snapshots: obj(r.snapshots) as StoreShape['snapshots'],
@@ -28,9 +27,7 @@ export function migrate(raw: unknown): StoreShape {
       shown: obj(us.shown) as Record<string, true>,
       merges: obj(us.merges) as Record<string, string>,
     },
-    settings: {
-      language: st.language === 'zh' || st.language === 'en' ? st.language : 'auto',
-    },
+    settings: {},
     syncMeta: obj(r.syncMeta) as StoreShape['syncMeta'],
     captured: obj(r.captured) as StoreShape['captured'],
   };
@@ -105,11 +102,6 @@ export async function addManualLink(l: CourseLink): Promise<void> {
 export async function removeManualLink(courseId: string, url: string): Promise<void> {
   const { manualLinks } = await loadStore();
   await patchStore({ manualLinks: manualLinks.filter((x) => !(x.courseId === courseId && x.url === url)) });
-}
-
-export async function updateSettings(patch: Partial<Settings>): Promise<void> {
-  const { settings } = await loadStore();
-  await patchStore({ settings: { ...settings, ...patch } });
 }
 
 /** Shows or hides a course card. Works for real courses (hidden by choice) and non-course entries (hidden by default). */

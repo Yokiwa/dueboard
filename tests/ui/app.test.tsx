@@ -28,48 +28,37 @@ describe('dashboard App', () => {
 
   it('renders header, next-due banner, tabs and stat chips from storage', async () => {
     await seed();
-    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
     await waitFor(() => expect(screen.getByText('CS 18000 · Project 3')).toBeTruthy());
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('本周还有 1 项待交');
-    expect(screen.getByRole('tab', { name: '课程' })).toBeTruthy();
-    expect(screen.getByText('48 小时内 1 项')).toBeTruthy();
-  });
-
-  it('uses English when the setting says so', async () => {
-    await seed();
-    await patchStore({ settings: { language: 'en' } });
-    render(<App />);
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy());
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('1 due this week');
+    expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy();
+    expect(screen.getByText('1 due in 48 h')).toBeTruthy();
   });
 
   it('remembers the chosen view in localStorage', async () => {
     await seed();
-    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
-    await waitFor(() => screen.getByRole('tab', { name: '日历' }));
-    fireEvent.click(screen.getByRole('tab', { name: '日历' }));
+    await waitFor(() => screen.getByRole('tab', { name: 'Calendar' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }));
     expect(localStorage.getItem('dueboard.view')).toBe('calendar');
-    expect(screen.getByRole('tab', { name: '日历' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Calendar' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('onboarding shown when no snapshots yet; 开始同步 sends sync', async () => {
-    await patchStore({ settings: { language: 'zh' } });
+  it('onboarding shown when no snapshots yet; Start sync sends sync', async () => {
     render(<App />);
-    await waitFor(() => screen.getByRole('heading', { name: '欢迎使用 DueBoard' }));
-    expect((screen.getByRole('link', { name: '打开 Brightspace' }) as HTMLAnchorElement).href).toBe('https://purdue.brightspace.com/d2l/home');
-    expect((screen.getByRole('link', { name: '打开 Gradescope' }) as HTMLAnchorElement).href).toBe('https://www.gradescope.com/');
+    await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
+    expect((screen.getByRole('link', { name: 'Open Brightspace' }) as HTMLAnchorElement).href).toBe('https://purdue.brightspace.com/d2l/home');
+    expect((screen.getByRole('link', { name: 'Open Gradescope' }) as HTMLAnchorElement).href).toBe('https://www.gradescope.com/');
     vi.mocked(sendToBackground).mockResolvedValueOnce({ brightspace: 'not_logged_in', gradescope: 'ok' });
-    fireEvent.click(screen.getByRole('button', { name: '开始同步' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start sync' }));
     expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync' });
-    await waitFor(() => expect(screen.getByText('Brightspace：还没登录')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Brightspace: not signed in yet')).toBeTruthy());
   });
 
   it('onboarding disappears once a snapshot arrives', async () => {
-    await patchStore({ settings: { language: 'zh' } });
     render(<App />);
-    await waitFor(() => screen.getByRole('heading', { name: '欢迎使用 DueBoard' }));
+    await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
     await seed();
-    await waitFor(() => expect(screen.getByRole('tab', { name: '课程' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy());
   });
 });

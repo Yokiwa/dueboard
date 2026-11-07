@@ -10,7 +10,7 @@ type MarkDone = (item: Item) => Promise<void>;
 // Without a provider (e.g. in isolation) marking done still works, just without the undo toast.
 const DoneContext = createContext<MarkDone>((item) => toggleDone(item.sourceKeys, true));
 
-/** Marks an item done (all its merged sources) and shows "已标记完成 · 撤销" for 5 seconds. */
+/** Marks an item done (all its merged sources) and shows "Marked done: … · Undo" for 5 seconds. */
 export const useMarkDone = () => useContext(DoneContext);
 
 export function DoneToastProvider({ children }: { children: ReactNode }) {

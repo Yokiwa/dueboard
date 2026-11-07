@@ -9,7 +9,7 @@ describe('displayName', () => {
     ['Spring 2027 MA 26100 Multivariate Calculus - LEC', 'MA 26100', 'Multivariate Calculus'],
     ['CS 18000-LEC Fall 2026', 'CS 18000', ''],
     ['CS 180 Problem Solving and Object-Oriented Programming', 'CS 18000', 'Problem Solving and Object-Oriented Programming'],
-    ['Java 编程入门', 'CS 18000', 'Java 编程入门'],
+    ['Intro to Java', 'CS 18000', 'Intro to Java'],
     ['Physics Lab', 'Physics Lab', ''],
     ['ENGL 10600 First-Year Composition (Online)', 'ENGL 10600', 'First-Year Composition (Online)'],
     ['Fall 2026 MA 26100 331 332 333', 'MA 26100', ''],

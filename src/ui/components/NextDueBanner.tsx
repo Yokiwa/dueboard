@@ -2,7 +2,7 @@ import { ArrowUpRight } from '@phosphor-icons/react';
 import { formatCountdown, formatDueAt } from '../../core/time';
 import type { Course, Item } from '../../core/types';
 import { primaryBtn, secondaryBtn } from '../forms';
-import { useLang, useT } from '../i18n';
+import { useT } from '../i18n';
 import { sourceLabel } from '../sourceLabel';
 import { useMarkDone } from './DoneToast';
 
@@ -13,7 +13,6 @@ export interface NextDueBannerProps {
 }
 
 export function NextDueBanner({ item, course, now }: NextDueBannerProps) {
-  const lang = useLang();
   const t = useT();
   const markDone = useMarkDone();
   if (!item?.dueAt) return null;
@@ -35,11 +34,11 @@ export function NextDueBanner({ item, course, now }: NextDueBannerProps) {
           {course && <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: course.color }} />}
           <span className="heading-6 text-db-text">{course ? `${course.code} · ${item.title}` : item.title}</span>
         </span>
-        <span className="caption-2 text-db-banner-sub">{`${sourceLabel(item, t)} · ${formatDueAt(due, now, lang)}`}</span>
+        <span className="caption-2 text-db-banner-sub">{`${sourceLabel(item, t)} · ${formatDueAt(due, now)}`}</span>
       </div>
       <div className="flex flex-wrap items-center gap-6">
         <span className="font-mono heading-4 tracking-tight text-db-countdown tabular-nums sm:heading-3" role="timer">
-          {formatCountdown(due, now, lang)}
+          {formatCountdown(due, now)}
         </span>
         <div className="flex gap-2">
           <a href={item.url} target="_blank" rel="noopener noreferrer" className={primaryBtn}>

@@ -4,7 +4,7 @@ import { ItemRow } from '../../ui/components/ItemRow';
 import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
-import { LangProvider, resolveLang, useT } from '../../ui/i18n';
+import { useT } from '../../ui/i18n';
 import { ArrowRight } from '@phosphor-icons/react';
 import { primaryBtn } from '../../ui/forms';
 import { BrandMark } from '../../ui/components/BrandMark';
@@ -50,10 +50,8 @@ export function PopupApp() {
   const now = useNow(1000);
   if (!store || !dashboard) return null;
   return (
-    <LangProvider lang={resolveLang(store.settings.language, navigator.language)}>
-      <DoneToastProvider>
-        <Body dashboard={dashboard} now={now} store={store} />
-      </DoneToastProvider>
-    </LangProvider>
+    <DoneToastProvider>
+      <Body dashboard={dashboard} now={now} store={store} />
+    </DoneToastProvider>
   );
 }
