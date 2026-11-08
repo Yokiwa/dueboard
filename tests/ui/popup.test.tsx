@@ -50,3 +50,15 @@ describe('popup visit progress', () => {
     await waitFor(() => expect(screen.queryByText(/platform pages/)).toBeNull());
   });
 });
+
+describe('popup settings', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('opens DueBoard settings', async () => {
+    await saveSnapshot('brightspace', { syncedAt: new Date().toISOString(), courses: [], items: [], links: [], partial: [] });
+    const open = vi.fn(async () => undefined);
+    (browser.runtime as unknown as { openOptionsPage: unknown }).openOptionsPage = open;
+    render(<PopupApp />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Settings' }));
+    expect(open).toHaveBeenCalledOnce();
+  });
+});

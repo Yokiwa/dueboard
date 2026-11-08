@@ -190,3 +190,12 @@ describe('SourceBanners only for platforms this student uses', () => {
   });
 
 });
+
+describe('Settings button', () => {
+  it('the header has a Settings button', () => {
+    const onSettings = vi.fn();
+    renderIn('en', <Header now={now} pendingWeek={1} lastSynced={null} syncing={false} onRefresh={() => {}} onSettings={onSettings} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(onSettings).toHaveBeenCalledOnce();
+  });
+});

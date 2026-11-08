@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { format } from 'date-fns';
-import { ArrowClockwise } from '@phosphor-icons/react';
-import { secondaryBtn } from '../forms';
+import { ArrowClockwise, Gear } from '@phosphor-icons/react';
+import { iconBtn, secondaryBtn } from '../forms';
 import { useT } from '../i18n';
 
 
@@ -13,6 +13,8 @@ export interface HeaderProps {
   /** While platform pages are read after a sync. */
   progress?: { done: number; total: number } | null;
   onRefresh(): void;
+  /** Opens DueBoard's settings page. */
+  onSettings?(): void;
   /** Optional row under the heading (the dashboard puts the stat chips here). */
   children?: ReactNode;
 }
@@ -24,7 +26,7 @@ function greetingKey(now: Date) {
   return 'greeting.evening' as const;
 }
 
-export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefresh, children }: HeaderProps) {
+export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefresh, onSettings, children }: HeaderProps) {
   const t = useT();
   const date = format(now, 'EEEE, MMMM d');
   const greet = t(greetingKey(now));
@@ -54,6 +56,11 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
           <ArrowClockwise aria-hidden="true" size={16} weight="bold" />
           {syncing ? t('sync.syncing') : t('refresh')}
         </button>
+        {onSettings && (
+          <button type="button" onClick={onSettings} aria-label={t('settings')} title={t('settings')} className={iconBtn}>
+            <Gear aria-hidden="true" size={18} />
+          </button>
+        )}
       </div>
     </header>
   );

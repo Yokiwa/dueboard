@@ -23,6 +23,7 @@ const messages = {
   'sync.never': 'Not synced yet',
   'sync.syncing': 'Syncing…',
   refresh: 'Refresh',
+  settings: 'Settings',
   ago: agoEn,
   'banner.label': 'NEXT DEADLINE',
   'banner.submit': 'Open',

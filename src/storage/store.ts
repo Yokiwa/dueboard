@@ -244,6 +244,7 @@ export interface StoredVisitLogEntry {
   key: string;
   title: string;
   site?: string;
+  siteNote?: string;
   opened: string;
   landed?: string;
   frames: string[];

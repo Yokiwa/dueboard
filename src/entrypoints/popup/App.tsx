@@ -5,8 +5,8 @@ import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
 import { useT } from '../../ui/i18n';
-import { ArrowRight } from '@phosphor-icons/react';
-import { primaryBtn } from '../../ui/forms';
+import { ArrowRight, Gear } from '@phosphor-icons/react';
+import { iconBtn, primaryBtn } from '../../ui/forms';
 import { BrandMark } from '../../ui/components/BrandMark';
 import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
@@ -22,10 +22,15 @@ function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; stor
   const upcoming = dashboard.items.filter((i) => !i.doneByUser && !i.submitted && i.dueAt && i.id !== next?.id && Date.parse(i.dueAt) > now.getTime()).slice(0, LIMIT);
   return (
     <div className="flex w-[380px] flex-col gap-4 bg-db-bg p-4">
-      <span className="flex items-center gap-2 title-4 text-db-text">
-        <BrandMark className="size-5" />
-        DueBoard
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 title-4 text-db-text">
+          <BrandMark className="size-5" />
+          DueBoard
+        </span>
+        <button type="button" onClick={() => void browser.runtime.openOptionsPage()} aria-label={t('settings')} title={t('settings')} className={iconBtn}>
+          <Gear aria-hidden="true" size={18} />
+        </button>
+      </div>
       {progress && <p className="m-0 caption-2 text-db-muted">{t('sync.visiting', { done: progress.done, total: progress.total })}</p>}
       <NextDueBanner item={next} course={dashboard.courses.find((c) => c.id === next?.courseId)} now={now} />
       {upcoming.length > 0 ? (

@@ -1,3 +1,4 @@
+import { browser } from 'wxt/browser';
 import { dueCounts } from '../../core/dashboard';
 import { DoneToastProvider } from '../../ui/components/DoneToast';
 import { Onboarding } from '../../ui/components/Onboarding';
@@ -55,7 +56,7 @@ export function App() {
   return (
     <DoneToastProvider>
         <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
-          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh}>
+          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
             <StatChips within48={counts.within48} week={counts.week} />
           </Header>
           {granted && <SiteAccessBanner granted={granted} />}

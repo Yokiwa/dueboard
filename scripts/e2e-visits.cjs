@@ -85,7 +85,8 @@ const launchPage = (target) =>
     if (u.includes('/quizzes/')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('myEvents')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: fs.readFileSync(path.join(ROOT, 'tests/fixtures/syllabus/schedule.pdf')) });
-    if (u.includes('rcode=W1')) return r.fulfill(html(launchPage('https://education.wiley.com/was/course')));
+    // Like Purdue's real launch pages, this one hands off in a way DueBoard can't read ahead of time.
+    if (u.includes('rcode=W1')) return r.fulfill(html(`<script>location.assign(atob(${JSON.stringify(Buffer.from('https://education.wiley.com/was/course').toString('base64'))}))</script>`));
     if (u.includes('rcode=W5')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw11')));
     if (u.includes('rcode=W6')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw10')));
     const page = u.match(/\/viewContent\/(\d+)\/View/);
@@ -165,6 +166,7 @@ const launchPage = (target) =>
   check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10, sharing HW11's quick link, gets its own date (${hw10?.dueAt})`);
   const vlog = await page.evaluate(async () => (await chrome.storage.local.get('visitLog')).visitLog ?? []);
   const hw11Log = vlog.find((e) => e.key === 'brightspace:topic:5');
+  check(hw11Log?.siteNote?.startsWith('no launch target on') && !hw11Log.site, `visit log says why the site wasn't known (${hw11Log?.siteNote})`);
   check(hw11Log?.result === 'found' && hw11Log.frames.some((f) => f.startsWith('https://education.wiley.com/')) && !hw11Log.frames.some((f) => f.includes('?')), `visit log records HW11's Wiley frame (${hw11Log?.frames?.length} frames)`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');

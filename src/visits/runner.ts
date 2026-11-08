@@ -13,8 +13,11 @@ export interface VisitApi {
    * target is a Brightspace content page (the platform is embedded in it), so that page loading is the landing.
    */
   waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean }): Promise<Landing>;
-  /** The platform host a Brightspace launch goes to, read from the launch page; null when it can't be told; 'signed_out' when Brightspace asks to sign in. */
-  launchHost(url: string): Promise<string | null | 'signed_out'>;
+  /**
+   * The platform host a Brightspace launch goes to, read from the launch page: null when it can't be told (with a note
+   * saying why, for the visit log); 'signed_out' when Brightspace asks to sign in.
+   */
+  launchHost(url: string): Promise<{ host: string | null | 'signed_out'; note?: string }>;
   /** Whether the student is still signed in to Brightspace. */
   signedIn(): Promise<boolean>;
   /** The visit window: still minimized, opened by the student, or gone. */
@@ -41,6 +44,8 @@ export interface VisitLogEntry {
   title: string;
   /** The site the Brightspace link goes to, as read from the link ('signed_out' if Brightspace asked to sign in). */
   site?: string;
+  /** Why the site couldn't be told from the link. */
+  siteNote?: string;
   opened: string;
   /** Where the page ended up, or 'timeout' / 'closed'. */
   landed?: string;
@@ -113,15 +118,19 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
   async function visit(t: VisitTarget, granted: string[], trace: Partial<VisitLogEntry>): Promise<VisitOutcome | 'stop'> {
     let site: string | null = null;
     if (t.mode !== 'session') {
-      const host = await api.launchHost(t.probeUrl ?? t.launchUrl);
+      const probe = await api.launchHost(t.probeUrl ?? t.launchUrl);
+      const host = probe.host;
       if (host) trace.site = host;
+      if (probe.note) trace.siteNote = probe.note;
       site = host === 'signed_out' ? null : host;
       if (host === 'signed_out') return { key: t.key, status: 'signed_out' };
       if (host && !originAllowed(granted, host)) return { key: t.key, status: 'needs_permission', host };
       if (!host) {
         if (!(await api.signedIn())) return { key: t.key, status: 'signed_out' };
-        // Without knowing the site, only a known platform the student allowed may be opened.
-        if (!t.platform) return { key: t.key, status: 'failed', reason: 'unknown' };
+        // Without knowing the site, a bare launch link is opened only for a known platform the student allowed. A
+        // homework's own Brightspace page is opened anyway: it is Brightspace, as the student sees it, and only the
+        // frames of sites the student allowed are read.
+        if (!t.platform && !t.probeUrl) return { key: t.key, status: 'failed', reason: 'unknown' };
       }
     }
     const brightspacePage = t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST;

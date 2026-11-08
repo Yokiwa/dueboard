@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3 — 2026-11
+
+- **Homework is opened even when its Brightspace link doesn't reveal the platform.** Purdue's launch links don't say which site they go to ahead of time, so 1.1.2 skipped every homework. DueBoard now opens each homework's own Brightspace page (as you would) and reads the frames of the platforms you allowed. Bare launch links whose site is unknown are still never opened
+- The visit log says why a link's site couldn't be told
+- **Settings button** on the dashboard and in the toolbar popup
+- After updating, homeworks the previous version couldn't read are tried again on the next Refresh
+
 ## 1.1.2 — 2026-11
 
 - **Platform pages are opened only when you click Refresh** (by default), so no window appears on its own; Settings can make it automatic again

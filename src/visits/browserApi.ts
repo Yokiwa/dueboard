@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { IS_FIREFOX } from '../core/env';
 import { setVisitWindow } from '../storage/store';
-import { FINDER_FILE, type VisitMessage } from './messages';
+import { FINDER_FILE, stripUrl, type VisitMessage } from './messages';
 import { launchTargetHost, SIGN_IN, type Landing, type VisitApi } from './runner';
 
 const BASE = 'https://purdue.brightspace.com';
@@ -113,12 +113,14 @@ export function createBrowserVisitApi(): VisitApi {
     async launchHost(url) {
       try {
         const res = await fetch(url, { credentials: 'include', signal: AbortSignal.timeout(15_000) });
-        if (SIGN_IN.test(res.url)) return 'signed_out';
+        if (SIGN_IN.test(res.url)) return { host: 'signed_out' };
         const finalHost = new URL(res.url).hostname;
-        if (finalHost !== BRIGHTSPACE_HOST) return finalHost;
-        return launchTargetHost(await res.text(), BASE);
-      } catch {
-        return null; // a redirect to a site without access, or offline: visit and see
+        if (finalHost !== BRIGHTSPACE_HOST) return { host: finalHost };
+        const target = launchTargetHost(await res.text(), BASE);
+        return target ? { host: target } : { host: null, note: `no launch target on ${stripUrl(res.url)} (HTTP ${res.status})` };
+      } catch (e) {
+        // A redirect to a site without access, offline, or a timeout: visit and see.
+        return { host: null, note: `fetch failed: ${(e as Error)?.name ?? 'Error'}: ${(e as Error)?.message ?? String(e)}`.slice(0, 200) };
       }
     },
 

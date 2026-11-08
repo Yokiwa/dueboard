@@ -55,7 +55,10 @@ export function VisitLog() {
                 <tr key={`${e.at}-${i}`}>
                   <td style={cell}>{new Date(e.at).toLocaleString()}</td>
                   <td style={cell}>{e.title}</td>
-                  <td style={cell}>{e.site ?? ''}</td>
+                  <td style={cell}>
+                    {e.site ?? ''}
+                    {e.siteNote && <div style={{ color: '#6B7280' }}>{e.siteNote}</div>}
+                  </td>
                   <td style={cell}>
                     {short(e.opened)}
                     {e.landed ? ` → ${short(e.landed)}` : ''}

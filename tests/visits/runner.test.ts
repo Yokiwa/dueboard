@@ -10,7 +10,7 @@ const found = (n: number): VisitMessage => ({ type: 'visitFound', found: { title
 interface Script {
   landings?: Landing[];
   messages?: (VisitMessage | 'timeout')[];
-  hosts?: (string | null | 'signed_out')[];
+  hosts?: (string | null | 'signed_out' | { host: string | null | 'signed_out'; note?: string })[];
   granted?: string[];
   injectThrows?: boolean;
   navigateThrows?: boolean;
@@ -42,7 +42,8 @@ function fakeApi(s: Script) {
     },
     launchHost: async (url) => {
       calls.push(`probe ${url}`);
-      return hosts.length ? hosts.shift()! : 'www.aleks.com';
+      const h = hosts.length ? hosts.shift()! : 'www.aleks.com';
+      return typeof h === 'object' && h !== null ? h : { host: h };
     },
     signedIn: async () => s.signedIn ?? true,
     windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
@@ -240,6 +241,24 @@ describe('runVisits: homework embedded in a Brightspace content page', () => {
     const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [topNull] });
     const out = await runVisits([page(1)], f.api);
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'none', host: 'education.wiley.com' }]);
+  });
+});
+
+describe('runVisits: when the link does not tell the site (real Brightspace launch pages)', () => {
+  const page = (n: number): VisitTarget => ({ ...target(n), launchUrl: `${B}/d2l/le/content/1/viewContent/${n}/View`, probeUrl: `${B}/launch/${n}` });
+  const wileyFound: VisitMessage = { type: 'visitFound', found: { title: 'HW11', dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Monday, Nov 9 at 11:59 PM (EST)' }, frameUrl: 'https://education.wiley.com/was/x', top: false };
+
+  it("still opens the homework's own Brightspace page and reads the frames it is allowed to", async () => {
+    const f = fakeApi({ hosts: [null], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
+    const out = await runVisits([page(1)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'found', host: 'education.wiley.com', found: (wileyFound as { found: unknown }).found }]);
+  });
+
+  it('the visit log says why the site could not be told', async () => {
+    const f = fakeApi({ hosts: [{ host: null, note: 'fetch failed: TypeError: Failed to fetch' }], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
+    const log: { siteNote?: string }[] = [];
+    await runVisits([page(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(log[0]!.siteNote).toBe('fetch failed: TypeError: Failed to fetch');
   });
 });
 
