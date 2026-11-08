@@ -12,6 +12,7 @@ import { createPearsonConnector } from '../connectors/pearson';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
 import { closeLeftover, runVisits } from '../visits/runner';
+import { forgetUnfoundVisits } from '../visits/apply';
 import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visits/browserApi';
 import { isVisitMessage } from '../visits/messages';
 import type { Connector, SourceId } from '../core/types';
@@ -73,7 +74,9 @@ export default defineBackground({
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };
 
-  browser.runtime.onInstalled.addListener((details) => {
+  browser.runtime.onInstalled.addListener(async (details) => {
+    // A new version may read pages the old one couldn't: retry homeworks the old one found nothing on.
+    if (details.reason === 'update') await patchStore({ captured: forgetUnfoundVisits((await loadStore()).captured) });
     void handleInstalled(details.reason, {
       ensureAlarm,
       sync: () => syncNow('auto'),

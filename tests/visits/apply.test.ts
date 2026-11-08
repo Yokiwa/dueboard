@@ -81,3 +81,16 @@ describe('applyOutcomes: blocked items once allowed', () => {
     expect(r.captured['brightspace:topic:1']!.failures).toBe(1);
   });
 });
+
+describe('forgetUnfoundVisits (after an update)', () => {
+  it('forgets visits that found nothing, so the new version reads them again; keeps found dates and page captures', async () => {
+    const { forgetUnfoundVisits } = await import('../../src/visits/apply');
+    const captured: Record<string, CapturedDue> = {
+      'brightspace:topic:1': prev({ misses: 3 }),
+      'brightspace:topic:2': prev({ itemKey: 'brightspace:topic:2', failures: 2, platform: 'unknown' }),
+      'brightspace:topic:3': prev({ itemKey: 'brightspace:topic:3', dueAt: '2026-11-10T04:59:00.000Z' }),
+      'title:hw4': { title: 'HW4', dueAt: '2026-11-12T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
+    };
+    expect(Object.keys(forgetUnfoundVisits(captured)).sort()).toEqual(['brightspace:topic:3', 'title:hw4']);
+  });
+});

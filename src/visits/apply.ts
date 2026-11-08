@@ -68,3 +68,11 @@ export function applyOutcomes(
   if (pearsonSession) visitState.pearsonSession = pearsonSession;
   return { captured, syllabus, visitState };
 }
+
+/**
+ * After an update: forget visits that found no date (misses, failures, blocks), so the new version reads those
+ * homeworks again on the next sync instead of waiting out the old backoff. Found dates and page captures stay.
+ */
+export function forgetUnfoundVisits(captured: StoreShape['captured']): StoreShape['captured'] {
+  return Object.fromEntries(Object.entries(captured).filter(([, c]) => !(c.via === 'visit' && !c.dueAt)));
+}

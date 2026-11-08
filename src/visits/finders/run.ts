@@ -8,6 +8,8 @@ export interface FinderWindow {
   /** Set by the visit runner before the finder script is injected. */
   __dueboardMode?: 'due' | 'syllabus';
   __dueboardPlatform?: string;
+  /** Set while this frame is reading, so repeated injections (for late frames) don't start a second reader. */
+  __dueboardReading?: boolean;
 }
 
 /**
@@ -17,6 +19,8 @@ export interface FinderWindow {
  * Sends at most one message per frame. Only reads the page.
  */
 export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, opts: { pollMs?: number; maxMs?: number; settleMs?: number } = {}): void {
+  if (win.__dueboardReading) return;
+  win.__dueboardReading = true;
   const pollMs = opts.pollMs ?? 500;
   const maxMs = opts.maxMs ?? 10_000;
   const settleMs = opts.settleMs ?? 1_500;

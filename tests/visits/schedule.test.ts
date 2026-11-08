@@ -33,7 +33,9 @@ const keys = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: strin
 describe('dueVisits', () => {
   it('visits an undated launch that was never visited', () => {
     expect(dueVisits(store([topic(1)]), now, 'auto', [])).toEqual([
-      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: launch(1), mode: 'due' },
+      // Opened like the student does: the Brightspace content page, which embeds that exact assignment.
+      // The topic's quick link (often shared by several assignments) only tells which site it goes to.
+      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: `${B}/d2l/le/content/1/viewContent/1/View`, probeUrl: launch(1), mode: 'due' },
     ]);
   });
 

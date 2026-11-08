@@ -8,8 +8,11 @@ export interface VisitApi {
   /** A new window on about:blank, minimized and not focused. */
   openWindow(): Promise<{ windowId: number; tabId: number }>;
   navigate(tabId: number, url: string): Promise<void>;
-  /** Resolves once the tab finished loading a page outside Brightspace, or a sign-in page. */
-  waitForLanding(tabId: number, timeoutMs: number): Promise<Landing>;
+  /**
+   * Resolves once the tab finished loading a page outside Brightspace, or a sign-in page. With brightspacePage, the
+   * target is a Brightspace content page (the platform is embedded in it), so that page loading is the landing.
+   */
+  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean }): Promise<Landing>;
   /** The platform host a Brightspace launch goes to, read from the launch page; null when it can't be told; 'signed_out' when Brightspace asks to sign in. */
   launchHost(url: string): Promise<string | null | 'signed_out'>;
   /** Whether the student is still signed in to Brightspace. */
@@ -83,8 +86,10 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 
   /** One target; 'stop' ends the run without blaming this item (window closed). */
   async function visit(t: VisitTarget, granted: string[]): Promise<VisitOutcome | 'stop'> {
+    let site: string | null = null;
     if (t.mode !== 'session') {
-      const host = await api.launchHost(t.launchUrl);
+      const host = await api.launchHost(t.probeUrl ?? t.launchUrl);
+      site = host === 'signed_out' ? null : host;
       if (host === 'signed_out') return { key: t.key, status: 'signed_out' };
       if (host && !originAllowed(granted, host)) return { key: t.key, status: 'needs_permission', host };
       if (!host) {
@@ -93,23 +98,47 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         if (!t.platform) return { key: t.key, status: 'failed', reason: 'unknown' };
       }
     }
+    const brightspacePage = t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST;
     await api.navigate(tabId, t.launchUrl);
-    const landing = await api.waitForLanding(tabId, perPageMs);
+    const landing = await api.waitForLanding(tabId, perPageMs, brightspacePage ? { brightspacePage: true } : undefined);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
     if (SIGN_IN.test(landing.url)) return { key: t.key, status: 'signed_out' };
-    return read(t, new URL(landing.url).hostname);
+    return read(t, new URL(landing.url).hostname, site);
   }
 
-  async function read(t: VisitTarget, host: string): Promise<VisitOutcome> {
+  async function read(t: VisitTarget, host: string, site: string | null): Promise<VisitOutcome> {
     if (t.mode === 'session') return { key: t.key, status: 'landed', host };
-    if (host === BRIGHTSPACE_HOST) return { key: t.key, status: 'failed', reason: 'timeout' };
+    const onPage = host === BRIGHTSPACE_HOST;
+    if (onPage && !(t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST)) return { key: t.key, status: 'failed', reason: 'timeout' };
     if (!originAllowed(await api.granted(), host)) return { key: t.key, status: 'needs_permission', host };
-    await api.inject(tabId, t.mode, t.platform);
-    const msg = await api.nextMessage(tabId, finderMs + 2_000);
-    if (msg === 'timeout') return { key: t.key, status: 'failed', reason: 'timeout' };
-    if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
-    return msg.found ? { key: t.key, status: 'found', found: msg.found, host } : { key: t.key, status: 'none', host };
+    const named = onPage ? (site ?? host) : host;
+
+    // The platform may sit in a frame that loads after the page (an embedded content page), so the reader is
+    // injected again every round; frames already reading ignore it. A "nothing here" from one frame doesn't end the
+    // wait: another frame may still find the date.
+    const rounds = Math.max(1, Math.ceil((finderMs + 2_000) / ROUND_MS));
+    let sawNothing = false;
+    for (let i = 0; i < rounds; i++) {
+      await api.inject(tabId, t.mode, t.platform);
+      const msg = await api.nextMessage(tabId, ROUND_MS);
+      if (msg === 'timeout') continue;
+      if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host: named };
+      if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? named };
+      sawNothing = true;
+      if (!onPage) break; // a plain platform page has one answer
+    }
+    return sawNothing ? { key: t.key, status: 'none', host: named } : { key: t.key, status: 'failed', reason: 'timeout' };
+  }
+}
+
+const ROUND_MS = 2_500;
+function frameHost(url: string): string | null {
+  try {
+    const h = new URL(url).hostname;
+    return h && h !== BRIGHTSPACE_HOST ? h : null;
+  } catch {
+    return null;
   }
 }
 

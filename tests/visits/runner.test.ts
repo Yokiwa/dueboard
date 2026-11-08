@@ -36,8 +36,14 @@ function fakeApi(s: Script) {
       clock += s.tick ?? 0;
       if (s.navigateThrows) throw new Error('No tab with id: 5');
     },
-    waitForLanding: async () => landings.shift() ?? 'timeout',
-    launchHost: async () => (hosts.length ? hosts.shift()! : 'www.aleks.com'),
+    waitForLanding: async (_tab, _ms, o) => {
+      if (o?.brightspacePage) calls.push('wait page');
+      return landings.shift() ?? 'timeout';
+    },
+    launchHost: async (url) => {
+      calls.push(`probe ${url}`);
+      return hosts.length ? hosts.shift()! : 'www.aleks.com';
+    },
     signedIn: async () => s.signedIn ?? true,
     windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
     granted: async () => s.granted ?? ['https://*/*'],
@@ -74,7 +80,7 @@ describe('runVisits', () => {
       { key: 'brightspace:topic:2', status: 'none', host: 'www.aleks.com' },
     ]);
     expect(progress).toEqual([1, 2]);
-    expect(f.calls).toEqual(['open', 'remember 9', `navigate ${B}/launch/1`, 'inject due', `navigate ${B}/launch/2`, 'inject due', 'close 9', 'remember null']);
+    expect(f.calls).toEqual(['open', 'remember 9', `probe ${B}/launch/1`, `navigate ${B}/launch/1`, 'wait page', 'inject due', `probe ${B}/launch/2`, `navigate ${B}/launch/2`, 'wait page', 'inject due', 'close 9', 'remember null']);
   });
 
   it('passes the platform to the finder', async () => {
@@ -202,6 +208,37 @@ describe('runVisits', () => {
     const out = await runVisits([target(1)], f.api);
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'error' }]);
     expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
+  });
+});
+
+describe('runVisits: homework embedded in a Brightspace content page', () => {
+  const page = (n: number): VisitTarget => ({ ...target(n), launchUrl: `${B}/d2l/le/content/1/viewContent/${n}/View`, probeUrl: `${B}/launch/${n}` });
+  const wileyFound: VisitMessage = { type: 'visitFound', found: { title: 'HW11', dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Monday, Nov 9 at 11:59 PM (EST)' }, frameUrl: 'https://education.wiley.com/was/x', top: false };
+  const topNull: VisitMessage = { type: 'visitFound', found: null, frameUrl: `${B}/d2l/le/content/1/viewContent/1/View`, top: true };
+
+  it('learns the site from the quick link, then opens the content page like the student does', async () => {
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
+    await runVisits([page(1)], f.api);
+    expect(f.calls.slice(2, 5)).toEqual([`probe ${B}/launch/1`, `navigate ${B}/d2l/le/content/1/viewContent/1/View`, 'wait page']);
+  });
+
+  it('reads the assignment from the platform frame inside the page, named by that frame', async () => {
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [topNull, wileyFound] });
+    const out = await runVisits([page(1)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'found', host: 'education.wiley.com', found: (wileyFound as { found: unknown }).found }]);
+  });
+
+  it('keeps injecting the reader so a platform frame that loads late is read too', async () => {
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: ['timeout', 'timeout', wileyFound] });
+    const out = await runVisits([page(1)], f.api);
+    expect(out[0]!.status).toBe('found');
+    expect(f.calls.filter((c) => c.startsWith('inject')).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('only "nothing found" from every frame is a miss', async () => {
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [topNull] });
+    const out = await runVisits([page(1)], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'none', host: 'education.wiley.com' }]);
   });
 });
 

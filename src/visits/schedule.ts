@@ -16,7 +16,10 @@ export interface VisitTarget {
   key: string;
   title: string;
   courseId: string;
+  /** What the visit opens: for homework, the Brightspace content page (it embeds that exact assignment). */
   launchUrl: string;
+  /** The topic's quick link, read only to learn which site the homework is on (several topics may share it). */
+  probeUrl?: string;
   /** Registry id guessed from the title or link. */
   platform?: string;
   mode: 'due' | 'session' | 'syllabus';
@@ -92,7 +95,7 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
     if (platform && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
     const n = rank(store.captured[key], now.getTime(), trigger, granted);
     if (n === null) continue;
-    const target: VisitTarget = { key, title: r.title, courseId: item.courseId, launchUrl: r.launchUrl!, mode: 'due' };
+    const target: VisitTarget = { key, title: r.title, courseId: item.courseId, launchUrl: r.url, probeUrl: r.launchUrl!, mode: 'due' };
     if (platform) target.platform = platform.id;
     ranked.push({ target, rank: n });
   }

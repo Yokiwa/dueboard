@@ -51,3 +51,21 @@ describe('runFinder', () => {
     expect(sent).toEqual([{ type: 'visitText', lines: ['Oct 14 | Exam 2'], frameUrl: 'https://www.aleks.com/hw7' }]);
   });
 });
+
+describe('runFinder injected again into the same frame', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+    document.body.innerHTML = '<h1>Homework 7</h1><p>Due Date: 11/10/2026 11:59 PM</p>';
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('a frame that is already reading ignores the second injection', async () => {
+    const sent: VisitMessage[] = [];
+    const w = fakeWindow(true);
+    runFinder(w, (m) => sent.push(m));
+    runFinder(w, (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(sent).toHaveLength(1);
+  });
+});

@@ -27,7 +27,7 @@ function extensionCopy() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dueboard-e2e-'));
   fs.cpSync(BUILT, dir, { recursive: true });
   const m = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
-  m.host_permissions.push('https://*.aleks.com/*', 'https://*.wwnorton.com/*');
+  m.host_permissions.push('https://*.aleks.com/*', 'https://*.wwnorton.com/*', 'https://*.wiley.com/*', 'https://*.wileyplus.com/*');
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(m));
   return dir;
 }
@@ -42,6 +42,16 @@ const toc = {
         { TopicId: 2, Title: 'InQuizitive Ch 5', Url: ql('N1'), TypeIdentifier: 'Link' },
         { TopicId: 3, Title: 'Assignment 3', Url: ql('U1'), TypeIdentifier: 'Link' },
         { TopicId: 4, Title: 'Worksheet 9', Url: ql('L1'), TypeIdentifier: 'Link' },
+      ],
+    },
+    {
+      // Like PHYS 172: several Wiley homeworks share one quick link (W1) that only reaches the Wiley course page;
+      // each content page embeds its own assignment.
+      Title: 'HOMEWORK 11',
+      Modules: [],
+      Topics: [
+        { TopicId: 5, Title: 'PHYS 172H - HW11 - FA26', Url: ql('W1'), TypeIdentifier: 'Link' },
+        { TopicId: 6, Title: 'PHYS 172H - HW10 - FA26', Url: ql('W1'), TypeIdentifier: 'Link' },
       ],
     },
     { Title: 'Start Here', Modules: [], Topics: [{ TopicId: 9, Title: 'Course Syllabus', Url: '/content/enforced/102-MA/syllabus.pdf', TypeIdentifier: 'File' }] },
@@ -75,6 +85,15 @@ const launchPage = (target) =>
     if (u.includes('/quizzes/')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('myEvents')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: fs.readFileSync(path.join(ROOT, 'tests/fixtures/syllabus/schedule.pdf')) });
+    if (u.includes('rcode=W1')) return r.fulfill(html(launchPage('https://education.wiley.com/was/course')));
+    if (u.includes('rcode=W5')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw11')));
+    if (u.includes('rcode=W6')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw10')));
+    const page = u.match(/\/viewContent\/(\d+)\/View/);
+    if (page) {
+      // The content viewer adds the tool's frame after the page loads; for Wiley topics the frame launches that topic.
+      const src = { 1: ql('A1'), 2: ql('N1'), 3: ql('U1'), 4: ql('L1'), 5: ql('W5'), 6: ql('W6') }[page[1]];
+      return r.fulfill(html(`<h1>Content</h1><div id="v"></div><script>setTimeout(()=>{const f=document.createElement('iframe');f.src=${JSON.stringify(src)};document.getElementById('v').append(f)},1000)</script>`));
+    }
     if (u.includes('rcode=A1')) return r.fulfill(html(launchPage('https://www.aleks.com/hw7')));
     if (u.includes('rcode=N1')) return r.fulfill(html(launchPage('https://digital.wwnorton.com/inq5')));
     if (u.includes('rcode=U1')) return r.fulfill(html(launchPage('https://example-unknown.com/a3')));
@@ -84,6 +103,15 @@ const launchPage = (target) =>
     }
     if (u.includes('/d2l/login')) return r.fulfill(html('<h1>Purdue sign in</h1>'));
     if (u.includes('/d2l/home/102')) return r.fulfill(html('<nav><a href="/d2l/le/content/102/Home">Content</a></nav>'));
+    return r.fulfill({ status: 404, body: '' });
+  });
+  await ctx.route('https://education.wiley.com/**', (r) => {
+    const u = r.request().url().replace(/[?#].*$/, ''); // a launch form sent with GET adds a "?" 
+    hits.wiley = (hits.wiley ?? 0) + 1;
+    if (u.endsWith('/was/course'))
+      return r.fulfill(html('<h1>PHYS 172H</h1><ul><li>HW10 <span>Due Monday, Nov 9 at 11:59 PM (EST)</span></li><li>HW11 <span>Due Monday, Nov 16 at 11:59 PM (EST)</span></li></ul>'));
+    if (u.endsWith('/was/hw11')) return r.fulfill(html('<main><h1>PHYS 172H - HW11 - FA26</h1><span>Due Monday, Nov 16 at 11:59 PM (EST)</span></main>'));
+    if (u.endsWith('/was/hw10')) return r.fulfill(html('<main><h1>PHYS 172H - HW10 - FA26</h1><span>Due Monday, Nov 9 at 11:59 PM (EST)</span></main>'));
     return r.fulfill({ status: 404, body: '' });
   });
   await ctx.route('https://www.aleks.com/**', (r) => {
@@ -131,6 +159,10 @@ const launchPage = (target) =>
   check(hw7?.dueAt === expected && hw7?.platform === 'aleks', `ALEKS homework read (${hw7?.dueAt}, ${hw7?.platform})`);
   const inq = s.captured?.["brightspace:topic:2"];
   check(inq?.dueAt === '2026-11-22T04:59:00.000Z' && inq?.platform === 'norton', `late-rendering InQuizitive page read (${inq?.dueAt})`);
+  const hw11 = s.captured?.['brightspace:topic:5'];
+  const hw10 = s.captured?.['brightspace:topic:6'];
+  check(hw11?.dueAt === '2026-11-17T04:59:00.000Z' && hw11?.platform === 'wileyplus', `Wiley HW11 read from the frame embedded in its Brightspace page (${hw11?.dueAt})`);
+  check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10, sharing HW11's quick link, gets its own date (${hw10?.dueAt})`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');
   check(s.visitState?.needsPermission?.includes('example-unknown.com'), 'access request recorded for example-unknown.com');

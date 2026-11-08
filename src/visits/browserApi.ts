@@ -48,6 +48,15 @@ function landed(url: string | undefined): boolean {
   }
 }
 
+function onPage(url: string | undefined): boolean {
+  if (!url || url === 'about:blank') return false;
+  try {
+    return new URL(url).hostname === BRIGHTSPACE_HOST || SIGN_IN.test(url);
+  } catch {
+    return false;
+  }
+}
+
 export function createBrowserVisitApi(): VisitApi {
   return {
     async openWindow() {
@@ -67,7 +76,7 @@ export function createBrowserVisitApi(): VisitApi {
       await browser.tabs.update(tabId, { url });
     },
 
-    waitForLanding(tabId, timeoutMs) {
+    waitForLanding(tabId, timeoutMs, opts) {
       return new Promise<Landing>((resolve) => {
         let done = false;
         const finish = (r: Landing) => {
@@ -80,7 +89,9 @@ export function createBrowserVisitApi(): VisitApi {
         };
         const onUpdated = (id: number, info: { status?: string }, tab: { url?: string; status?: string }) => {
           if (id !== tabId) return;
-          if ((info.status === 'complete' || tab.status === 'complete') && landed(tab.url)) finish({ url: tab.url! });
+          if (info.status !== 'complete' && tab.status !== 'complete') return;
+          // A Brightspace content page is itself the landing (the platform is embedded in it); else wait to leave it.
+          if (opts?.brightspacePage ? onPage(tab.url) : landed(tab.url)) finish({ url: tab.url! });
         };
         const onRemoved = (id: number) => {
           if (id === tabId) finish('closed');

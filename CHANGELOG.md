@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 — 2026-11
+
+- **Homework embedded in a Brightspace page is read.** Some courses (for example WileyPLUS in PHYS 172) give several homeworks the same platform link, which only reaches the course page; DueBoard now opens each homework's own Brightspace content page, the way you do, and reads the assignment embedded in it
+- After updating, homeworks the previous version found no date on are read again right away
+
 ## 1.1.0 — 2026-11
 
 - **Due dates from any homework platform.** For homework that Brightspace launches on another platform (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and others, including ones DueBoard doesn't know), DueBoard opens the Brightspace link in a minimized window, reads the page's "Due …" line and closes it. It never clicks or submits anything. New homework is read once, and dates are rechecked daily. Settings: "Automatically", "Only when I click Refresh" or "Never"
