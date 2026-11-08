@@ -18,7 +18,8 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
 - **Next deadline.** The nearest deadline sits on top with a live countdown, an *Open* button and a *Done* button.
 - **Calendar and to-do views.** Week and month views; a to-do list you can tick off. Submitted work is ticked automatically where the platform reports it.
-- **Any homework platform.** For homework that Brightspace launches on another platform, DueBoard opens the link in a minimized window, reads the "Due …" line and closes it. You allow each platform once.
+- **Any homework platform.** For homework that Brightspace launches on another platform, when you click Refresh DueBoard opens the link in a minimized window, reads the "Due …" line and closes it (or automatically, if you choose that in Settings). You allow each platform once.
+- **Dates in titles.** A homework titled "HW11_due_Nov 11" gets that date.
 - **Syllabus suggestions.** Dated work found in your syllabus (Simple Syllabus, or a PDF in Content), to add with one click.
 - **Automatic sync** every 30 minutes, using the sessions already in your browser.
 - **Chrome, Edge and Firefox** (and other Chromium browsers such as Brave, Arc and Opera).

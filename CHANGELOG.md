@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.1.2 — 2026-11
 
+- **Platform pages are opened only when you click Refresh** (by default), so no window appears on its own; Settings can make it automatic again
 - **Due dates written in homework titles** ("HW11 (10.3, 12.1)_due_Nov 11", "Set #05, Due Oct 02") are used when Brightspace has no date, marked "Date from title"; those homeworks are never opened in the visit window
+- Documents named like "Assignments and due dates" are read like a syllabus
+- **Visit log** in Diagnostics (Settings → Diagnostics): what each platform visit saw, step by step, to download and send when a date isn't read. It stays on your computer
 
 ## 1.1.1 — 2026-11
 
