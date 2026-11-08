@@ -49,6 +49,15 @@ describe('dueVisits', () => {
     expect(keys(s)).toEqual([]);
   });
 
+  it('a found date more than 3 days away is rechecked every 3 days; a nearer one daily', () => {
+    const far = '2026-11-20T04:59:00.000Z';
+    expect(keys(store([topic(1)], cap(1, { dueAt: far, checkedAt: ago(25) })))).toEqual([]);
+    expect(keys(store([topic(1)], cap(1, { dueAt: far, checkedAt: ago(71) })))).toEqual([]);
+    expect(keys(store([topic(1)], cap(1, { dueAt: far, checkedAt: ago(73) })))).toEqual(['brightspace:topic:1']);
+    // Read when it was far off; now it's 2 days away: daily again.
+    expect(keys(store([topic(1)], cap(1, { dueAt: '2026-11-09T17:00:00.000Z', checkedAt: ago(25) })))).toEqual(['brightspace:topic:1']);
+  });
+
   it('rechecks a found date after 24 hours, not before', () => {
     expect(keys(store([topic(1)], cap(1, { dueAt: '2026-11-10T04:59:00.000Z', checkedAt: ago(23) })))).toEqual([]);
     expect(keys(store([topic(1)], cap(1, { dueAt: '2026-11-10T04:59:00.000Z', checkedAt: ago(25) })))).toEqual(['brightspace:topic:1']);

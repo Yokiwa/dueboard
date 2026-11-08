@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.3 — 2026-11
+
+- **Fewer visit windows on Refresh**: a due date read from a platform page is read again every 3 days while the due date is more than 3 days away, and daily in its last 3 days (it was daily for all). Most Refreshes now open no window. How pages are read is unchanged
+
 ## 1.2.2 — 2026-11
 
 - **Firefox no longer gets stuck at "Reading 1 of N platform pages…"**: Firefox can keep DueBoard waiting forever while one of a page's frames is still loading. DueBoard now reads the frames that are ready and moves on, so the run finishes, the visit window closes and Gradescope is read again

@@ -47,7 +47,11 @@ function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted
   const stamp = Date.parse(c.checkedAt) || 0;
   if ((c.failures ?? 0) >= 3) return trigger === 'manual' && age > H ? 1 + stamp : null;
   if ((c.failures ?? 0) >= 1) return age > 6 * H ? 1 + stamp : null;
-  if (c.dueAt) return age > 24 * H ? 1 + stamp : null;
+  if (c.dueAt) {
+    // Dates rarely move: one more than 3 days off is read again every 3 days, a nearer one daily.
+    const every = Date.parse(c.dueAt) - now > 72 * H ? 72 * H : 24 * H;
+    return age > every ? 1 + stamp : null;
+  }
   if ((c.misses ?? 0) < 3) return age > 24 * H ? 1 + stamp : null;
   return trigger === 'manual' && age > H ? 1 + stamp : null;
 }
