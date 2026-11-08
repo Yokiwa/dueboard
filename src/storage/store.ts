@@ -236,3 +236,26 @@ export async function getVisitWindow(): Promise<number | undefined> {
   const r = (await sessionArea().get('visitWindowId')) as { visitWindowId?: number | null };
   return typeof r.visitWindowId === 'number' ? r.visitWindowId : undefined;
 }
+
+/** The local visit log (Diagnostics): the latest 100 visits. Never sent anywhere. */
+const LOG_MAX = 100;
+export interface StoredVisitLogEntry {
+  at: string;
+  key: string;
+  title: string;
+  site?: string;
+  opened: string;
+  landed?: string;
+  frames: string[];
+  result: string;
+  detail?: string;
+}
+export async function appendVisitLog(entries: StoredVisitLogEntry[]): Promise<void> {
+  if (entries.length === 0) return;
+  const log = [...(await getVisitLog()), ...entries].slice(-LOG_MAX);
+  await browser.storage.local.set({ visitLog: log });
+}
+export async function getVisitLog(): Promise<StoredVisitLogEntry[]> {
+  const r = (await browser.storage.local.get('visitLog')) as { visitLog?: StoredVisitLogEntry[] };
+  return Array.isArray(r.visitLog) ? r.visitLog : [];
+}

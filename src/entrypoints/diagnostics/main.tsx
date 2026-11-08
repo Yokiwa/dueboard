@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProbeReport, ProbeResult, FixtureBundle } from '../../diagnostics/probe';
 import { loadStore } from '../../storage/store';
+import { VisitLog } from './VisitLog';
 
 const box: React.CSSProperties = {
   fontFamily: 'system-ui, sans-serif',
-  maxWidth: 720,
+  maxWidth: 960,
   margin: '40px auto',
   padding: '0 16px',
   color: '#111827',
@@ -88,6 +89,7 @@ function App() {
       )}
       {exportNote && <pre style={{ whiteSpace: 'pre-wrap' }}>{exportNote}</pre>}
       {syncNote && <pre style={{ whiteSpace: 'pre-wrap' }}>{syncNote}</pre>}
+      <VisitLog />
     </main>
   );
 }

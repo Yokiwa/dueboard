@@ -1,4 +1,4 @@
-import type { VisitMessage } from './messages';
+import { stripUrl, type VisitMessage } from './messages';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -24,6 +24,8 @@ export interface VisitApi {
   inject(tabId: number, mode: 'due' | 'syllabus', platform?: string): Promise<void>;
   nextMessage(tabId: number, timeoutMs: number): Promise<VisitMessage | 'timeout'>;
   closeWindow(windowId: number): Promise<void>;
+  /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
+  framesSeen(tabId: number): Promise<string[]>;
   /** Persists visitState.windowId, so a restart can close a window a crashed run left behind. */
   remember(windowId: number | null): Promise<void>;
 }
@@ -32,12 +34,29 @@ export interface VisitApi {
 export const SIGN_IN = /\/d2l\/login|login\.purdue\.edu|\/idp\/profile\/|duosecurity\.com/i;
 const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
 
+/** One line of the visit log: what a visit saw, step by step. Addresses are stripped of "?…" and "#…". */
+export interface VisitLogEntry {
+  at: string;
+  key: string;
+  title: string;
+  /** The site the Brightspace link goes to, as read from the link ('signed_out' if Brightspace asked to sign in). */
+  site?: string;
+  opened: string;
+  /** Where the page ended up, or 'timeout' / 'closed'. */
+  landed?: string;
+  /** Frames of the page that loaded and were read. */
+  frames: string[];
+  result: VisitOutcome['status'];
+  detail?: string;
+}
+
 export interface RunOptions {
   perPageMs?: number;
   finderMs?: number;
   budgetMs?: number;
   now?: () => number;
   onProgress?: (done: number, total: number) => void;
+  onLog?: (entry: VisitLogEntry) => void;
 }
 
 /**
@@ -66,9 +85,15 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         leaveOpen = true;
         break;
       }
-      const outcome = await visit(t, granted).catch(async (): Promise<VisitOutcome | 'stop'> => ((await api.windowState(windowId)) === 'gone' ? 'stop' : { key: t.key, status: 'failed', reason: 'error' }));
+      const trace: Partial<VisitLogEntry> = {};
+      const outcome = await visit(t, granted, trace).catch(async (): Promise<VisitOutcome | 'stop'> => ((await api.windowState(windowId)) === 'gone' ? 'stop' : { key: t.key, status: 'failed', reason: 'error' }));
       if (outcome === 'stop') break;
       out.push(outcome);
+      if (opts.onLog) {
+        const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
+        if (outcome.status === 'failed') entry.detail = outcome.reason;
+        opts.onLog(entry);
+      }
       opts.onProgress?.(out.length, targets.length);
       if (outcome.status === 'signed_out') break;
     }
@@ -85,10 +110,11 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
   return out;
 
   /** One target; 'stop' ends the run without blaming this item (window closed). */
-  async function visit(t: VisitTarget, granted: string[]): Promise<VisitOutcome | 'stop'> {
+  async function visit(t: VisitTarget, granted: string[], trace: Partial<VisitLogEntry>): Promise<VisitOutcome | 'stop'> {
     let site: string | null = null;
     if (t.mode !== 'session') {
       const host = await api.launchHost(t.probeUrl ?? t.launchUrl);
+      if (host) trace.site = host;
       site = host === 'signed_out' ? null : host;
       if (host === 'signed_out') return { key: t.key, status: 'signed_out' };
       if (host && !originAllowed(granted, host)) return { key: t.key, status: 'needs_permission', host };
@@ -101,6 +127,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     const brightspacePage = t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST;
     await api.navigate(tabId, t.launchUrl);
     const landing = await api.waitForLanding(tabId, perPageMs, brightspacePage ? { brightspacePage: true } : undefined);
+    trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
     if (SIGN_IN.test(landing.url)) return { key: t.key, status: 'signed_out' };
@@ -122,7 +149,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     for (let i = 0; i < rounds; i++) {
       await api.inject(tabId, t.mode, t.platform);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host: named };
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? named };
       sawNothing = true;

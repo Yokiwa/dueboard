@@ -184,3 +184,17 @@ describe('default settings', () => {
     expect(migrate({ settings: { visits: 'auto', syllabus: true } }).settings.visits).toBe('auto');
   });
 });
+
+describe('visit log', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('keeps the latest 100 entries', async () => {
+    const { appendVisitLog, getVisitLog } = await import('../../src/storage/store');
+    const entry = (n: number) => ({ at: String(n), key: `k${n}`, title: `T${n}`, opened: 'o', frames: [], result: 'none' });
+    await appendVisitLog(Array.from({ length: 80 }, (_, i) => entry(i)));
+    await appendVisitLog(Array.from({ length: 30 }, (_, i) => entry(80 + i)));
+    const log = await getVisitLog();
+    expect(log).toHaveLength(100);
+    expect(log[0]!.key).toBe('k10');
+    expect(log.at(-1)!.key).toBe('k109');
+  });
+});

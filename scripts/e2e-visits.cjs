@@ -163,6 +163,9 @@ const launchPage = (target) =>
   const hw10 = s.captured?.['brightspace:topic:6'];
   check(hw11?.dueAt === '2026-11-17T04:59:00.000Z' && hw11?.platform === 'wileyplus', `Wiley HW11 read from the frame embedded in its Brightspace page (${hw11?.dueAt})`);
   check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10, sharing HW11's quick link, gets its own date (${hw10?.dueAt})`);
+  const vlog = await page.evaluate(async () => (await chrome.storage.local.get('visitLog')).visitLog ?? []);
+  const hw11Log = vlog.find((e) => e.key === 'brightspace:topic:5');
+  check(hw11Log?.result === 'found' && hw11Log.frames.some((f) => f.startsWith('https://education.wiley.com/')) && !hw11Log.frames.some((f) => f.includes('?')), `visit log records HW11's Wiley frame (${hw11Log?.frames?.length} frames)`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');
   check(s.visitState?.needsPermission?.includes('example-unknown.com'), 'access request recorded for example-unknown.com');

@@ -13,11 +13,17 @@ let visitTab: number | null = null;
 const ours = new Set<number>();
 const opened = new Map<number, { state?: string; focused?: boolean }>();
 const queue: VisitMessage[] = [];
+/** Frames that reported in during the current visit (for the visit log). */
+const frames: string[] = [];
 let waiter: ((m: VisitMessage) => void) | null = null;
 
 /** Called by the background router for finder messages. Returns whether the message was taken. */
 export function deliverVisitMessage(msg: VisitMessage, sender: { tab?: { id?: number } } | undefined): boolean {
   if (visitTab === null || sender?.tab?.id !== visitTab) return false;
+  if (msg.type === 'visitFrame') {
+    if (!frames.includes(msg.frameUrl)) frames.push(msg.frameUrl);
+    return true;
+  }
   if (waiter) {
     const w = waiter;
     waiter = null;
@@ -35,6 +41,7 @@ export function isVisitTab(tabId: number | undefined): boolean {
 export function setVisitTab(tabId: number | null): void {
   visitTab = tabId;
   queue.length = 0;
+  frames.length = 0;
   waiter = null;
 }
 
@@ -73,6 +80,7 @@ export function createBrowserVisitApi(): VisitApi {
 
     async navigate(tabId, url) {
       queue.length = 0; // late messages from the previous page don't belong to this one
+      frames.length = 0;
       await browser.tabs.update(tabId, { url });
     },
 
@@ -144,6 +152,10 @@ export function createBrowserVisitApi(): VisitApi {
       } catch {
         return 'gone';
       }
+    },
+
+    async framesSeen() {
+      return [...frames];
     },
 
     async granted() {

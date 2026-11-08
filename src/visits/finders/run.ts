@@ -1,4 +1,4 @@
-import type { VisitMessage } from '../messages';
+import { stripUrl, type VisitMessage } from '../messages';
 import { findDue, pageLines } from './index';
 
 export interface FinderWindow {
@@ -27,6 +27,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   const top = win.top === win;
   const frameUrl = win.location.href;
   const started = Date.now();
+  send({ type: 'visitFrame', frameUrl: stripUrl(frameUrl), top });
   let lastText = '';
   let stableSince = started;
 

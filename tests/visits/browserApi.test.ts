@@ -80,3 +80,14 @@ describe('visit window state', () => {
     expect(await api.windowState(1)).toBe('gone');
   });
 });
+
+describe('frames seen during a visit', () => {
+  afterEach(() => setVisitTab(null));
+  it('frame reports are collected for the log and are not taken as answers', async () => {
+    setVisitTab(5);
+    const api = createBrowserVisitApi();
+    expect(deliverVisitMessage({ type: 'visitFrame', frameUrl: 'https://education.wiley.com/was/x', top: false }, { tab: { id: 5 } })).toBe(true);
+    expect(await api.framesSeen(5)).toEqual(['https://education.wiley.com/was/x']);
+    expect(await api.nextMessage(5, 20)).toBe('timeout');
+  });
+});

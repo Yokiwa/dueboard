@@ -46,6 +46,7 @@ function fakeApi(s: Script) {
     },
     signedIn: async () => s.signedIn ?? true,
     windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
+    framesSeen: async () => [],
     granted: async () => s.granted ?? ['https://*/*'],
     inject: async (_tab, mode, platform) => {
       calls.push(`inject ${mode}${platform ? ` ${platform}` : ''}`);
@@ -271,5 +272,26 @@ describe('launchTargetHost', () => {
   it('ignores Brightspace-internal targets and pages without one', () => {
     expect(launchTargetHost(`<form action="/d2l/le/lti/1/launch"></form>`, B)).toBeNull();
     expect(launchTargetHost('<p>Hello</p>', B)).toBeNull();
+  });
+});
+
+describe('runVisits: visit log', () => {
+  it('records what each visit saw, step by step', async () => {
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View?ou=1`)], messages: [{ type: 'visitFound', found: null, frameUrl: `${B}/x`, top: true }] });
+    f.api.framesSeen = async () => [`${B}/d2l/le/content/1/viewContent/1/View`];
+    const log: unknown[] = [];
+    await runVisits([{ ...target(1), launchUrl: `${B}/d2l/le/content/1/viewContent/1/View`, probeUrl: `${B}/launch/1` }], f.api, { onLog: (e) => log.push(e), now: () => 1_700_000_000_000 });
+    expect(log).toEqual([
+      {
+        at: new Date(1_700_000_000_000).toISOString(),
+        key: 'brightspace:topic:1',
+        title: 'HW 1',
+        site: 'education.wiley.com',
+        opened: `${B}/d2l/le/content/1/viewContent/1/View`,
+        landed: `${B}/d2l/le/content/1/viewContent/1/View`,
+        frames: [`${B}/d2l/le/content/1/viewContent/1/View`],
+        result: 'none',
+      },
+    ]);
   });
 });

@@ -3,7 +3,7 @@ import { handleInstalled } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
-import { getVisitWindow, loadStore, patchStore, saveCaptured, setVisitProgress } from '../storage/store';
+import { appendVisitLog, getVisitWindow, loadStore, patchStore, saveCaptured, setVisitProgress } from '../storage/store';
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
@@ -11,7 +11,7 @@ import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
-import { closeLeftover, runVisits } from '../visits/runner';
+import { closeLeftover, runVisits, type VisitLogEntry } from '../visits/runner';
 import { forgetUnfoundVisits } from '../visits/apply';
 import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visits/browserApi';
 import { isVisitMessage } from '../visits/messages';
@@ -39,10 +39,15 @@ const syncNow = (trigger: Trigger = 'auto') => {
         sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
         granted: () => visitApi.granted(),
         visit: async (targets) => {
+          const log: VisitLogEntry[] = [];
           try {
-            return await runVisits(targets, visitApi, { onProgress: (done, total) => void setVisitProgress({ done, total }) });
+            return await runVisits(targets, visitApi, {
+              onProgress: (done, total) => void setVisitProgress({ done, total }),
+              onLog: (entry) => log.push(entry),
+            });
           } finally {
             await setVisitProgress(null);
+            await appendVisitLog(log);
           }
         },
         save: (patch) => patchStore(patch),
@@ -96,6 +101,7 @@ export default defineBackground({
     },
     visitFound: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitText: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
+    visitFrame: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
     captureDue: async (msg, sender) => {
