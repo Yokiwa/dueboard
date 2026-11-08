@@ -165,3 +165,9 @@ describe('dueVisits: fixes from review', () => {
     expect(keys(s)).toEqual(['brightspace:topic:4']);
   });
 });
+
+describe('dueVisits: dates in titles', () => {
+  it('never opens a homework whose title already says when it is due', () => {
+    expect(keys(store([topic(1, 'HW11 (10.3, 12.1)_due_Nov 11'), topic(2, 'Homework 2')]))).toEqual(['brightspace:topic:2']);
+  });
+});

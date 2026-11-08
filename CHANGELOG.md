@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Due dates written in homework titles** ("HW11 (10.3, 12.1)_due_Nov 11", "Set #05, Due Oct 02") are used when Brightspace has no date, marked "Date from title"; those homeworks are never opened in the visit window
+
 ## 1.1.1 — 2026-11
 
 - **Homework embedded in a Brightspace page is read.** Some courses (for example WileyPLUS in PHYS 172) give several homeworks the same platform link, which only reaches the course page; DueBoard now opens each homework's own Brightspace content page, the way you do, and reads the assignment embedded in it

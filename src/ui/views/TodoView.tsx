@@ -57,6 +57,8 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         </a>
         {item.dueFrom === 'platform' ? (
           <span className="caption-5 text-db-faint" title={item.dueEvidence}>{`${course?.code ?? ''} · ${t('item.readFrom', { platform: item.duePlatform ?? '' })}`}</span>
+        ) : item.dueFrom === 'title' ? (
+          <span className="caption-5 text-db-faint">{`${course?.code ?? ''} · ${t('item.fromTitle')}`}</span>
         ) : (
           <span className="caption-5 text-db-faint">{course?.code}</span>
         )}

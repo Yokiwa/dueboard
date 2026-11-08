@@ -141,3 +141,18 @@ describe('next-deadline banner names the platform a date was read from', () => {
     expect(screen.queryByText(/^Brightspace · /)).toBeNull();
   });
 });
+
+describe('date origin: title', () => {
+  it('says a date came from the title', async () => {
+    const { TodoView } = await import('../../src/ui/views/TodoView');
+    const item: Item = {
+      id: 'brightspace:topic:7', courseId: 'brightspace:7', title: 'HW11 (10.3, 12.1)_due_Nov 11', type: 'assignment', dueAt: '2026-11-12T04:59:00.000Z', url: 'u',
+      sources: ['brightspace'], sourceKeys: ['brightspace:topic:7'], submitted: false, doneByUser: false, dueFrom: 'title',
+    };
+    const course = { id: 'brightspace:7', code: 'CHM 11510', name: 'CHM 11510', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
+    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
+    expect(screen.getByText('CHM 11510 · Date from title')).toBeTruthy();
+    render(<ItemRow item={item} now={now} />);
+    expect(screen.getByText(/^Date from title · /)).toBeTruthy();
+  });
+});

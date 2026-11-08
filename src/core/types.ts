@@ -105,8 +105,8 @@ export interface Item {
   sourceKeys: string[];
   submitted: boolean;
   doneByUser: boolean;
-  /** Set only when a platform page (visit or page capture) supplied the date. */
-  dueFrom?: 'platform';
+  /** Where a date came from when not from a source's own field: a platform page, or the item's title ("_due_Nov 11"). */
+  dueFrom?: 'platform' | 'title';
   /** The platform's name, for "Read from ALEKS". */
   duePlatform?: string;
   /** "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'" */

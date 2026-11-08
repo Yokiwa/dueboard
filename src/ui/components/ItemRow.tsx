@@ -22,6 +22,8 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
         </a>
         {item.dueFrom === 'platform' ? (
           <span className="caption-5 text-db-faint" title={item.dueEvidence}>{`${t('item.readFrom', { platform: item.duePlatform ?? '' })} · ${when}`}</span>
+        ) : item.dueFrom === 'title' ? (
+          <span className="caption-5 text-db-faint">{`${t('item.fromTitle')} · ${when}`}</span>
         ) : (
           <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
         )}

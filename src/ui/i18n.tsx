@@ -148,6 +148,7 @@ const messages = {
   'settings.removeLabel': 'Remove',
   'settings.syllabus': 'Syllabus suggestions',
   'item.readFrom': (v: Vars) => `Read from ${v.platform}`,
+  'item.fromTitle': 'Date from title',
   'sync.visiting': (v: Vars) => `Reading ${v.done} of ${v.total} platform pages…`,
   'syllabus.title': 'From syllabus',
   'syllabus.hint': 'Found in your syllabus. Add the ones that are real deadlines.',

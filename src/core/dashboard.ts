@@ -1,4 +1,5 @@
 import { platformById } from './platformRegistry';
+import { findDueMatches } from './dueText';
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
 import { classifyLink } from './links';
 import type {
@@ -203,6 +204,14 @@ function buildLinks(input: DashboardInput, courses: Course[], alias: Map<string,
   return courses.flatMap((c) => perCourse.get(c.id) ?? []);
 }
 
+/** Instructors sometimes write the deadline into the title: "HW11 (10.3, 12.1)_due_Nov 11". Only with "due". */
+function fillFromTitle(m: Item, now: Date): void {
+  const match = findDueMatches(m.title.replace(/_/g, ' '), now).find((x) => x.label === 'due');
+  if (!match) return;
+  m.dueAt = match.dueAt;
+  m.dueFrom = 'title';
+}
+
 /**
  * An undated item takes a date read on a platform page: first the one stored for one of its own source keys (a
  * visit), then one stored under its title (a page the student opened). Items with any other date keep it.
@@ -245,6 +254,7 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   }
   for (const m of merged) {
     m.id = m.sourceKeys[0]!;
+    if (!m.dueAt) fillFromTitle(m, now);
     if (!m.dueAt) fillFromCaptured(m, input.captured);
     // A MyLab session expires; the Brightspace launch link always gets the student back in.
     const launch = m.sources.includes('pearson') ? pearsonLaunch.get(m.courseId) : undefined;

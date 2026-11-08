@@ -598,3 +598,31 @@ describe('course shortcut prefers the Brightspace launch', () => {
     expect(gs[0]!.url).toBe(`https://purdue.brightspace.com${launch}`);
   });
 });
+
+describe('due dates written in the homework title', () => {
+  const chm = (title: string, dueAt: string | null = null) =>
+    input({ snapshots: { brightspace: snap([bsCourse('7', 'CHM 11510', 'CHM 11510')], [item({ source: 'brightspace', sourceItemId: 'topic:7', sourceCourseId: '7', title, dueAt })]) } });
+  const one = (title: string, dueAt: string | null = null) => buildDashboard(chm(title, dueAt), now).items[0]!;
+
+  it('reads "_due_Nov 11" in a title (underscores as spaces), at 11:59 PM, and says so', () => {
+    const it11 = one('HW11 (10.3, 12.1)_due_Nov 11');
+    expect(it11.dueAt).toBe(new Date(2026, 10, 11, 23, 59).toISOString());
+    expect(it11.dueFrom).toBe('title');
+  });
+
+  it('reads "_due_Oct_21" and "_due_Sept_30"', () => {
+    expect(one('HW08_due_Oct_21 (8.3 8.4)').dueAt).toBe(new Date(2026, 9, 21, 23, 59).toISOString());
+    expect(one('HW05_due_Sept_30 (6.1-6.6)').dueAt).toBe(new Date(2026, 8, 30, 23, 59).toISOString());
+  });
+
+  it('only with the word "due": a date alone in a title is not a deadline', () => {
+    expect(one('Lecture Nov 10 notes').dueAt).toBeNull();
+    expect(one('Exam 2 - Oct 14').dueAt).toBeNull();
+  });
+
+  it('a Brightspace date wins over the title', () => {
+    const it11 = one('HW11 (10.3, 12.1)_due_Nov 11', iso('2026-11-12T23:59:00-05:00'));
+    expect(it11.dueAt).toBe(iso('2026-11-12T23:59:00-05:00'));
+    expect(it11.dueFrom).toBeUndefined();
+  });
+});
