@@ -32,12 +32,15 @@
       <p>DueBoard's own requests only read. It never changes, submits or deletes anything on these sites, and it never sees or stores your password.</p>
 
       <h2>Reading platform pages</h2>
-      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link in a minimized browser window, the same way you would. Brightspace signs you in to the platform as it always does when you click the link. DueBoard then reads the page's heading and its “Due …” line, and closes the window. It never clicks, types or submits anything on the platform.</p>
+      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link as a page in a minimized browser window, like “Open in new window”. Brightspace signs you in to the platform as it always does when you click the link. DueBoard then reads the page's heading and its “Due …” line, and closes the window. It reads only pages on platforms you allowed. It never types or submits anything.</p>
+      <p>Some platforms first show a launcher that waits for a click (WileyPLUS, for example). There DueBoard may press that one button, and only buttons that open the assignment (labels such as “Open”, “Launch” or “View assignment”). It never presses anything that starts, continues, retries or submits work (“Start”, “Begin”, “Continue”, “Resume”, “Attempt”, “Take”, “Submit” and similar).</p>
       <ul>
         <li>By default this happens only when you click Refresh, for new homework without a date and to recheck dates once a day. You can choose “Automatically” or “Never” in Settings.</li>
         <li>Quizzes, tests and exams are never opened this way, so DueBoard can't start a timed or proctored attempt.</li>
         <li>Because DueBoard opens the link as you, a platform (and your instructor, if the platform reports it) may see these visits as you opening the assignment page.</li>
         <li>If you open or click into the window while it works, DueBoard stops and leaves the window to you.</li>
+        <li>When Gradescope or Pearson MyLab says you are signed out, DueBoard opens that platform's entry in one of your Brightspace courses once, so Brightspace signs you back in, and then reads it as before.</li>
+        <li>Settings → Diagnostics keeps a log of these visits on your computer: where each link went and, when no date was found, a short piece of the page's text and its button labels. It is never sent anywhere; you can download it to share it.</li>
         <li>These pages appear in your browser history, like pages you open yourself.</li>
         <li>What DueBoard reads stays in your browser like everything else.</li>
       </ul>

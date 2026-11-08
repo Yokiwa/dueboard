@@ -44,14 +44,16 @@ const toc = {
         { TopicId: 4, Title: 'Worksheet 9', Url: ql('L1'), TypeIdentifier: 'Link' },
       ],
     },
+    // Like DataMine: a Gradescope entry in a course; Gradescope is signed out until it is opened from Brightspace.
+    { Title: 'Tools', Modules: [], Topics: [{ TopicId: 8, Title: 'Gradescope', Url: ql('G1'), TypeIdentifier: 'Link' }] },
     {
       // Like PHYS 172: several Wiley homeworks share one quick link (W1) that only reaches the Wiley course page;
       // each content page embeds its own assignment.
       Title: 'HOMEWORK 11',
       Modules: [],
       Topics: [
-        { TopicId: 5, Title: 'PHYS 172H - HW11 - FA26', Url: ql('W1'), TypeIdentifier: 'Link' },
-        { TopicId: 6, Title: 'PHYS 172H - HW10 - FA26', Url: ql('W1'), TypeIdentifier: 'Link' },
+        { TopicId: 5, Title: 'PHYS 172H - HW11 - FA26', Url: ql('W5'), TypeIdentifier: 'Link' },
+        { TopicId: 6, Title: 'PHYS 172H - HW10 - FA26', Url: ql('W6'), TypeIdentifier: 'Link' },
       ],
     },
     { Title: 'Start Here', Modules: [], Topics: [{ TopicId: 9, Title: 'Course Syllabus', Url: '/content/enforced/102-MA/syllabus.pdf', TypeIdentifier: 'File' }] },
@@ -87,8 +89,11 @@ const launchPage = (target) =>
     if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: fs.readFileSync(path.join(ROOT, 'tests/fixtures/syllabus/schedule.pdf')) });
     // Like Purdue's real launch pages, this one hands off in a way DueBoard can't read ahead of time.
     if (u.includes('rcode=W1')) return r.fulfill(html(`<script>location.assign(atob(${JSON.stringify(Buffer.from('https://education.wiley.com/was/course').toString('base64'))}))</script>`));
-    if (u.includes('rcode=W5')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw11')));
-    if (u.includes('rcode=W6')) return r.fulfill(html(launchPage('https://education.wiley.com/was/hw10')));
+    // Like Purdue's real launch pages: the hand-off can't be read ahead; Wiley shows a launcher that waits for a click.
+    const handOff = (to) => html(`<script>location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))}))</script>`);
+    if (u.includes('rcode=W5')) return r.fulfill(handOff('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L5'));
+    if (u.includes('rcode=W6')) return r.fulfill(handOff('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L6'));
+    if (u.includes('rcode=G1')) return r.fulfill(html(launchPage('https://www.gradescope.com/auth/saml/lti')));
     const page = u.match(/\/viewContent\/(\d+)\/View/);
     if (page) {
       // The content viewer adds the tool's frame after the page loads; for Wiley topics the frame launches that topic.
@@ -111,6 +116,13 @@ const launchPage = (target) =>
     hits.wiley = (hits.wiley ?? 0) + 1;
     if (u.endsWith('/was/course'))
       return r.fulfill(html('<h1>PHYS 172H</h1><ul><li>HW10 <span>Due Monday, Nov 9 at 11:59 PM (EST)</span></li><li>HW11 <span>Due Monday, Nov 16 at 11:59 PM (EST)</span></li></ul>'));
+    if (u.endsWith('/lti-tool-launcher/index.html')) {
+      const id = new URL(r.request().url()).searchParams.get('launchId');
+      // L5: a button that opens the assignment with window.open (a new tab); L6: a link with target=_blank.
+      return r.fulfill(html(id === 'L5'
+        ? `<h1>Launching your assignment</h1><button onclick="window.open('/was/hw11','_blank')">Open Assignment</button><button>Start Over</button>`
+        : `<h1>Launching your assignment</h1><a href="/was/hw10" target="_blank">Launch</a>`));
+    }
     if (u.endsWith('/was/hw11')) return r.fulfill(html('<main><h1>PHYS 172H - HW11 - FA26</h1><span>Due Monday, Nov 16 at 11:59 PM (EST)</span></main>'));
     if (u.endsWith('/was/hw10')) return r.fulfill(html('<main><h1>PHYS 172H - HW10 - FA26</h1><span>Due Monday, Nov 9 at 11:59 PM (EST)</span></main>'));
     return r.fulfill({ status: 404, body: '' });
@@ -127,7 +139,20 @@ const launchPage = (target) =>
     hits.unknown++;
     return r.fulfill(html('<p>Due Nov 22</p>'));
   });
-  await ctx.route('https://www.gradescope.com/**', (r) => r.fulfill({ status: 302, headers: { location: 'https://www.gradescope.com/login' } }));
+  let gradescopeSignedIn = false;
+  await ctx.route('https://www.gradescope.com/**', (r) => {
+    const u = r.request().url();
+    if (u.includes('/auth/saml/lti')) {
+      gradescopeSignedIn = true; // the Brightspace entry signs the student in
+      return r.fulfill(html('<h1>Your Courses</h1>'));
+    }
+    if (u.endsWith('/login')) return r.fulfill(html('<form action="/login" method="post"><input name="session[email]"><input type="password" name="session[password]"></form>'));
+    // Signed out, Gradescope shows its sign-in form (a 302 can't be mocked for the extension's background requests).
+    if (!gradescopeSignedIn) return r.fulfill(html('<form action="/login" method="post"><input name="session[email]"></form>'));
+    if (u.endsWith('/account')) return r.fulfill(html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/gradescope/home.html'), 'utf8')));
+    if (u.includes('/courses/')) return r.fulfill(html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/gradescope/course.html'), 'utf8')));
+    return r.fulfill(html(''));
+  });
 
   let [sw] = ctx.serviceWorkers();
   if (!sw) sw = await ctx.waitForEvent('serviceworker', { timeout: 15000 });
@@ -162,12 +187,17 @@ const launchPage = (target) =>
   check(inq?.dueAt === '2026-11-22T04:59:00.000Z' && inq?.platform === 'norton', `late-rendering InQuizitive page read (${inq?.dueAt})`);
   const hw11 = s.captured?.['brightspace:topic:5'];
   const hw10 = s.captured?.['brightspace:topic:6'];
-  check(hw11?.dueAt === '2026-11-17T04:59:00.000Z' && hw11?.platform === 'wileyplus', `Wiley HW11 read from the frame embedded in its Brightspace page (${hw11?.dueAt})`);
-  check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10, sharing HW11's quick link, gets its own date (${hw10?.dueAt})`);
+  check(hw11?.dueAt === '2026-11-17T04:59:00.000Z' && hw11?.platform === 'wileyplus', `Wiley HW11 read after its launcher's "Open Assignment" button (${hw11?.dueAt})`);
+  check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10 read after its launcher's "Launch" link (${hw10?.dueAt})`);
   const vlog = await page.evaluate(async () => (await chrome.storage.local.get('visitLog')).visitLog ?? []);
   const hw11Log = vlog.find((e) => e.key === 'brightspace:topic:5');
   check(hw11Log?.siteNote?.startsWith('no launch target on') && !hw11Log.site, `visit log says why the site wasn't known (${hw11Log?.siteNote})`);
-  check(hw11Log?.result === 'found' && hw11Log.frames.some((f) => f.startsWith('https://education.wiley.com/')) && !hw11Log.frames.some((f) => f.includes('?')), `visit log records HW11's Wiley frame (${hw11Log?.frames?.length} frames)`);
+  check(vlog.find((e) => e.key === 'brightspace:topic:6')?.clicked?.[0] === 'Launch (education.wiley.com)', 'HW10\'s "Launch" link (meant for a new tab) was followed in the hidden tab');
+  check(hw11Log?.result === 'found' && hw11Log.clicked?.[0] === 'Open Assignment (education.wiley.com)', `HW11's launcher button was pressed (${hw11Log?.clicked})`);
+  check(!JSON.stringify(vlog).includes('Start Over'.replace(' ', '')) && !(vlog.flatMap((e) => e.clicked ?? []).some((c) => /start/i.test(c))), 'never pressed a "Start" button');
+  const gsMeta = await page.evaluate(async () => (await chrome.storage.local.get('syncMeta')).syncMeta?.gradescope);
+  const gsCourses = await page.evaluate(async () => (await chrome.storage.local.get('snapshots')).snapshots?.gradescope?.courses?.length ?? 0);
+  check(gsMeta?.lastSuccess && gsCourses > 0, `signed back in to Gradescope through the course's Gradescope entry, then read it (${gsCourses} courses)`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');
   check(s.visitState?.needsPermission?.includes('example-unknown.com'), 'access request recorded for example-unknown.com');

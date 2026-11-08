@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 — 2026-11
+
+- **Homework links open as full pages**, like "Open in new window". Platforms don't show inside Brightspace's own frame (WileyPLUS shows a launcher there; Gradescope doesn't load at all), so DueBoard now opens each homework's Brightspace launch link as a page and waits through the platform's steps
+- **Launchers that wait for a click**: on platform pages DueBoard may press one "open the assignment" button (Open, Launch, View assignment), never anything that starts, continues or submits work; an assignment meant for a new tab opens in DueBoard's hidden tab
+- **Gradescope signs back in through Brightspace**: when Gradescope (or Pearson) is signed out and any of your courses has its entry, DueBoard opens that entry once and reads Gradescope again, so every course's Gradescope assignments get their dates
+- The visit log (Settings → Diagnostics) also shows the button pressed and, for pages without a date, a short text sample and their buttons
+
 ## 1.1.3 — 2026-11
 
 - **Homework is opened even when its Brightspace link doesn't reveal the platform.** Purdue's launch links don't say which site they go to ahead of time, so 1.1.2 skipped every homework. DueBoard now opens each homework's own Brightspace page (as you would) and reads the frames of the platforms you allowed. Bare launch links whose site is unknown are still never opened
