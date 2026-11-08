@@ -16,13 +16,13 @@ export function applyOutcomes(
   const needsPermission = [...store.visitState.needsPermission];
   const byKey = new Map(targets.map((t) => [t.key, t]));
 
-  let pearsonSession = store.visitState.pearsonSession;
+  const sessions = { ...store.visitState.sessions };
   for (const o of outcomes) {
     const target = byKey.get(o.key);
     if (target?.mode === 'session') {
-      // Landing is not yet success (the re-read of Pearson decides that); anything else is a failed attempt.
-      const failures = (pearsonSession?.failures ?? 0) + (o.status === 'landed' ? 0 : 1);
-      pearsonSession = { at, failures };
+      // Landing is not yet success (re-reading the platform decides that); anything else is a failed attempt.
+      const src = target.platform as 'gradescope' | 'pearson';
+      sessions[src] = { at, failures: (sessions[src]?.failures ?? 0) + (o.status === 'landed' ? 0 : 1) };
       continue;
     }
     if (target?.mode === 'syllabus') {
@@ -65,7 +65,7 @@ export function applyOutcomes(
     }
   }
   const visitState = { ...store.visitState, needsPermission, lastRun: at };
-  if (pearsonSession) visitState.pearsonSession = pearsonSession;
+  if (Object.keys(sessions).length) visitState.sessions = sessions;
   return { captured, syllabus, visitState };
 }
 

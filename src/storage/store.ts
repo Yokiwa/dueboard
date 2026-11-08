@@ -32,8 +32,14 @@ function migrateVisitState(v: unknown): VisitState {
   };
   if (typeof r.windowId === 'number') out.windowId = r.windowId;
   if (typeof r.lastRun === 'string') out.lastRun = r.lastRun;
-  const ps = obj(r.pearsonSession);
-  if (typeof ps.at === 'string' && typeof ps.failures === 'number') out.pearsonSession = { at: ps.at, failures: ps.failures };
+  const sessions: NonNullable<VisitState['sessions']> = {};
+  const legacy = obj(r.pearsonSession); // 1.1.0–1.1.3
+  if (typeof legacy.at === 'string' && typeof legacy.failures === 'number') sessions.pearson = { at: legacy.at, failures: legacy.failures };
+  for (const [src, v] of Object.entries(obj(r.sessions))) {
+    const o = obj(v);
+    if ((src === 'gradescope' || src === 'pearson') && typeof o.at === 'string' && typeof o.failures === 'number') sessions[src] = { at: o.at, failures: o.failures };
+  }
+  if (Object.keys(sessions).length) out.sessions = sessions;
   return out;
 }
 

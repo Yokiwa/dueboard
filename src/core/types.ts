@@ -153,8 +153,11 @@ export interface VisitState {
   needsPermission: string[];
   /** Permission asks the student postponed: platform id or host → ISO time until which not to ask. */
   snoozed: Record<string, string>;
-  /** Last attempt to restore the Pearson session through Brightspace, and how many in a row did not help. */
-  pearsonSession?: { at: string; failures: number };
+  /**
+   * Per platform read in the background (Gradescope, Pearson): the last attempt to sign back in through a course's
+   * Brightspace entry, and how many attempts in a row did not help.
+   */
+  sessions?: Partial<Record<SourceId, { at: string; failures: number }>>;
 }
 export interface SyncMeta {
   lastSuccess?: string;

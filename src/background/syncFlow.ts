@@ -27,7 +27,8 @@ export interface SyncAndVisitDeps {
   save: (patch: Partial<StoreShape>) => Promise<void>;
   /** Reads syllabus files and checks course navigation bars; returns what changed. */
   syllabus?: (store: StoreShape) => Promise<Pick<StoreShape, 'syllabus' | 'syllabusNav'>>;
-  resyncPearson: () => Promise<SyncReport>;
+  /** Reads one background source again (after its sign-in was restored through Brightspace). */
+  resync: (source: 'gradescope' | 'pearson') => Promise<SyncReport>;
   now: () => Date;
 }
 
@@ -96,13 +97,14 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     return [] as VisitOutcome[];
   });
   await deps.save(applyOutcomes(await deps.load(), targets, outcomes, deps.now()));
-  if (outcomes.some((o) => o.key === 'pearson:session' && o.status === 'landed')) {
-    const pearson = await deps.resyncPearson();
-    Object.assign(report, pearson);
-    if (pearson.pearson !== 'ok') {
+  for (const src of ['gradescope', 'pearson'] as const) {
+    if (!outcomes.some((o) => o.key === `${src}:session` && o.status === 'landed')) continue;
+    const again = await deps.resync(src);
+    Object.assign(report, again);
+    if (again[src] !== 'ok') {
       const { visitState } = await deps.load();
-      const prev = visitState.pearsonSession;
-      await deps.save({ visitState: { ...visitState, pearsonSession: { at: prev?.at ?? deps.now().toISOString(), failures: (prev?.failures ?? 0) + 1 } } });
+      const prev = visitState.sessions?.[src];
+      await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: { at: prev?.at ?? deps.now().toISOString(), failures: (prev?.failures ?? 0) + 1 } } } });
     }
   }
   return report;

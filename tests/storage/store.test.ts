@@ -198,3 +198,9 @@ describe('visit log', () => {
     expect(log.at(-1)!.key).toBe('k109');
   });
 });
+
+describe('sign-in sessions', () => {
+  it('1.1 Pearson session attempts carry over', () => {
+    expect(migrate({ visitState: { needsPermission: [], snoozed: {}, pearsonSession: { at: 'a', failures: 2 } } }).visitState.sessions).toEqual({ pearson: { at: 'a', failures: 2 } });
+  });
+});

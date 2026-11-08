@@ -141,7 +141,7 @@ describe('dueVisits: fixes from review', () => {
     const s = store([]);
     s.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P' }];
     s.syncMeta.pearson = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
-    if (session) s.visitState.pearsonSession = session;
+    if (session) s.visitState.sessions = { pearson: session };
     return s;
   };
 
@@ -169,5 +169,33 @@ describe('dueVisits: fixes from review', () => {
 describe('dueVisits: dates in titles', () => {
   it('never opens a homework whose title already says when it is due', () => {
     expect(keys(store([topic(1, 'HW11 (10.3, 12.1)_due_Nov 11'), topic(2, 'Homework 2')]))).toEqual(['brightspace:topic:2']);
+  });
+});
+
+describe('dueVisits: signing back in to Gradescope through any course', () => {
+  const withGradescope = (meta: object, sessions?: object) => {
+    const s = store([]);
+    s.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Gradescope', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G' }];
+    s.syncMeta.gradescope = meta as never;
+    if (sessions) s.visitState.sessions = sessions as never;
+    return s;
+  };
+
+  it('opens a course\'s Gradescope entry once when Gradescope is signed out', () => {
+    expect(dueVisits(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }), now, 'auto', [])).toEqual([
+      { key: 'gradescope:session', title: 'Gradescope', courseId: '', launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G`, platform: 'gradescope', mode: 'session' },
+    ]);
+  });
+
+  it('not while Gradescope reads fine, and not more often than every 6 hours', () => {
+    expect(keys(withGradescope({ lastSuccess: ago(0.1) }))).toEqual([]);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(5), failures: 1 } }))).toEqual([]);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(7), failures: 1 } }))).toEqual(['gradescope:session']);
+  });
+
+  it('a course without a Gradescope entry adds nothing', () => {
+    const s = store([]);
+    s.syncMeta.gradescope = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
+    expect(keys(s)).toEqual([]);
   });
 });

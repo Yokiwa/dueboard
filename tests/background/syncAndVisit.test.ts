@@ -29,7 +29,7 @@ function deps(store: StoreShape, outcomes: VisitOutcome[] = [], over: Partial<Sy
     save: vi.fn(async (p) => {
       saved.push(p);
     }),
-    resyncPearson: vi.fn(async () => ({ pearson: 'ok' as const })),
+    resync: vi.fn(async (src: string) => ({ [src]: 'ok' as const })),
     now: () => now,
     ...over,
   };
@@ -64,7 +64,7 @@ describe('syncAndVisit', () => {
     store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
     const { d } = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
     const report = await syncAndVisit(d, 'auto');
-    expect(d.resyncPearson).toHaveBeenCalledTimes(1);
+    expect(d.resync).toHaveBeenCalledWith('pearson');
     expect(report.pearson).toBe('ok');
   });
 });
@@ -161,9 +161,20 @@ describe('Pearson session retries', () => {
   it('counts a failure when Pearson is still signed out after the session visit', async () => {
     const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
     store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
-    const { d, saved } = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], { resyncPearson: vi.fn(async () => ({ pearson: 'not_logged_in' as const })) });
+    const { d, saved } = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], { resync: vi.fn(async () => ({ pearson: 'not_logged_in' as const })) });
     await syncAndVisit(d, 'auto');
     const last = saved.at(-1) as Pick<StoreShape, 'visitState'>;
-    expect(last.visitState.pearsonSession).toEqual({ at: now.toISOString(), failures: 1 });
+    expect(last.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 1 });
+  });
+});
+
+describe('Gradescope sign-in through Brightspace', () => {
+  it('re-reads Gradescope after a course\'s Gradescope entry signed the student back in', async () => {
+    const store = withHomework({ syncMeta: { gradescope: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Gradescope', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G` }];
+    const { d } = deps(store, [{ key: 'gradescope:session', status: 'landed', host: 'www.gradescope.com' }], { resync: vi.fn(async () => ({ gradescope: 'ok' as const })) });
+    const report = await syncAndVisit(d, 'auto');
+    expect(d.resync).toHaveBeenCalledWith('gradescope');
+    expect(report.gradescope).toBe('ok');
   });
 });

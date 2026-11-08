@@ -51,7 +51,7 @@ const syncNow = (trigger: Trigger = 'auto') => {
           }
         },
         save: (patch) => patchStore(patch),
-        resyncPearson: () => runSync([CONNECTORS.pearson()]),
+        resync: (src) => runSync([CONNECTORS[src]()]),
         syllabus: (store) => refreshSyllabi(store, new Date(), fetch.bind(globalThis), parsers.syllabus),
         now: () => new Date(),
       },

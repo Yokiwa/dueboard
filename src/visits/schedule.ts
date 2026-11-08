@@ -12,7 +12,7 @@ export { applyOutcomes } from './apply';
 
 export type Trigger = 'auto' | 'manual';
 export interface VisitTarget {
-  /** 'brightspace:topic:123', 'pearson:session', 'syllabus:<ou>' */
+  /** 'brightspace:topic:123', 'gradescope:session', 'pearson:session', 'syllabus:<ou>' */
   key: string;
   title: string;
   courseId: string;
@@ -52,17 +52,29 @@ function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted
   return trigger === 'manual' && age > H ? 1 + stamp : null;
 }
 
-/** The Brightspace launch to reopen when Pearson's session expired: at most every 6 h; after 3 failures, on Refresh only. */
-function pearsonSession(store: StoreShape, now: Date, trigger: Trigger): VisitTarget | null {
-  const last = store.visitState.pearsonSession;
-  if (last && now.getTime() - Date.parse(last.at) < 6 * H) return null;
-  if (last && last.failures >= 3 && trigger !== 'manual') return null;
-  const meta = store.syncMeta.pearson;
-  const err = meta?.lastError;
-  if (err?.reason !== 'not_logged_in') return null;
-  if (meta?.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return null;
-  const url = launchLinks(store).pearson;
-  return url ? { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: url, platform: 'pearson', mode: 'session' } : null;
+const SESSION_SOURCES = ['gradescope', 'pearson'] as const;
+const LABEL: Record<(typeof SESSION_SOURCES)[number], string> = { gradescope: 'Gradescope', pearson: 'Pearson' };
+
+/**
+ * Platforms DueBoard reads in the background (Gradescope, Pearson) sign the student in through Brightspace. When one
+ * reports "signed out" and any course has its Brightspace entry, that entry is opened once to sign back in: at most
+ * every 6 h; after 3 attempts that didn't help, on Refresh only.
+ */
+function sessionTargets(store: StoreShape, now: Date, trigger: Trigger): VisitTarget[] {
+  const links = launchLinks(store);
+  const out: VisitTarget[] = [];
+  for (const src of SESSION_SOURCES) {
+    const last = store.visitState.sessions?.[src];
+    if (last && now.getTime() - Date.parse(last.at) < 6 * H) continue;
+    if (last && last.failures >= 3 && trigger !== 'manual') continue;
+    const meta = store.syncMeta[src];
+    const err = meta?.lastError;
+    if (err?.reason !== 'not_logged_in') continue;
+    if (meta?.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) continue;
+    const url = links[src];
+    if (url) out.push({ key: `${src}:session`, title: LABEL[src], courseId: '', launchUrl: url, platform: src, mode: 'session' });
+  }
+  return out;
 }
 
 /**
@@ -110,6 +122,5 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       return t;
     });
   const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
-  const session = pearsonSession(store, now, trigger);
-  return session ? [session, ...out] : out;
+  return [...sessionTargets(store, now, trigger), ...out];
 }
