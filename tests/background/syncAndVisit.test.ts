@@ -15,6 +15,7 @@ const withHomework = (extra: Record<string, unknown> = {}): StoreShape =>
         items: [{ source: 'brightspace', sourceItemId: 'topic:1', sourceCourseId: '1', title: 'Homework 1', type: 'assignment', dueAt: null, url: `${B}/v/1`, submitted: false, launchUrl: `${B}/launch/1` }],
       },
     },
+    settings: { visits: 'auto', syllabus: true },
     ...extra,
   });
 

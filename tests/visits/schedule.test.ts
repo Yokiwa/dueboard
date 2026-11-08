@@ -23,6 +23,7 @@ const store = (items: RawItem[], captured: Record<string, CapturedDue> = {}, ext
       },
     },
     captured,
+    settings: { visits: 'auto', syllabus: true }, // these rules are about automatic reading
     ...extra,
   });
 const cap = (n: number, p: Partial<CapturedDue>): Record<string, CapturedDue> => ({

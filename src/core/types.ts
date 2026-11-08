@@ -144,7 +144,7 @@ export interface Settings {
   /** Show dates found in syllabi as suggestions. */
   syllabus: boolean;
 }
-export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true };
+export const DEFAULT_SETTINGS: Settings = { visits: 'manual', syllabus: true };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;

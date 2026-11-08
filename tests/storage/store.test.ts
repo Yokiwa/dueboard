@@ -175,3 +175,12 @@ describe('visit progress', () => {
     expect(await getVisitProgress()).toBeNull();
   });
 });
+
+describe('default settings', () => {
+  it('a new install opens platform pages only when Refresh is clicked', () => {
+    expect(migrate({}).settings.visits).toBe('manual');
+  });
+  it('a choice the student made is kept', () => {
+    expect(migrate({ settings: { visits: 'auto', syllabus: true } }).settings.visits).toBe('auto');
+  });
+});
