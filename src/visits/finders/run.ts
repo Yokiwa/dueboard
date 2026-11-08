@@ -1,5 +1,6 @@
 import { stripUrl, type VisitMessage } from '../messages';
 import { findDue, pageLines } from './index';
+import { openButton } from './open';
 
 export interface FinderWindow {
   document: Document;
@@ -10,7 +11,13 @@ export interface FinderWindow {
   __dueboardPlatform?: string;
   /** Set while this frame is reading, so repeated injections (for late frames) don't start a second reader. */
   __dueboardReading?: boolean;
+  /** Set by the runner for homework visits: the reader may press "open the assignment" (see open.ts). */
+  __dueboardAllowOpen?: boolean;
 }
+
+const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
+/** How long a platform page gets to show its date before its "open the assignment" button is pressed. */
+const OPEN_AFTER_MS = 4_000;
 
 /**
  * Runs in every frame of a visited page. Platforms are mostly single-page apps that render late, so the page is
@@ -29,6 +36,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   const started = Date.now();
   send({ type: 'visitFrame', frameUrl: stripUrl(frameUrl), top });
   let lastText = '';
+  let pressed = false;
   let stableSince = started;
 
   const tick = () => {
@@ -51,6 +59,15 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         send({ type: 'visitFound', found, frameUrl, top });
         return;
       }
+      // A launcher page that waits for a click: press its "open the assignment" button, once, on platform pages only.
+      if (win.__dueboardAllowOpen && !pressed && elapsed >= OPEN_AFTER_MS && hostOf(frameUrl) !== BRIGHTSPACE_HOST) {
+        const button = openButton(win.document);
+        if (button) {
+          pressed = true;
+          send({ type: 'visitClick', label: button.label, frameUrl: stripUrl(frameUrl) });
+          button.press();
+        }
+      }
       if (elapsed >= maxMs) {
         if (top) send({ type: 'visitFound', found: null, frameUrl, top });
         return;
@@ -59,4 +76,12 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
     setTimeout(tick, pollMs);
   };
   tick();
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 }

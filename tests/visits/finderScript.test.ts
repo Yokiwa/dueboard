@@ -87,3 +87,53 @@ describe('runFinder says which frames loaded (for the visit log)', () => {
     expect(sent[0]).toEqual({ type: 'visitFrame', frameUrl: 'https://education.wiley.com/was/ui/v2/assessment-player/index.html', top: false });
   });
 });
+
+describe('runFinder presses "open the assignment" when allowed', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const launcher = (href: string, allowOpen = true) => {
+    const w = fakeWindow(true);
+    w.location = { href };
+    (w as FinderWindow & { __dueboardAllowOpen?: boolean }).__dueboardAllowOpen = allowOpen;
+    return w;
+  };
+  const clicks = (sent: VisitMessage[]) => sent.filter((m) => m.type === 'visitClick');
+
+  it('on a platform page still without a date after 4 s, presses it once and says so', async () => {
+    document.body.innerHTML = '<h1>Assignment</h1><button id="b">Open Assignment</button>';
+    let pressed = 0;
+    document.getElementById('b')!.addEventListener('click', () => pressed++);
+    const sent: VisitMessage[] = [];
+    runFinder(launcher('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(pressed).toBe(0);
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect(pressed).toBe(1);
+    expect(clicks(sent)).toEqual([{ type: 'visitClick', label: 'Open Assignment', frameUrl: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html' }]);
+  });
+
+  it('never presses on a Brightspace page', async () => {
+    document.body.innerHTML = '<button>Open in New Window</button>';
+    const sent: VisitMessage[] = [];
+    runFinder(launcher('https://purdue.brightspace.com/d2l/le/content/1/viewContent/2/View'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(clicks(sent)).toEqual([]);
+  });
+
+  it('never presses when the date is already there, or when the visit does not allow it', async () => {
+    document.body.innerHTML = '<h1>HW</h1><p>Due Nov 20 11:59 PM</p><button>Open Assignment</button>';
+    const sent: VisitMessage[] = [];
+    runFinder(launcher('https://education.wiley.com/a'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(clicks(sent)).toEqual([]);
+    document.body.innerHTML = '<button>Open Assignment</button>';
+    const sent2: VisitMessage[] = [];
+    runFinder(launcher('https://education.wiley.com/b', false), (m) => sent2.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(clicks(sent2)).toEqual([]);
+  });
+});

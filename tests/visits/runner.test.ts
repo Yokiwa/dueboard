@@ -48,6 +48,7 @@ function fakeApi(s: Script) {
     signedIn: async () => s.signedIn ?? true,
     windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
     framesSeen: async () => [],
+    clicksSeen: async () => [],
     granted: async () => s.granted ?? ['https://*/*'],
     inject: async (_tab, mode, platform) => {
       calls.push(`inject ${mode}${platform ? ` ${platform}` : ''}`);
@@ -280,6 +281,16 @@ describe('launchTargetHost', () => {
   it('ignores Brightspace-internal targets and pages without one', () => {
     expect(launchTargetHost(`<form action="/d2l/le/lti/1/launch"></form>`, B)).toBeNull();
     expect(launchTargetHost('<p>Hello</p>', B)).toBeNull();
+  });
+});
+
+describe('runVisits: visit log of pressed buttons', () => {
+  it('records which "open the assignment" button was pressed', async () => {
+    const f = fakeApi({ landings: [at('https://education.wiley.com/l')], messages: [found(1)] });
+    f.api.clicksSeen = async () => ['Open Assignment (education.wiley.com)'];
+    const log: { clicked?: string[] }[] = [];
+    await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(log[0]!.clicked).toEqual(['Open Assignment (education.wiley.com)']);
   });
 });
 

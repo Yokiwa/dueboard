@@ -13,8 +13,9 @@ let visitTab: number | null = null;
 const ours = new Set<number>();
 const opened = new Map<number, { state?: string; focused?: boolean }>();
 const queue: VisitMessage[] = [];
-/** Frames that reported in during the current visit (for the visit log). */
+/** Frames that reported in during the current visit, and buttons they pressed (for the visit log). */
 const frames: string[] = [];
+const clicks: string[] = [];
 let waiter: ((m: VisitMessage) => void) | null = null;
 
 /** Called by the background router for finder messages. Returns whether the message was taken. */
@@ -22,6 +23,16 @@ export function deliverVisitMessage(msg: VisitMessage, sender: { tab?: { id?: nu
   if (visitTab === null || sender?.tab?.id !== visitTab) return false;
   if (msg.type === 'visitFrame') {
     if (!frames.includes(msg.frameUrl)) frames.push(msg.frameUrl);
+    return true;
+  }
+  if (msg.type === 'visitClick') {
+    let host = '';
+    try {
+      host = new URL(msg.frameUrl).hostname;
+    } catch {
+      // keep empty
+    }
+    clicks.push(host ? `${msg.label} (${host})` : msg.label);
     return true;
   }
   if (waiter) {
@@ -42,6 +53,7 @@ export function setVisitTab(tabId: number | null): void {
   visitTab = tabId;
   queue.length = 0;
   frames.length = 0;
+  clicks.length = 0;
   waiter = null;
 }
 
@@ -81,6 +93,7 @@ export function createBrowserVisitApi(): VisitApi {
     async navigate(tabId, url) {
       queue.length = 0; // late messages from the previous page don't belong to this one
       frames.length = 0;
+      clicks.length = 0;
       await browser.tabs.update(tabId, { url });
     },
 
@@ -160,19 +173,43 @@ export function createBrowserVisitApi(): VisitApi {
       return [...frames];
     },
 
+    async clicksSeen() {
+      return [...clicks];
+    },
+
     async granted() {
       return (await browser.permissions.getAll()).origins ?? [];
     },
 
     async inject(tabId, mode, platform) {
+      const allowOpen = mode === 'due';
+      if (allowOpen) {
+        // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
+        await browser.scripting
+          .executeScript({
+            target: { tabId, allFrames: true },
+            world: 'MAIN',
+            func: () => {
+              const w = window as unknown as { __dueboardOpenHere?: boolean; open: (u?: string | URL) => Window | null };
+              if (w.__dueboardOpenHere) return;
+              w.__dueboardOpenHere = true;
+              w.open = (u?: string | URL) => {
+                if (u) location.assign(String(u));
+                return null;
+              };
+            },
+          })
+          .catch(() => undefined);
+      }
       await browser.scripting.executeScript({
         target: { tabId, allFrames: true },
-        func: (m: string, p: string | null) => {
-          const w = window as unknown as { __dueboardMode?: string; __dueboardPlatform?: string };
+        func: (m: string, p: string | null, open: boolean) => {
+          const w = window as unknown as { __dueboardMode?: string; __dueboardPlatform?: string; __dueboardAllowOpen?: boolean };
           w.__dueboardMode = m;
           if (p) w.__dueboardPlatform = p;
+          w.__dueboardAllowOpen = open;
         },
-        args: [mode, platform ?? null],
+        args: [mode, platform ?? null, allowOpen],
       });
       await browser.scripting.executeScript({ target: { tabId, allFrames: true }, files: [FINDER_FILE] });
     },

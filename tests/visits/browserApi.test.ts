@@ -91,3 +91,14 @@ describe('frames seen during a visit', () => {
     expect(await api.nextMessage(5, 20)).toBe('timeout');
   });
 });
+
+describe('buttons pressed during a visit', () => {
+  afterEach(() => setVisitTab(null));
+  it('are collected for the log and are not taken as answers', async () => {
+    setVisitTab(5);
+    const api = createBrowserVisitApi();
+    expect(deliverVisitMessage({ type: 'visitClick', label: 'Open Assignment', frameUrl: 'https://education.wiley.com/l' }, { tab: { id: 5 } })).toBe(true);
+    expect(await api.clicksSeen(5)).toEqual(['Open Assignment (education.wiley.com)']);
+    expect(await api.nextMessage(5, 20)).toBe('timeout');
+  });
+});

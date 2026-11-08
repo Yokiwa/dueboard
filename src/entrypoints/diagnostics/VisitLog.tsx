@@ -67,7 +67,10 @@ export function VisitLog() {
                     {e.frames.length} frame{e.frames.length === 1 ? '' : 's'}
                     {e.frames.length > 0 && <div style={{ color: '#6B7280' }}>{e.frames.map(short).join(', ')}</div>}
                   </td>
-                  <td style={cell}>{e.detail ? `${e.result} (${e.detail})` : e.result}</td>
+                  <td style={cell}>
+                    {e.detail ? `${e.result} (${e.detail})` : e.result}
+                    {e.clicked?.length ? <div style={{ color: '#6B7280' }}>pressed: {e.clicked.join(', ')}</div> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

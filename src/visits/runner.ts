@@ -29,6 +29,8 @@ export interface VisitApi {
   closeWindow(windowId: number): Promise<void>;
   /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
   framesSeen(tabId: number): Promise<string[]>;
+  /** "Open the assignment" buttons pressed since the last navigation ("label (host)"), for the visit log. */
+  clicksSeen(tabId: number): Promise<string[]>;
   /** Persists visitState.windowId, so a restart can close a window a crashed run left behind. */
   remember(windowId: number | null): Promise<void>;
 }
@@ -51,6 +53,8 @@ export interface VisitLogEntry {
   landed?: string;
   /** Frames of the page that loaded and were read. */
   frames: string[];
+  /** "Open the assignment" buttons DueBoard pressed. */
+  clicked?: string[];
   result: VisitOutcome['status'];
   detail?: string;
 }
@@ -66,7 +70,8 @@ export interface RunOptions {
 
 /**
  * Opens each target's Brightspace launch, one at a time, in one minimized window, and reads the page it lands on.
- * Never clicks or types. The window is always closed at the end, on error and when the time budget runs out.
+ * Never types; the only button ever pressed is a platform's "open the assignment" (see finders/open.ts). The window
+ * is always closed at the end, on error and when the time budget runs out.
  */
 export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: RunOptions = {}): Promise<VisitOutcome[]> {
   if (targets.length === 0) return [];
@@ -98,6 +103,8 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       if (opts.onLog) {
         const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
         if (outcome.status === 'failed') entry.detail = outcome.reason;
+        const clicked = await api.clicksSeen(tabId).catch(() => []);
+        if (clicked.length) entry.clicked = clicked;
         opts.onLog(entry);
       }
       opts.onProgress?.(out.length, targets.length);
@@ -157,7 +164,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     for (let i = 0; i < rounds; i++) {
       await api.inject(tabId, t.mode, t.platform);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout' || msg.type === 'visitFrame') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;

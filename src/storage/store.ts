@@ -248,6 +248,7 @@ export interface StoredVisitLogEntry {
   opened: string;
   landed?: string;
   frames: string[];
+  clicked?: string[];
   result: string;
   detail?: string;
 }
