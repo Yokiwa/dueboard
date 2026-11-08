@@ -1,6 +1,7 @@
 import type { Connector, SourceId, StoreShape } from '../core/types';
 import type { SyncReport } from '../sync/runSync';
 import { activeSourceIds } from './sources';
+import { platformByHost } from '../core/platformRegistry';
 import { applyOutcomes, dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
 
 /**
@@ -97,15 +98,22 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     return [] as VisitOutcome[];
   });
   await deps.save(applyOutcomes(await deps.load(), targets, outcomes, deps.now()));
+  // A visit that reached Gradescope or Pearson signed the student in there (sign-in visits often end on pages DueBoard
+  // can't see): read that platform again in this same run.
   for (const src of ['gradescope', 'pearson'] as const) {
-    if (!outcomes.some((o) => o.key === `${src}:session` && o.status === 'landed')) continue;
+    if (report[src] === 'ok') continue;
+    const session = outcomes.find((o) => o.key === `${src}:session`);
+    const sessionTried = session?.status === 'landed' || (session?.status === 'failed' && session.reason === 'timeout');
+    const reached = outcomes.some((o) => 'host' in o && platformByHost(o.host)?.id === src);
+    if (!sessionTried && !reached) continue;
     const again = await deps.resync(src);
     Object.assign(report, again);
-    if (again[src] !== 'ok') {
-      const { visitState } = await deps.load();
-      const prev = visitState.sessions?.[src];
-      await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: { at: prev?.at ?? deps.now().toISOString(), failures: (prev?.failures ?? 0) + 1 } } } });
-    }
+    if (!session) continue;
+    const { visitState } = await deps.load();
+    const prev = visitState.sessions?.[src];
+    const at = prev?.at ?? deps.now().toISOString();
+    const failures = again[src] === 'ok' ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
+    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: { at, failures } } } });
   }
   return report;
 }

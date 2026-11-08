@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-11
+
+- **Gradescope dates after a visit signs you in**: opening a homework link that ends up on Gradescope (DataMine's projects, for example) signs you in there; DueBoard now reads Gradescope again in the same run, so those assignments get their dates right away
+- A Pearson or Gradescope sign-in visit that ends on a page DueBoard can't see is still followed by a re-read, which tells whether the sign-in worked
+- The visit log shows the date read and the text it came from
+
 ## 1.2.0 — 2026-11
 
 - **Homework links open as full pages**, like "Open in new window". Platforms don't show inside Brightspace's own frame (WileyPLUS shows a launcher there; Gradescope doesn't load at all), so DueBoard now opens each homework's Brightspace launch link as a page and waits through the platform's steps

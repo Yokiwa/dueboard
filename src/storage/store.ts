@@ -256,6 +256,8 @@ export interface StoredVisitLogEntry {
   frames: string[];
   clicked?: string[];
   pages?: { url: string; text: string; buttons: string[] }[];
+  due?: string;
+  evidence?: string;
   result: string;
   detail?: string;
 }

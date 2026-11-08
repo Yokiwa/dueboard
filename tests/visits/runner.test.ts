@@ -325,3 +325,12 @@ describe('runVisits: visit log', () => {
     ]);
   });
 });
+
+describe('runVisits: visit log of found dates', () => {
+  it('records the date read and the text it came from', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/a')], messages: [found(1)] });
+    const log: { due?: string; evidence?: string }[] = [];
+    await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(log[0]).toMatchObject({ due: '2026-11-11T04:59:00.000Z', evidence: 'Due Nov 11' });
+  });
+});

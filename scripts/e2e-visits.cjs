@@ -44,8 +44,9 @@ const toc = {
         { TopicId: 4, Title: 'Worksheet 9', Url: ql('L1'), TypeIdentifier: 'Link' },
       ],
     },
-    // Like DataMine: a Gradescope entry in a course; Gradescope is signed out until it is opened from Brightspace.
-    { Title: 'Tools', Modules: [], Topics: [{ TopicId: 8, Title: 'Gradescope', Url: ql('G1'), TypeIdentifier: 'Link' }] },
+    // Like DataMine: homework launches that land on Gradescope (signed out until one of them is opened), no link
+    // titled "Gradescope".
+    { Title: 'Projects', Modules: [], Topics: [{ TopicId: 8, Title: 'Project #1', Url: ql('G1'), TypeIdentifier: 'Link' }] },
     {
       // Like PHYS 172: several Wiley homeworks share one quick link (W1) that only reaches the Wiley course page;
       // each content page embeds its own assignment.
@@ -197,7 +198,7 @@ const launchPage = (target) =>
   check(!JSON.stringify(vlog).includes('Start Over'.replace(' ', '')) && !(vlog.flatMap((e) => e.clicked ?? []).some((c) => /start/i.test(c))), 'never pressed a "Start" button');
   const gsMeta = await page.evaluate(async () => (await chrome.storage.local.get('syncMeta')).syncMeta?.gradescope);
   const gsCourses = await page.evaluate(async () => (await chrome.storage.local.get('snapshots')).snapshots?.gradescope?.courses?.length ?? 0);
-  check(gsMeta?.lastSuccess && gsCourses > 0, `signed back in to Gradescope through the course's Gradescope entry, then read it (${gsCourses} courses)`);
+  check(gsMeta?.lastSuccess && gsCourses > 0, `a homework link that landed on Gradescope signed in, and Gradescope was read again in the same run (${gsCourses} courses)`);
   const unk = s.captured?.['brightspace:topic:3'];
   check(unk?.blocked === 'example-unknown.com' && hits.unknown === 0, 'unknown site not visited; access asked instead');
   check(s.visitState?.needsPermission?.includes('example-unknown.com'), 'access request recorded for example-unknown.com');

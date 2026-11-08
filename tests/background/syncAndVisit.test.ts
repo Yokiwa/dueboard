@@ -172,9 +172,46 @@ describe('Gradescope sign-in through Brightspace', () => {
   it('re-reads Gradescope after a course\'s Gradescope entry signed the student back in', async () => {
     const store = withHomework({ syncMeta: { gradescope: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
     store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Gradescope', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G` }];
-    const { d } = deps(store, [{ key: 'gradescope:session', status: 'landed', host: 'www.gradescope.com' }], { resync: vi.fn(async () => ({ gradescope: 'ok' as const })) });
+    const { d } = deps(store, [{ key: 'gradescope:session', status: 'landed', host: 'www.gradescope.com' }], {
+      sync: vi.fn(async () => ({ brightspace: 'ok' as const, gradescope: 'not_logged_in' as const })),
+      resync: vi.fn(async () => ({ gradescope: 'ok' as const })),
+    });
     const report = await syncAndVisit(d, 'auto');
     expect(d.resync).toHaveBeenCalledWith('gradescope');
     expect(report.gradescope).toBe('ok');
+  });
+});
+
+describe('reading Gradescope and Pearson again after a visit signed in to them', () => {
+  it('a homework visit that ended up on Gradescope (which signs the student in) is followed by a re-read of Gradescope', async () => {
+    const store = withHomework({ syncMeta: { gradescope: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    const resync = vi.fn(async () => ({ gradescope: 'ok' as const }));
+    const { d } = deps(store, [{ key: 'brightspace:topic:1', status: 'none', host: 'www.gradescope.com' }], {
+      sync: vi.fn(async () => ({ brightspace: 'ok' as const, gradescope: 'not_logged_in' as const })),
+      resync,
+    });
+    const report = await syncAndVisit(d, 'manual');
+    expect(resync).toHaveBeenCalledWith('gradescope');
+    expect(report.gradescope).toBe('ok');
+  });
+
+  it('not when Gradescope already read fine', async () => {
+    const resync = vi.fn(async () => ({ gradescope: 'ok' as const }));
+    const { d } = deps(withHomework(), [{ key: 'brightspace:topic:1', status: 'none', host: 'www.gradescope.com' }], { resync });
+    await syncAndVisit(d, 'manual');
+    expect(resync).not.toHaveBeenCalled();
+  });
+
+  it('a sign-in visit that could not see where it ended up is still followed by a re-read', async () => {
+    const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
+    const resync = vi.fn(async () => ({ pearson: 'ok' as const }));
+    const { d } = deps(store, [{ key: 'pearson:session', status: 'failed', reason: 'timeout' }], {
+      sync: vi.fn(async () => ({ brightspace: 'ok' as const, pearson: 'not_logged_in' as const })),
+      resync,
+    });
+    const report = await syncAndVisit(d, 'manual');
+    expect(resync).toHaveBeenCalledWith('pearson');
+    expect(report.pearson).toBe('ok');
   });
 });

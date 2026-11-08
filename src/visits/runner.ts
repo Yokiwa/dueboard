@@ -65,6 +65,9 @@ export interface VisitLogEntry {
   clicked?: string[];
   /** What the pages showed when no date was found. */
   pages?: PageSample[];
+  /** The date read, and the text it came from. */
+  due?: string;
+  evidence?: string;
   result: VisitOutcome['status'];
   detail?: string;
 }
@@ -113,6 +116,10 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       if (opts.onLog) {
         const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
         if (outcome.status === 'failed') entry.detail = outcome.reason;
+        if (outcome.status === 'found') {
+          entry.due = outcome.found.dueAt;
+          entry.evidence = outcome.found.evidence;
+        }
         const clicked = await api.clicksSeen(tabId).catch(() => []);
         if (clicked.length) entry.clicked = clicked;
         if (outcome.status !== 'found') {
