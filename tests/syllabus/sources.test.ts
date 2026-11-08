@@ -91,3 +91,14 @@ describe('syllabusSources', () => {
     expect(syllabusSources(s).map((x) => x.ou)).toEqual(['1', '2']);
   });
 });
+
+describe('documents that list due dates', () => {
+  it('reads "Assignments and due dates" and "Important dates" documents like a syllabus', () => {
+    const toc = { Modules: [{ Title: 'Start', Modules: [], Topics: [
+      { TopicId: 1, Title: 'Assignments and due dates_11510_FA26_rev 10.16', Url: '/content/enforced/1-CHM/Assignments and due dates.pdf', TypeIdentifier: 'File' },
+      { TopicId: 2, Title: 'Due Dates', Url: '/content/enforced/1-CHM/due.html', TypeIdentifier: 'File' },
+      { TopicId: 3, Title: 'Lecture 4 slides', Url: '/content/enforced/1-CHM/l4.pdf', TypeIdentifier: 'File' },
+    ] }] };
+    expect(tocSyllabusSources(toc, '1', B).map((s) => s.title)).toEqual(['Assignments and due dates_11510_FA26_rev 10.16', 'Due Dates']);
+  });
+});

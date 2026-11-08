@@ -3,7 +3,7 @@ import type { Toc, TocModule } from '../connectors/brightspace/api';
 
 export type { SyllabusSource };
 
-export const SYLLABUS_TITLE = /syllabus|schedule|course calendar|important dates/i;
+export const SYLLABUS_TITLE = /syllabus|schedule|course calendar|important dates|due dates/i;
 const WEEK = 7 * 86_400_000;
 const LAUNCH = /\/lti\/|quickLink.*[?&]type=lti/i;
 
