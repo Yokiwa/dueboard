@@ -76,6 +76,8 @@ export interface RunOptions {
   perPageMs?: number;
   finderMs?: number;
   budgetMs?: number;
+  /** How long one reader injection may take before the round goes on without it (default 5 s). */
+  injectMs?: number;
   now?: () => number;
   onProgress?: (done: number, total: number) => void;
   onLog?: (entry: VisitLogEntry) => void;
@@ -91,6 +93,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
   const perPageMs = opts.perPageMs ?? 20_000;
   // Platforms reached through Brightspace load in steps (sign-in hand-off, launcher, assignment): give them time.
   const finderMs = opts.finderMs ?? 20_000;
+  const injectMs = opts.injectMs ?? 5_000;
   const now = opts.now ?? (() => Date.now());
   const deadline = now() + (opts.budgetMs ?? 300_000);
   const out: VisitOutcome[] = [];
@@ -183,7 +186,9 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     const rounds = Math.max(1, Math.ceil((finderMs + 2_000) / ROUND_MS));
     let sawNothing = false;
     for (let i = 0; i < rounds; i++) {
-      await api.inject(tabId, t.mode, t.platform);
+      // Firefox can leave an injection pending for good while one of the page's frames is still loading (an empty or
+      // slow frame never reaches "idle"). Frames that are ready have the reader by then, so the round goes on.
+      await settleWithin(api.inject(tabId, t.mode, t.platform), injectMs);
       const msg = await api.nextMessage(tabId, ROUND_MS);
       if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
@@ -195,6 +200,13 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 }
 
 const ROUND_MS = 2_500;
+
+/** Waits for `work` (and passes on its error) for at most `ms`; after that, goes on as if it had finished. */
+function settleWithin(work: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<void>((resolve) => (timer = setTimeout(resolve, ms)));
+  return Promise.race([work.then(() => undefined), late]).finally(() => clearTimeout(timer));
+}
 function frameHost(url: string): string | null {
   try {
     const h = new URL(url).hostname;

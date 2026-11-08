@@ -39,15 +39,18 @@ const syncNow = (trigger: Trigger = 'auto') => {
         sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
         granted: () => visitApi.granted(),
         visit: async (targets) => {
-          const log: VisitLogEntry[] = [];
+          // Each page's entry is saved as soon as it is read (one write after another), so the log shows how far a run
+          // got even if it never ends.
+          let logged = Promise.resolve();
+          const log = (entry: VisitLogEntry) => (logged = logged.then(() => appendVisitLog([entry])).catch(() => undefined));
           try {
             return await runVisits(targets, visitApi, {
               onProgress: (done, total) => void setVisitProgress({ done, total }),
-              onLog: (entry) => log.push(entry),
+              onLog: log,
             });
           } finally {
+            await logged;
             await setVisitProgress(null);
-            await appendVisitLog(log);
           }
         },
         save: (patch) => patchStore(patch),

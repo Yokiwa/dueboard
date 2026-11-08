@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 — 2026-11
+
+- **Firefox no longer gets stuck at "Reading 1 of N platform pages…"**: Firefox can keep DueBoard waiting forever while one of a page's frames is still loading. DueBoard now reads the frames that are ready and moves on, so the run finishes, the visit window closes and Gradescope is read again
+- The visit log (Settings → Diagnostics) gets each page as soon as it's read, so it shows how far a run got
+
 ## 1.2.1 — 2026-11
 
 - **Gradescope dates after a visit signs you in**: opening a homework link that ends up on Gradescope (DataMine's projects, for example) signs you in there; DueBoard now reads Gradescope again in the same run, so those assignments get their dates right away

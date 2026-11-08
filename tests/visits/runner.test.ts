@@ -176,6 +176,14 @@ describe('runVisits', () => {
     expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
   });
 
+  it('a reader injection that never returns (Firefox, a frame stuck loading) does not stall the run', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/a'), at('https://www.aleks.com/b')], messages: [found(1), found(2)] });
+    f.api.inject = () => new Promise<void>(() => undefined);
+    const out = await runVisits([target(1), target(2)], f.api, { injectMs: 5 });
+    expect(out.map((o) => o.status)).toEqual(['found', 'found']);
+    expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
+  });
+
   it('stops when the launch page shows Brightspace signed out (session expired mid-run)', async () => {
     const f = fakeApi({ hosts: ['www.aleks.com', 'signed_out'], landings: [at('https://www.aleks.com/a')], messages: [found(1)] });
     const out = await runVisits([target(1), target(2), target(3)], f.api);
