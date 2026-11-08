@@ -16,6 +16,7 @@ const queue: VisitMessage[] = [];
 /** Frames that reported in during the current visit, and buttons they pressed (for the visit log). */
 const frames: string[] = [];
 const clicks: string[] = [];
+const samples: { url: string; text: string; buttons: string[] }[] = [];
 let waiter: ((m: VisitMessage) => void) | null = null;
 
 /** Called by the background router for finder messages. Returns whether the message was taken. */
@@ -23,6 +24,13 @@ export function deliverVisitMessage(msg: VisitMessage, sender: { tab?: { id?: nu
   if (visitTab === null || sender?.tab?.id !== visitTab) return false;
   if (msg.type === 'visitFrame') {
     if (!frames.includes(msg.frameUrl)) frames.push(msg.frameUrl);
+    return true;
+  }
+  if (msg.type === 'visitSample') {
+    const i = samples.findIndex((x) => x.url === msg.frameUrl);
+    const entry = { url: msg.frameUrl, text: msg.text, buttons: msg.buttons };
+    if (i >= 0) samples[i] = entry;
+    else if (samples.length < 6) samples.push(entry);
     return true;
   }
   if (msg.type === 'visitClick') {
@@ -54,6 +62,7 @@ export function setVisitTab(tabId: number | null): void {
   queue.length = 0;
   frames.length = 0;
   clicks.length = 0;
+  samples.length = 0;
   waiter = null;
 }
 
@@ -94,6 +103,7 @@ export function createBrowserVisitApi(): VisitApi {
       queue.length = 0; // late messages from the previous page don't belong to this one
       frames.length = 0;
       clicks.length = 0;
+      samples.length = 0;
       await browser.tabs.update(tabId, { url });
     },
 
@@ -175,6 +185,10 @@ export function createBrowserVisitApi(): VisitApi {
 
     async clicksSeen() {
       return [...clicks];
+    },
+
+    async samplesSeen() {
+      return samples.map((x) => ({ ...x, buttons: [...x.buttons] }));
     },
 
     async granted() {

@@ -49,6 +49,7 @@ function fakeApi(s: Script) {
     windowState: async () => (s.states?.length ? s.states.shift()! : 'minimized'),
     framesSeen: async () => [],
     clicksSeen: async () => [],
+    samplesSeen: async () => [],
     granted: async () => s.granted ?? ['https://*/*'],
     inject: async (_tab, mode, platform) => {
       calls.push(`inject ${mode}${platform ? ` ${platform}` : ''}`);
@@ -291,6 +292,16 @@ describe('runVisits: visit log of pressed buttons', () => {
     const log: { clicked?: string[] }[] = [];
     await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
     expect(log[0]!.clicked).toEqual(['Open Assignment (education.wiley.com)']);
+  });
+});
+
+describe('runVisits: visit log of page samples', () => {
+  it('records what the pages said when nothing was found', async () => {
+    const f = fakeApi({ landings: [at('https://education.wiley.com/l')], messages: [{ type: 'visitFound', found: null, frameUrl: 'https://education.wiley.com/l', top: true }] });
+    f.api.samplesSeen = async () => [{ url: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }];
+    const log: { pages?: unknown[] }[] = [];
+    await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(log[0]!.pages).toEqual([{ url: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }]);
   });
 });
 

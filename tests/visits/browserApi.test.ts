@@ -102,3 +102,14 @@ describe('buttons pressed during a visit', () => {
     expect(await api.nextMessage(5, 20)).toBe('timeout');
   });
 });
+
+describe('page samples during a visit', () => {
+  afterEach(() => setVisitTab(null));
+  it('are collected for the log', async () => {
+    setVisitTab(5);
+    const api = createBrowserVisitApi();
+    deliverVisitMessage({ type: 'visitSample', frameUrl: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }, { tab: { id: 5 } });
+    expect(await api.samplesSeen(5)).toEqual([{ url: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }]);
+    expect(await api.nextMessage(5, 20)).toBe('timeout');
+  });
+});

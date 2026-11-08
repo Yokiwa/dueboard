@@ -28,7 +28,8 @@ export function VisitLog() {
       <h2>Platform visits</h2>
       <p>
         What DueBoard saw when it opened your homework links (latest {log.length}). Addresses are shown without the part after
-        “?”. Click Refresh on the dashboard to make a new visit, then download this log to send it.
+        “?”. Click Refresh on the dashboard to make a new visit, then download this log to send it. Pages that showed no date
+        are described with a short piece of their text, which can include your name: check the file before sending.
       </p>
       {log.length === 0 ? (
         <p>No platform visits yet. Click Refresh on the dashboard first.</p>
@@ -66,6 +67,11 @@ export function VisitLog() {
                   <td style={cell}>
                     {e.frames.length} frame{e.frames.length === 1 ? '' : 's'}
                     {e.frames.length > 0 && <div style={{ color: '#6B7280' }}>{e.frames.map(short).join(', ')}</div>}
+                    {e.pages?.map((pg) => (
+                      <div key={pg.url} style={{ color: '#6B7280', marginTop: 4 }}>
+                        <em>{short(pg.url)}</em>: “{pg.text}”{pg.buttons.length ? ` — buttons: ${pg.buttons.join(', ')}` : ''}
+                      </div>
+                    ))}
                   </td>
                   <td style={cell}>
                     {e.detail ? `${e.result} (${e.detail})` : e.result}

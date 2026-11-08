@@ -3,7 +3,7 @@ import { runFinder, type FinderWindow } from '../../src/visits/finders/run';
 import type { VisitMessage } from '../../src/visits/messages';
 
 /** The answers a frame sends (its "I'm here" report is checked separately). */
-const answers = (sent: VisitMessage[]) => sent.filter((m) => m.type !== 'visitFrame');
+const answers = (sent: VisitMessage[]) => sent.filter((m) => m.type === 'visitFound' || m.type === 'visitText');
 const fakeWindow = (top: boolean, mode: 'due' | 'syllabus' = 'due', platform?: string): FinderWindow => {
   const w = { document, location: { href: 'https://www.aleks.com/hw7' }, __dueboardMode: mode, __dueboardPlatform: platform } as FinderWindow;
   w.top = top ? w : ({} as FinderWindow);
@@ -135,5 +135,30 @@ describe('runFinder presses "open the assignment" when allowed', () => {
     runFinder(launcher('https://education.wiley.com/b', false), (m) => sent2.push(m));
     await vi.advanceTimersByTimeAsync(11_000);
     expect(clicks(sent2)).toEqual([]);
+  });
+});
+
+describe('runFinder describes a page it found nothing on (for the visit log)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('at the time limit, each frame sends a short sample of its text and its buttons', async () => {
+    document.body.innerHTML = '<h1>Launching your assignment</h1><p>Your instructor set this to open in a new window.</p><button>Start</button><a href="#">Help</a>';
+    const sent: VisitMessage[] = [];
+    const w = fakeWindow(false);
+    w.location = { href: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=X' };
+    runFinder(w, (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(sent.filter((m) => m.type === 'visitSample')).toEqual([
+      {
+        type: 'visitSample',
+        frameUrl: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html',
+        text: 'Launching your assignment / Your instructor set this to open in a new window. / Start Help',
+        buttons: ['Start', 'Help'],
+      },
+    ]);
   });
 });

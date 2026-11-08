@@ -1,6 +1,6 @@
 import { stripUrl, type VisitMessage } from '../messages';
 import { findDue, pageLines } from './index';
-import { openButton } from './open';
+import { buttonLabels, openButton } from './open';
 
 export interface FinderWindow {
   document: Document;
@@ -69,6 +69,9 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         }
       }
       if (elapsed >= maxMs) {
+        // Nothing found here: describe the page for the visit log, so a stuck step can be seen and fixed.
+        const text = pageLines(win.document).join(' / ').replace(/\s+/g, ' ').slice(0, 300);
+        send({ type: 'visitSample', frameUrl: stripUrl(frameUrl), text, buttons: buttonLabels(win.document) });
         if (top) send({ type: 'visitFound', found: null, frameUrl, top });
         return;
       }

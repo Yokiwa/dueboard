@@ -52,7 +52,7 @@ export function pageLines(doc: Document): string[] {
           push(run);
           run = '';
           walk(c);
-        } else run += visibleText(c);
+        } else run += ` ${visibleText(c)} `; // adjacent inline elements (buttons, links) stay separate words
       }
     }
     push(run);

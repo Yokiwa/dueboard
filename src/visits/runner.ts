@@ -31,6 +31,8 @@ export interface VisitApi {
   framesSeen(tabId: number): Promise<string[]>;
   /** "Open the assignment" buttons pressed since the last navigation ("label (host)"), for the visit log. */
   clicksSeen(tabId: number): Promise<string[]>;
+  /** What pages that found no date showed (text sample, buttons), for the visit log. */
+  samplesSeen(tabId: number): Promise<PageSample[]>;
   /** Persists visitState.windowId, so a restart can close a window a crashed run left behind. */
   remember(windowId: number | null): Promise<void>;
 }
@@ -38,6 +40,12 @@ export interface VisitApi {
 /** Brightspace's own sign-in page, Purdue's identity provider, and Duo. */
 export const SIGN_IN = /\/d2l\/login|login\.purdue\.edu|\/idp\/profile\/|duosecurity\.com/i;
 const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
+
+export interface PageSample {
+  url: string;
+  text: string;
+  buttons: string[];
+}
 
 /** One line of the visit log: what a visit saw, step by step. Addresses are stripped of "?…" and "#…". */
 export interface VisitLogEntry {
@@ -55,6 +63,8 @@ export interface VisitLogEntry {
   frames: string[];
   /** "Open the assignment" buttons DueBoard pressed. */
   clicked?: string[];
+  /** What the pages showed when no date was found. */
+  pages?: PageSample[];
   result: VisitOutcome['status'];
   detail?: string;
 }
@@ -105,6 +115,10 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         if (outcome.status === 'failed') entry.detail = outcome.reason;
         const clicked = await api.clicksSeen(tabId).catch(() => []);
         if (clicked.length) entry.clicked = clicked;
+        if (outcome.status !== 'found') {
+          const pages = await api.samplesSeen(tabId).catch(() => []);
+          if (pages.length) entry.pages = pages;
+        }
         opts.onLog(entry);
       }
       opts.onProgress?.(out.length, targets.length);
@@ -164,7 +178,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     for (let i = 0; i < rounds; i++) {
       await api.inject(tabId, t.mode, t.platform);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;

@@ -255,6 +255,7 @@ export interface StoredVisitLogEntry {
   landed?: string;
   frames: string[];
   clicked?: string[];
+  pages?: { url: string; text: string; buttons: string[] }[];
   result: string;
   detail?: string;
 }

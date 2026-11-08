@@ -28,3 +28,14 @@ describe('Diagnostics: visit log', () => {
     await waitFor(() => expect(screen.getByText(/No platform visits yet/)).toBeTruthy());
   });
 });
+
+describe('Diagnostics: page samples', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('shows what a page said, and reminds to check before sending', async () => {
+    await appendVisitLog([{ at: '2026-11-08T10:00:00.000Z', key: 'k', title: 'HW11', opened: 'o', frames: [], result: 'none', pages: [{ url: 'https://education.wiley.com/l', text: 'Launching your assignment', buttons: ['Open in new tab'] }] }]);
+    render(<VisitLog />);
+    expect(await screen.findByText(/Launching your assignment/)).toBeTruthy();
+    expect(screen.getByText(/buttons: Open in new tab/)).toBeTruthy();
+    expect(screen.getByText(/check the file before sending/i)).toBeTruthy();
+  });
+});

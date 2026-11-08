@@ -42,3 +42,15 @@ export function openButton(doc: Document): OpenButton | null {
   }
   return null;
 }
+
+/** The labels of the page's visible buttons and links (up to 8), for the visit log. */
+export function buttonLabels(doc: Document): string[] {
+  const out: string[] = [];
+  for (const el of Array.from(doc.querySelectorAll('button, a[href], [role="button"], input[type="button"], input[type="submit"]'))) {
+    if (hidden(el)) continue;
+    const label = labelOf(el);
+    if (label && label.length <= MAX_LABEL && !out.includes(label)) out.push(label);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
