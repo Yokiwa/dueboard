@@ -71,7 +71,8 @@ export interface RunOptions {
 export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: RunOptions = {}): Promise<VisitOutcome[]> {
   if (targets.length === 0) return [];
   const perPageMs = opts.perPageMs ?? 20_000;
-  const finderMs = opts.finderMs ?? 10_000;
+  // Platforms reached through Brightspace load in steps (sign-in hand-off, launcher, assignment): give them time.
+  const finderMs = opts.finderMs ?? 20_000;
   const now = opts.now ?? (() => Date.now());
   const deadline = now() + (opts.budgetMs ?? 300_000);
   const out: VisitOutcome[] = [];
@@ -127,15 +128,14 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       if (host && !originAllowed(granted, host)) return { key: t.key, status: 'needs_permission', host };
       if (!host) {
         if (!(await api.signedIn())) return { key: t.key, status: 'signed_out' };
-        // Without knowing the site, a bare launch link is opened only for a known platform the student allowed. A
-        // homework's own Brightspace page is opened anyway: it is Brightspace, as the student sees it, and only the
-        // frames of sites the student allowed are read.
-        if (!t.platform && !t.probeUrl) return { key: t.key, status: 'failed', reason: 'unknown' };
+        // Purdue's launch links never reveal their site ahead of time. A homework link is the student's own Brightspace
+        // link, so it is opened anyway, and only pages on sites the student allowed are read. Other links (syllabus)
+        // are opened only for a known platform the student allowed.
+        if (!t.platform && t.mode !== 'due') return { key: t.key, status: 'failed', reason: 'unknown' };
       }
     }
-    const brightspacePage = t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST;
     await api.navigate(tabId, t.launchUrl);
-    const landing = await api.waitForLanding(tabId, perPageMs, brightspacePage ? { brightspacePage: true } : undefined);
+    const landing = await api.waitForLanding(tabId, perPageMs);
     trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
@@ -145,26 +145,24 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 
   async function read(t: VisitTarget, host: string, site: string | null): Promise<VisitOutcome> {
     if (t.mode === 'session') return { key: t.key, status: 'landed', host };
-    const onPage = host === BRIGHTSPACE_HOST;
-    if (onPage && !(t.mode === 'due' && new URL(t.launchUrl).hostname === BRIGHTSPACE_HOST)) return { key: t.key, status: 'failed', reason: 'timeout' };
+    if (host === BRIGHTSPACE_HOST) return { key: t.key, status: 'failed', reason: 'timeout' };
     if (!originAllowed(await api.granted(), host)) return { key: t.key, status: 'needs_permission', host };
-    const named = onPage ? (site ?? host) : host;
+    void site;
 
-    // The platform may sit in a frame that loads after the page (an embedded content page), so the reader is
-    // injected again every round; frames already reading ignore it. A "nothing here" from one frame doesn't end the
-    // wait: another frame may still find the date.
+    // A platform reached through Brightspace loads in steps (sign-in hand-off, launcher, assignment), in this page or
+    // its frames, so the reader is injected again every round (frames already reading ignore it), and a "nothing
+    // here" from one step doesn't end the wait: the assignment may still appear.
     const rounds = Math.max(1, Math.ceil((finderMs + 2_000) / ROUND_MS));
     let sawNothing = false;
     for (let i = 0; i < rounds; i++) {
       await api.inject(tabId, t.mode, t.platform);
       const msg = await api.nextMessage(tabId, ROUND_MS);
       if (msg === 'timeout' || msg.type === 'visitFrame') continue;
-      if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host: named };
-      if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? named };
+      if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
+      if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;
-      if (!onPage) break; // a plain platform page has one answer
     }
-    return sawNothing ? { key: t.key, status: 'none', host: named } : { key: t.key, status: 'failed', reason: 'timeout' };
+    return sawNothing ? { key: t.key, status: 'none', host } : { key: t.key, status: 'failed', reason: 'timeout' };
   }
 }
 

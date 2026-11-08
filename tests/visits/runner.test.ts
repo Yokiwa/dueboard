@@ -82,7 +82,8 @@ describe('runVisits', () => {
       { key: 'brightspace:topic:2', status: 'none', host: 'www.aleks.com' },
     ]);
     expect(progress).toEqual([1, 2]);
-    expect(f.calls).toEqual(['open', 'remember 9', `probe ${B}/launch/1`, `navigate ${B}/launch/1`, 'wait page', 'inject due', `probe ${B}/launch/2`, `navigate ${B}/launch/2`, 'wait page', 'inject due', 'close 9', 'remember null']);
+    expect(f.calls.filter((c) => c.startsWith('navigate'))).toEqual([`navigate ${B}/launch/1`, `navigate ${B}/launch/2`]);
+    expect(f.calls.slice(-2)).toEqual(['close 9', 'remember null']);
   });
 
   it('passes the platform to the finder', async () => {
@@ -185,10 +186,10 @@ describe('runVisits', () => {
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'signed_out' }]);
   });
 
-  it('never opens a launch whose site is unknown and not a known platform', async () => {
+  it('never opens a syllabus link whose site is unknown and not a known platform', async () => {
     const f = fakeApi({ hosts: [null] });
-    const out = await runVisits([target(1)], f.api);
-    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'unknown' }]);
+    const out = await runVisits([{ ...target(1, 'syllabus'), key: 'syllabus:1' }], f.api);
+    expect(out).toEqual([{ key: 'syllabus:1', status: 'failed', reason: 'unknown' }]);
     expect(f.calls.some((c) => c.startsWith('navigate'))).toBe(false);
   });
 
@@ -213,52 +214,40 @@ describe('runVisits', () => {
   });
 });
 
-describe('runVisits: homework embedded in a Brightspace content page', () => {
-  const page = (n: number): VisitTarget => ({ ...target(n), launchUrl: `${B}/d2l/le/content/1/viewContent/${n}/View`, probeUrl: `${B}/launch/${n}` });
-  const wileyFound: VisitMessage = { type: 'visitFound', found: { title: 'HW11', dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Monday, Nov 9 at 11:59 PM (EST)' }, frameUrl: 'https://education.wiley.com/was/x', top: false };
-  const topNull: VisitMessage = { type: 'visitFound', found: null, frameUrl: `${B}/d2l/le/content/1/viewContent/1/View`, top: true };
+describe('runVisits: a homework link opened as a full page (like "Open in new window")', () => {
+  const hw = (n: number): VisitTarget => ({ ...target(n), launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rCode=X-${n}` });
+  const wileyFound: VisitMessage = { type: 'visitFound', found: { title: 'HW11', dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Monday, Nov 9 at 11:59 PM (EST)' }, frameUrl: 'https://education.wiley.com/was/ui/v2/assessment-player/index.html', top: true };
+  const launcherNull: VisitMessage = { type: 'visitFound', found: null, frameUrl: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html', top: true };
 
-  it('learns the site from the quick link, then opens the content page like the student does', async () => {
-    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
-    await runVisits([page(1)], f.api);
-    expect(f.calls.slice(2, 5)).toEqual([`probe ${B}/launch/1`, `navigate ${B}/d2l/le/content/1/viewContent/1/View`, 'wait page']);
-  });
-
-  it('reads the assignment from the platform frame inside the page, named by that frame', async () => {
-    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [topNull, wileyFound] });
-    const out = await runVisits([page(1)], f.api);
+  it('opens the link itself even when it does not reveal the site; only allowed sites are read', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html')], messages: [wileyFound] });
+    const out = await runVisits([hw(1)], f.api);
+    expect(f.calls).toContain(`navigate ${hw(1).launchUrl}`);
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'found', host: 'education.wiley.com', found: (wileyFound as { found: unknown }).found }]);
   });
 
-  it('keeps injecting the reader so a platform frame that loads late is read too', async () => {
-    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: ['timeout', 'timeout', wileyFound] });
-    const out = await runVisits([page(1)], f.api);
+  it('a platform that loads in steps (hand-off, launcher, assignment) is read once the assignment appears', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://lti.education.wiley.com/oidc/return')], messages: ['timeout', 'timeout', 'timeout', wileyFound] });
+    const out = await runVisits([hw(1)], f.api);
     expect(out[0]!.status).toBe('found');
-    expect(f.calls.filter((c) => c.startsWith('inject')).length).toBeGreaterThanOrEqual(3);
+    expect(f.calls.filter((c) => c.startsWith('inject')).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('only "nothing found" from every frame is a miss', async () => {
-    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [topNull] });
-    const out = await runVisits([page(1)], f.api);
-    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'none', host: 'education.wiley.com' }]);
+  it('"nothing here" from the launcher does not end the wait: the assignment may still open', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html')], messages: [launcherNull, wileyFound] });
+    expect((await runVisits([hw(1)], f.api))[0]!.status).toBe('found');
   });
-});
 
-describe('runVisits: when the link does not tell the site (real Brightspace launch pages)', () => {
-  const page = (n: number): VisitTarget => ({ ...target(n), launchUrl: `${B}/d2l/le/content/1/viewContent/${n}/View`, probeUrl: `${B}/launch/${n}` });
-  const wileyFound: VisitMessage = { type: 'visitFound', found: { title: 'HW11', dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Monday, Nov 9 at 11:59 PM (EST)' }, frameUrl: 'https://education.wiley.com/was/x', top: false };
-
-  it("still opens the homework's own Brightspace page and reads the frames it is allowed to", async () => {
-    const f = fakeApi({ hosts: [null], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
-    const out = await runVisits([page(1)], f.api);
-    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'found', host: 'education.wiley.com', found: (wileyFound as { found: unknown }).found }]);
+  it('only "nothing here" until the end is a miss', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html')], messages: [launcherNull] });
+    expect(await runVisits([hw(1)], f.api)).toEqual([{ key: 'brightspace:topic:1', status: 'none', host: 'education.wiley.com' }]);
   });
 
   it('the visit log says why the site could not be told', async () => {
-    const f = fakeApi({ hosts: [{ host: null, note: 'fetch failed: TypeError: Failed to fetch' }], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View`)], messages: [wileyFound] });
+    const f = fakeApi({ hosts: [{ host: null, note: 'no launch target on x (HTTP 200)' }], landings: [at('https://education.wiley.com/a')], messages: [wileyFound] });
     const log: { siteNote?: string }[] = [];
-    await runVisits([page(1)], f.api, { onLog: (e) => log.push(e) });
-    expect(log[0]!.siteNote).toBe('fetch failed: TypeError: Failed to fetch');
+    await runVisits([hw(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(log[0]!.siteNote).toBe('no launch target on x (HTTP 200)');
   });
 });
 
@@ -296,19 +285,19 @@ describe('launchTargetHost', () => {
 
 describe('runVisits: visit log', () => {
   it('records what each visit saw, step by step', async () => {
-    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at(`${B}/d2l/le/content/1/viewContent/1/View?ou=1`)], messages: [{ type: 'visitFound', found: null, frameUrl: `${B}/x`, top: true }] });
-    f.api.framesSeen = async () => [`${B}/d2l/le/content/1/viewContent/1/View`];
+    const f = fakeApi({ hosts: ['education.wiley.com'], landings: [at('https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=SECRET')], messages: [{ type: 'visitFound', found: null, frameUrl: 'https://education.wiley.com/x', top: true }] });
+    f.api.framesSeen = async () => ['https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html'];
     const log: unknown[] = [];
-    await runVisits([{ ...target(1), launchUrl: `${B}/d2l/le/content/1/viewContent/1/View`, probeUrl: `${B}/launch/1` }], f.api, { onLog: (e) => log.push(e), now: () => 1_700_000_000_000 });
+    await runVisits([{ ...target(1), launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rCode=X-1` }], f.api, { onLog: (e) => log.push(e), now: () => 1_700_000_000_000 });
     expect(log).toEqual([
       {
         at: new Date(1_700_000_000_000).toISOString(),
         key: 'brightspace:topic:1',
         title: 'HW 1',
         site: 'education.wiley.com',
-        opened: `${B}/d2l/le/content/1/viewContent/1/View`,
-        landed: `${B}/d2l/le/content/1/viewContent/1/View`,
-        frames: [`${B}/d2l/le/content/1/viewContent/1/View`],
+        opened: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l`,
+        landed: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html',
+        frames: ['https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html'],
         result: 'none',
       },
     ]);

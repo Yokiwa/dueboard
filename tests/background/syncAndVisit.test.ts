@@ -42,7 +42,7 @@ describe('syncAndVisit', () => {
     const { d, saved } = deps(withHomework(), out);
     const report = await syncAndVisit(d, 'auto');
     expect(report).toEqual({ brightspace: 'ok', gradescope: 'ok' });
-    expect(d.visit).toHaveBeenCalledWith([expect.objectContaining({ key: 'brightspace:topic:1', launchUrl: `${B}/v/1`, probeUrl: `${B}/launch/1` })]);
+    expect(d.visit).toHaveBeenCalledWith([expect.objectContaining({ key: 'brightspace:topic:1', launchUrl: `${B}/launch/1` })]);
     expect(saved).toHaveLength(1);
     expect((saved[0] as Pick<StoreShape, 'captured'>).captured['brightspace:topic:1']!.dueAt).toBe('2026-11-10T04:59:00.000Z');
   });
