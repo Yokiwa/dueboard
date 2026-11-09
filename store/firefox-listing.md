@@ -25,7 +25,7 @@ Stop clicking through every course in Brightspace and opening platform after pla
 • Add your own entries for anything else
 
 <b>Privacy</b>
-Everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password. It only reads pages; it never clicks, submits or changes anything.
+Everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password. It only reads pages. The one thing it may press is a platform's "open the assignment" button (Open, Launch, View assignment); it never types, and never starts, continues or submits work.
 
 Currently works with Purdue University's Brightspace (purdue.brightspace.com).
 DueBoard is an open-source student project and is not affiliated with Purdue University, D2L, Gradescope, Pearson, Wiley, McGraw Hill, W. W. Norton or Mozilla.
@@ -49,4 +49,4 @@ https://yokiwa.github.io/dueboard/privacy.html
 ## Notes for reviewers
 Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`.
 The UNSAFE_VAR_ASSIGNMENT warnings are in bundled React DOM and pdf.js (pdf.worker.min.mjs ships unmodified from pdfjs-dist); DueBoard never writes innerHTML.
-Optional host permission `https://*/*` is requested one site at a time, only after a click on an "Allow" button that names the homework platform found in the student's courses. It lets DueBoard read the due date on that platform's assignment pages.
+Optional host permission `https://*/*` is requested one site at a time, only after a click on an "Allow" button that names the homework platform found in the student's courses. It lets DueBoard read the due date on that platform's assignment pages, in a minimized window DueBoard opens and closes itself. In that window only, DueBoard may press the page's one "open the assignment" button, and `window.open` is redirected to the same tab so an assignment meant for a new tab opens there.
