@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { addManualLink, loadStore } from '../../src/storage/store';
+import { addManualLink, loadStore, toggleDone } from '../../src/storage/store';
 import { screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { renderIn } from './render';
 import { CoursesView } from '../../src/ui/views/CoursesView';
@@ -18,6 +18,7 @@ const d = dash({
     item('i4', 'b:1', 'Lab 10', '2026-11-14T23:59:00-05:00'),
     item('i5', 'b:1', 'Old lab', '2026-11-02T23:59:00-05:00', { doneByUser: true }),
     item('i6', 'b:2', 'WebAssign 14.3', '2026-11-05T23:59:00-05:00', { submitted: true }),
+    item('i7', 'b:1', 'Late lab', '2026-10-30T23:59:00-05:00'),
   ],
   links: [
     link('b:1', 'Brightspace', 'lms'),
@@ -31,15 +32,15 @@ const d = dash({
 const card = (code: string) => screen.getByRole('article', { name: code });
 
 describe('CoursesView', () => {
-  it('card shows code, name, color dot, at most 3 upcoming not-done items, and all links as buttons', () => {
+  it('card shows code, name, color dot, the next 7 days of unfinished work, finished work at the bottom, and all links', () => {
     renderIn('en', <CoursesView dashboard={d} now={NOW} />);
     const c = within(card('CS 18000'));
     expect(c.getByText('Intro to Java')).toBeTruthy();
     expect((c.getByTestId('course-dot') as HTMLElement).style.background.toLowerCase()).toMatch(/#ea580c|rgb\(234, 88, 12\)/);
-    expect(c.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent)).toEqual(['Project 3', 'Lab 09', 'Quiz 6']);
+    expect(c.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent)).toEqual(['Project 3', 'Lab 09', 'Quiz 6', 'Old lab']);
+    expect((c.getByRole('checkbox', { name: 'Mark done: Old lab' }) as HTMLInputElement).checked).toBe(true);
     expect(c.getByText('Gradescope · Today 6:00 PM')).toBeTruthy();
     expect(c.getByText('in 6 h')).toBeTruthy();
-    expect(c.getByRole('button', { name: '1 more' })).toBeTruthy();
     expect(within(c.getByRole('group', { name: 'Shortcuts' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Brightspace',
       'Gradescope',
@@ -48,12 +49,53 @@ describe('CoursesView', () => {
     ]);
   });
 
-  it('card with nothing upcoming shows Nothing due soon', () => {
+  it('card with nothing in the next 7 days says so', () => {
     renderIn('en', <CoursesView dashboard={d} now={NOW} />);
-    expect(within(card('COM 11400')).getByText('Nothing due soon')).toBeTruthy();
+    expect(within(card('COM 11400')).getByText('Nothing due through Nov 11')).toBeTruthy();
   });
 
-  it('a submitted item that is not past due stays on the card, checked and locked', () => {
+  it('when everything in the window is finished, the card says so', () => {
+    renderIn('en', <CoursesView dashboard={d} now={NOW} />);
+    expect(within(card('MA 26100')).getByText('All done through Nov 11')).toBeTruthy();
+  });
+
+  it('overdue work stays off the card; "1 overdue" opens the detail', () => {
+    renderIn('en', <CoursesView dashboard={d} now={NOW} />);
+    const c = within(card('CS 18000'));
+    expect(c.queryByText('Late lab')).toBeNull();
+    fireEvent.click(c.getByRole('button', { name: '1 overdue' }));
+    expect(screen.getByRole('dialog', { name: 'CS 18000 · Intro to Java' })).toBeTruthy();
+  });
+
+  it('"Show next week" adds the following week\'s work above the finished work', () => {
+    renderIn('en', <CoursesView dashboard={d} now={NOW} />);
+    const c = within(card('CS 18000'));
+    fireEvent.click(c.getByRole('button', { name: 'Show next week (1)' }));
+    expect(c.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent)).toEqual(['Project 3', 'Lab 09', 'Quiz 6', 'Lab 10', 'Old lab']);
+    expect(c.queryByRole('button', { name: /Show next week/ })).toBeNull();
+  });
+
+  it('with finished work in its own section, cards leave it out and "Done this week" lists it', () => {
+    renderIn('en', <CoursesView dashboard={d} now={NOW} completed="section" />);
+    expect(within(card('CS 18000')).queryByText('Old lab')).toBeNull();
+    const done = within(screen.getByRole('region', { name: 'Done this week' }));
+    expect(done.getByText('2')).toBeTruthy();
+    expect(done.getAllByRole('listitem').map((li) => li.querySelector('[data-title]')?.textContent)).toEqual(['Old lab', 'WebAssign 14.3']);
+  });
+
+  it('"Done this week" is hidden when nothing was finished, and unticking there marks the work not done', async () => {
+    fakeBrowser.reset();
+    const none = dash({ courses: [cs], items: [item('n1', 'b:1', 'Lab 09', '2026-11-07T23:59:00-05:00')] });
+    const { unmount } = renderIn('en', <CoursesView dashboard={none} now={NOW} completed="section" />);
+    expect(screen.queryByRole('region', { name: 'Done this week' })).toBeNull();
+    unmount();
+    await toggleDone(['i5'], true);
+    renderIn('en', <CoursesView dashboard={d} now={NOW} completed="section" />);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Done this week' })).getByRole('checkbox', { name: 'Mark done: Old lab' }));
+    await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
+  });
+
+  it('a submitted item stays on the card, checked and locked', () => {
     renderIn('en', <CoursesView dashboard={d} now={NOW} />);
     const box = within(card('MA 26100')).getByRole('checkbox', { name: 'Mark done: WebAssign 14.3' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
@@ -73,27 +115,20 @@ describe('CoursesView', () => {
     }
   });
 
-  it('clicking card opens detail dialog listing all items and links grouped by category', () => {
+  it('clicking card opens detail dialog with work grouped as overdue, upcoming and completed, and links by category', () => {
     renderIn('en', <CoursesView dashboard={d} now={NOW} />);
     fireEvent.click(within(card('CS 18000')).getByRole('button', { name: 'Open CS 18000 details' }));
     const dlg = within(screen.getByRole('dialog', { name: 'CS 18000 · Intro to Java' }));
-    expect(dlg.getAllByTestId('detail-item').map((el) => el.querySelector('[data-title]')?.textContent)).toEqual([
-      'Old lab',
-      'Project 3',
-      'Lab 09',
-      'Quiz 6',
-      'Lab 10',
-    ]);
+    const group = (name: string) =>
+      within(dlg.getByRole('region', { name })).getAllByTestId('detail-item').map((el) => el.querySelector('[data-title]')?.textContent);
+    expect(group('Overdue')).toEqual(['Late lab']);
+    expect(group('Upcoming')).toEqual(['Project 3', 'Lab 09', 'Quiz 6', 'Lab 10']);
+    expect(group('Completed')).toEqual(['Old lab']);
+    expect(dlg.queryByRole('region', { name: 'No due date' })).toBeNull();
     expect(dlg.getByText('Done')).toBeTruthy();
     expect(dlg.getByRole('heading', { name: 'Textbooks' })).toBeTruthy();
     expect(dlg.getByRole('heading', { name: 'Discussion' })).toBeTruthy();
     expect(dlg.getByRole('link', { name: 'zyBooks' })).toBeTruthy();
-  });
-
-  it('"N more" also opens the detail', () => {
-    renderIn('en', <CoursesView dashboard={d} now={NOW} />);
-    fireEvent.click(within(card('CS 18000')).getByRole('button', { name: '1 more' }));
-    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
   it('Esc and the close button close the dialog', () => {

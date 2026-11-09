@@ -124,7 +124,12 @@ describe('store', () => {
   });
 
   it('migrate keeps valid settings', () => {
-    expect(migrate({ settings: { visits: 'manual', syllabus: false } }).settings).toEqual({ visits: 'manual', syllabus: false });
+    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section' });
+  });
+
+  it('finished work shows in the course cards unless set to its own section', () => {
+    expect(migrate({ settings: { visits: 'manual', syllabus: true } }).settings.completed).toBe('card');
+    expect(migrate({ settings: { completed: 'elsewhere' } }).settings.completed).toBe('card');
   });
 
   it('migrate moves 1.0 page captures to title keys', () => {
@@ -154,7 +159,7 @@ describe('store', () => {
 
   it('saveSettings merges into the current settings', async () => {
     await saveSettings({ visits: 'off' });
-    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true });
+    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card' });
   });
 
   it('patchVisitState merges into the current visit state', async () => {

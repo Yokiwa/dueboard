@@ -135,7 +135,7 @@ describe('buildDashboard — courses', () => {
     expect(color('brightspace:1')).toBe(PALETTE[2]); // MA
   });
 
-  it('sorts courses by nearest incomplete due, empty courses last, tie by code', () => {
+  it('sorts courses by code, so cards keep their place when work is done', () => {
     const d = buildDashboard(
       input({
         snapshots: {
@@ -151,7 +151,7 @@ describe('buildDashboard — courses', () => {
       }),
       now,
     );
-    expect(d.courses.map((c) => c.code)).toEqual(['MA 26100', 'CS 18000', 'CHM 11500', 'ENGL 10600']);
+    expect(d.courses.map((c) => c.code)).toEqual(['CHM 11500', 'CS 18000', 'ENGL 10600', 'MA 26100']);
   });
 });
 
@@ -602,7 +602,7 @@ describe('course shortcut prefers the Brightspace launch', () => {
 describe('due dates written in the homework title', () => {
   const chm = (title: string, dueAt: string | null = null) =>
     input({ snapshots: { brightspace: snap([bsCourse('7', 'CHM 11510', 'CHM 11510')], [item({ source: 'brightspace', sourceItemId: 'topic:7', sourceCourseId: '7', title, dueAt })]) } });
-  const one = (title: string, dueAt: string | null = null) => buildDashboard(chm(title, dueAt), now).items[0]!;
+  const one = (title: string, dueAt: string | null = null, at = now) => buildDashboard(chm(title, dueAt), at).items[0]!;
 
   it('reads "_due_Nov 11" in a title (underscores as spaces), at 11:59 PM, and says so', () => {
     const it11 = one('HW11 (10.3, 12.1)_due_Nov 11');
@@ -611,8 +611,13 @@ describe('due dates written in the homework title', () => {
   });
 
   it('reads "_due_Oct_21" and "_due_Sept_30"', () => {
-    expect(one('HW08_due_Oct_21 (8.3 8.4)').dueAt).toBe(new Date(2026, 9, 21, 23, 59).toISOString());
-    expect(one('HW05_due_Sept_30 (6.1-6.6)').dueAt).toBe(new Date(2026, 8, 30, 23, 59).toISOString());
+    const sept = new Date('2026-09-20T12:00:00-04:00');
+    expect(one('HW08_due_Oct_21 (8.3 8.4)', null, sept).dueAt).toBe(new Date(2026, 9, 21, 23, 59).toISOString());
+    expect(one('HW05_due_Sept_30 (6.1-6.6)', null, sept).dueAt).toBe(new Date(2026, 8, 30, 23, 59).toISOString());
+  });
+
+  it('a title date more than 7 days past is dropped like any other old item, so it does not come back as overdue', () => {
+    expect(buildDashboard(chm('HW03_due_Sept_16 (4.1)'), now).items).toEqual([]);
   });
 
   it('only with the word "due": a date alone in a title is not a deadline', () => {

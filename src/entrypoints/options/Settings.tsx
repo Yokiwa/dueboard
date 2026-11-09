@@ -12,7 +12,7 @@ import { FEEDBACK_URL } from '../../ui/config';
 import { field, label } from '../../ui/forms';
 import { useStore } from '../../ui/hooks/useStore';
 import { useT } from '../../ui/i18n';
-import type { StoreShape, VisitMode } from '../../core/types';
+import type { CompletedPlacement, StoreShape, VisitMode } from '../../core/types';
 
 const card = 'db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm';
 const h2 = 'm-0 heading-6';
@@ -75,6 +75,18 @@ function Body({ store }: { store: StoreShape }) {
               </li>
             ))}
           </ul>
+          <label className={label} htmlFor={`${id}-completed`}>
+            {t('settings.completed')}
+            <select
+              id={`${id}-completed`}
+              className={field}
+              value={store.settings.completed}
+              onChange={(e) => void saveSettings({ completed: e.target.value as CompletedPlacement })}
+            >
+              <option value="card">{t('settings.completed.card')}</option>
+              <option value="section">{t('settings.completed.section')}</option>
+            </select>
+          </label>
         </section>
 
         <section className={card}>

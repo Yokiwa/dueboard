@@ -260,6 +260,8 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
     const launch = m.sources.includes('pearson') ? pearsonLaunch.get(m.courseId) : undefined;
     if (launch) m.url = launch;
   }
+  // Dates filled in from titles and platform pages follow the same 7-day limit as the rest.
+  merged.splice(0, merged.length, ...merged.filter(inWindow));
 
   for (const m of input.manualItems) {
     const cid = alias.get(m.courseId) ?? m.courseId;
@@ -271,17 +273,10 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   const items = merged.sort((a, b) => dueMs(a) - dueMs(b) || a.title.localeCompare(b.title));
   const pending = (i: Item) => !i.doneByUser && !i.submitted;
 
-  const nearest = new Map<string, number>();
-  for (const i of items) {
-    if (pending(i) && i.dueAt && !nearest.has(i.courseId)) nearest.set(i.courseId, dueMs(i));
-  }
+  // A fixed order (by code): cards keep their place when work is done or dates change.
   const courses = [...all.values()]
     .filter((c) => opts.includeHidden || !c.hidden)
-    .sort(
-      (a, b) =>
-        (nearest.get(a.id) ?? Number.POSITIVE_INFINITY) - (nearest.get(b.id) ?? Number.POSITIVE_INFINITY) ||
-        a.code.localeCompare(b.code),
-    );
+    .sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
 
   const links = buildLinks(input, courses, alias, gsUrl);
   const nextDue = items.find((i) => pending(i) && i.dueAt && dueMs(i) > now.getTime()) ?? null;

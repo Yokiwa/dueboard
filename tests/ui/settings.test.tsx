@@ -67,6 +67,14 @@ describe('Settings', () => {
     await waitFor(async () => expect((await loadStore()).userState.merges).toEqual({}));
   });
 
+  it('chooses where finished work shows on the Courses page', async () => {
+    render(<Settings />);
+    const select = (await screen.findByLabelText('Finished work on the Courses page')) as HTMLSelectElement;
+    expect(select.value).toBe('card');
+    fireEvent.change(select, { target: { value: 'section' } });
+    await waitFor(async () => expect((await loadStore()).settings.completed).toBe('section'));
+  });
+
   it('feedback link points to FEEDBACK_URL constant', async () => {
     render(<Settings />);
     await waitFor(() => screen.getByRole('link', { name: 'Send feedback' }));

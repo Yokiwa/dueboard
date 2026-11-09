@@ -107,7 +107,7 @@ describe('Settings: reading platforms', () => {
   });
 
   it('turns syllabus suggestions off', async () => {
-    await patchStore({ settings: { visits: 'auto', syllabus: true } });
+    await patchStore({ settings: { visits: 'auto', syllabus: true, completed: 'card' } });
     render(<Settings />);
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Syllabus suggestions' }));
     await waitFor(async () => expect((await loadStore()).settings.syllabus).toBe(false));

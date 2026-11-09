@@ -143,8 +143,11 @@ export interface Settings {
   visits: VisitMode;
   /** Show dates found in syllabi as suggestions. */
   syllabus: boolean;
+  /** Where finished work shows on the Courses page: at the bottom of each course card, or in a "Done this week" section. */
+  completed: CompletedPlacement;
 }
-export const DEFAULT_SETTINGS: Settings = { visits: 'manual', syllabus: true };
+export type CompletedPlacement = 'card' | 'section';
+export const DEFAULT_SETTINGS: Settings = { visits: 'manual', syllabus: true, completed: 'card' };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;

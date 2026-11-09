@@ -21,6 +21,7 @@ function migrateSettings(v: unknown): Settings {
   return {
     visits: r.visits === 'auto' || r.visits === 'manual' || r.visits === 'off' ? r.visits : DEFAULT_SETTINGS.visits,
     syllabus: typeof r.syllabus === 'boolean' ? r.syllabus : DEFAULT_SETTINGS.syllabus,
+    completed: r.completed === 'card' || r.completed === 'section' ? r.completed : DEFAULT_SETTINGS.completed,
   };
 }
 

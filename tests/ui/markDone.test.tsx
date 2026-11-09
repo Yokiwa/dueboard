@@ -74,8 +74,8 @@ describe('mark done from course cards', () => {
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
   });
 
-  it('cards leave out done items that are already past due, and undated items', () => {
-    const oldDone = item('b:old', 'b:1', 'Old lab', '2026-11-02T23:59:00-05:00', { doneByUser: true });
+  it('cards leave out done items due more than 7 days ago, and undated items', () => {
+    const oldDone = item('b:old', 'b:1', 'Old lab', '2026-10-20T23:59:00-05:00', { doneByUser: true });
     const undated = item('b:quiz1', 'b:1', 'Quiz 1', null, { type: 'quiz' });
     withToast(<CoursesView dashboard={dash({ courses: [cs], items: [oldDone, p3, undated] })} now={NOW} />);
     const card = within(screen.getByRole('article', { name: 'CS 18000' }));

@@ -21,7 +21,7 @@ import { TodoView } from '../../ui/views/TodoView';
 import type { Dashboard } from '../../core/dashboard';
 import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
 import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
-import type { StoreShape } from '../../core/types';
+import type { CompletedPlacement, StoreShape } from '../../core/types';
 
 /** Oldest successful sync across platforms that have synced at least once. */
 export function lastSynced(store: StoreShape): string | null {
@@ -32,8 +32,8 @@ export function lastSynced(store: StoreShape): string | null {
   return times[0] ?? null;
 }
 
-function ViewBody({ view, dashboard, now, syllabus }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView }) {
-  if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} />;
+function ViewBody({ view, dashboard, now, syllabus, completed }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView; completed: CompletedPlacement }) {
+  if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} completed={completed} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
   return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;
 }
@@ -69,6 +69,7 @@ export function App() {
             dashboard={dashboard}
             now={now}
             syllabus={{ suggestions: syllabusSuggestions(store, dashboard, now), unreadable: unreadableSyllabi(store, dashboard) }}
+            completed={store.settings.completed}
           />
         </AppShell>
     </DoneToastProvider>

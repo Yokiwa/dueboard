@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Dashboard } from '../../core/dashboard';
-import type { Item } from '../../core/types';
+import type { CompletedPlacement, Item } from '../../core/types';
 
 const byDue = (a: Item, b: Item) =>
   (a.dueAt ? Date.parse(a.dueAt) : Number.POSITIVE_INFINITY) - (b.dueAt ? Date.parse(b.dueAt) : Number.POSITIVE_INFINITY);
@@ -8,9 +8,21 @@ import { Books } from '@phosphor-icons/react';
 import { useT } from '../i18n';
 import { CourseCard } from './CourseCard';
 import { CourseDetail } from './CourseDetail';
+import { DoneThisWeek } from './DoneThisWeek';
 import type { SyllabusView } from '../components/SyllabusSuggestions';
 
-export function CoursesView({ dashboard, now, syllabus }: { dashboard: Dashboard; now: Date; syllabus?: SyllabusView }) {
+export function CoursesView({
+  dashboard,
+  now,
+  syllabus,
+  completed = 'card',
+}: {
+  dashboard: Dashboard;
+  now: Date;
+  syllabus?: SyllabusView;
+  /** Where finished work shows: at the bottom of each card, or in the "Done this week" section. */
+  completed?: CompletedPlacement;
+}) {
   const t = useT();
   const [openId, setOpenId] = useState<string | null>(null);
   const open = dashboard.courses.find((c) => c.id === openId);
@@ -35,10 +47,12 @@ export function CoursesView({ dashboard, now, syllabus }: { dashboard: Dashboard
             items={itemsOf(c.id)}
             links={dashboard.links.filter((l) => l.courseId === c.id)}
             now={now}
+            showDone={completed === 'card'}
             onOpen={() => setOpenId(c.id)}
           />
         ))}
       </div>
+      {completed === 'section' && <DoneThisWeek courses={dashboard.courses} items={dashboard.items} now={now} />}
       {open && (
         <CourseDetail
           course={open}

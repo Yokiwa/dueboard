@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.4 — 2026-11
+
+- **Course cards keep their place**: courses are sorted by code instead of by their next deadline, so ticking off work no longer reshuffles the page
+- **Cards show the next 7 days**: unfinished work due in the next 7 days, soonest first; finished work moves to the bottom of the card. "Show next week" adds the following week's work
+- **Overdue work is off the cards**: a small "N overdue" line opens the course, whose detail now groups work as Overdue, Upcoming, No due date and Completed
+- Old homework no longer comes back as overdue: dates read from a title or a platform page more than 7 days ago are dropped like any other old item
+- **Settings → Finished work on the Courses page**: keep finished work at the bottom of each card, or list it in a separate "Done this week" section
+
 ## 1.2.3 — 2026-11
 
 - **Fewer visit windows on Refresh**: a due date read from a platform page is read again every 3 days while the due date is more than 3 days away, and daily in its last 3 days (it was daily for all). Most Refreshes now open no window. How pages are read is unchanged

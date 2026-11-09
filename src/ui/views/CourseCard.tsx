@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { displayName } from '../../core/courseName';
+import { cardView, nextWeeks } from '../../core/courseWeek';
 import type { Course, CourseLink, Item } from '../../core/types';
 import { useT } from '../i18n';
 import { ItemRow } from '../components/ItemRow';
@@ -6,24 +8,41 @@ import { LinkPill } from '../components/LinkPill';
 import { toggleDone } from '../../storage/store';
 import { CaretRight, WarningCircle } from '@phosphor-icons/react';
 
-const SHOWN = 3;
+const textBtn = 'db-press mt-1 cursor-pointer self-start rounded-sm border-0 bg-transparent p-0 body-5 text-db-accent hover:underline hover:underline-offset-4';
+const shortDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 export interface CourseCardProps {
   course: Course;
   items: Item[];
   links: CourseLink[];
   now: Date;
+  /** List this window's finished work at the bottom of the card (else it has its own section). */
+  showDone?: boolean;
   onOpen(): void;
 }
 
-export function CourseCard({ course, items, links, now, onOpen }: CourseCardProps) {
+export function CourseCard({ course, items, links, now, showDone = true, onOpen }: CourseCardProps) {
   const t = useT();
-  // Dated items that still matter: anything unfinished (overdue included), plus finished ones not yet past due,
-  // which stay in place with a tick. Undated items live in the course detail only.
-  const relevant = items.filter(
-    (i) => i.dueAt && ((!i.doneByUser && !i.submitted) || Date.parse(i.dueAt) > now.getTime()),
+  // The next 7 days of unfinished work (more after "Show next week"), then finished work at the bottom. Overdue work
+  // is only counted here and listed in the course detail; undated work lives in the detail only.
+  const [weeks, setWeeks] = useState(1);
+  const view = cardView(items, now, weeks, showDone);
+  const row = (i: Item) => (
+    <li key={i.id} className="flex items-center gap-3 border-t border-db-border-soft py-3">
+      <input
+        type="checkbox"
+        aria-label={t('done.mark', { title: i.title })}
+        checked={i.doneByUser || i.submitted}
+        disabled={i.submitted}
+        onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
+        className="size-4 shrink-0 cursor-pointer"
+      />
+      <div className="min-w-0 grow">
+        <ItemRow item={i} now={now} />
+      </div>
+    </li>
   );
-  const shown = relevant.slice(0, SHOWN);
+  const date = shortDate(view.until);
   const name = displayName(course);
   // Lecture videos etc. found in course content only appear in the detail view; the card keeps platform shortcuts.
   const shortcuts = links.filter((l) => l.category !== 'website' || l.source === 'manual');
@@ -60,30 +79,21 @@ export function CourseCard({ course, items, links, now, onOpen }: CourseCardProp
       </button>
 
       <div className="flex grow flex-col">
-        {shown.length > 0 ? (
-          <ul className="m-0 list-none p-0">
-            {shown.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 border-t border-db-border-soft py-3">
-                <input
-                  type="checkbox"
-                  aria-label={t('done.mark', { title: i.title })}
-                  checked={i.doneByUser || i.submitted}
-                  disabled={i.submitted}
-                  onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
-                  className="size-4 shrink-0 cursor-pointer"
-                />
-                <div className="min-w-0 grow">
-                  <ItemRow item={i} now={now} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="m-0 border-t border-db-border-soft py-4 body-6 text-db-faint">{t('course.empty')}</p>
+        {view.pending.length > 0 && <ul className="m-0 list-none p-0">{view.pending.map(row)}</ul>}
+        {view.pending.length === 0 && (
+          <p className="m-0 border-t border-db-border-soft py-4 body-6 text-db-faint">
+            {view.done.length > 0 ? t('course.allDone', { date }) : t('course.nothingDue', { date })}
+          </p>
         )}
-        {relevant.length > SHOWN && (
-          <button type="button" onClick={onOpen} className="db-press mt-1 cursor-pointer self-start rounded-sm border-0 bg-transparent p-0 body-5 text-db-accent hover:underline hover:underline-offset-4">
-            {t('course.more', { n: relevant.length - SHOWN })}
+        {view.hasLater && (
+          <button type="button" onClick={() => setWeeks(nextWeeks(items, now, weeks))} className={`${textBtn} mb-2`}>
+            {t('course.nextWeek', { n: view.nextCount })}
+          </button>
+        )}
+        {view.done.length > 0 && <ul className="m-0 list-none p-0">{view.done.map(row)}</ul>}
+        {view.overdue > 0 && (
+          <button type="button" onClick={onOpen} className="db-press mt-2 cursor-pointer self-start rounded-sm border-0 bg-transparent p-0 caption-4 text-db-faint hover:text-db-urgent-fg hover:underline hover:underline-offset-4">
+            {t('course.overdue', { n: view.overdue })}
           </button>
         )}
         {course.partial && (

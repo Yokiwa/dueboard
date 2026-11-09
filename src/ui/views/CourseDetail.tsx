@@ -12,6 +12,14 @@ import { ItemRow } from '../components/ItemRow';
 import { LinkPill } from '../components/LinkPill';
 import { SyllabusSuggestions } from '../components/SyllabusSuggestions';
 import type { Suggestion } from '../../core/syllabusSuggestions';
+import { detailGroups, type DetailGroups } from '../../core/courseWeek';
+
+const GROUPS: [keyof DetailGroups, MessageKey][] = [
+  ['overdue', 'detail.overdue'],
+  ['upcoming', 'detail.upcoming'],
+  ['undated', 'detail.undated'],
+  ['completed', 'detail.completed'],
+];
 
 const CATEGORIES: [LinkCategory, MessageKey][] = [
   ['lms', 'cat.lms'],
@@ -39,6 +47,7 @@ export function CourseDetail({ course, items, links, now, suggestions = [], syll
   const titleId = `detail-${course.id}`;
   const [adding, setAdding] = useState<'item' | 'link' | null>(null);
   const markDone = useMarkDone();
+  const groups = detailGroups(items, now);
 
   // Open as a real modal (backdrop, focus trap, Esc). Fall back to a plain open dialog where showModal is missing.
   useEffect(() => {
@@ -91,30 +100,39 @@ export function CourseDetail({ course, items, links, now, suggestions = [], syll
         {adding === 'item' && <ManualItemForm courses={[course]} courseId={course.id} onDone={() => setAdding(null)} />}
         {adding === 'link' && <ManualLinkForm courseId={course.id} onDone={() => setAdding(null)} />}
 
-        <section className="flex flex-col gap-2">
-          <h3 className="m-0 caption-3 tracking-wide text-db-muted">{t('detail.items')}</h3>
-          {items.length === 0 ? (
-            <p className="m-0 rounded-xl bg-db-subtle px-4 py-6 text-center body-6 text-db-faint">{t('detail.noItems')}</p>
-          ) : (
-            <ul className="m-0 list-none p-0">
-              {items.map((i) => (
-                <li key={i.id} data-testid="detail-item" className="flex items-center gap-3 border-t border-db-border-soft py-3">
-                  <input
-                    type="checkbox"
-                    aria-label={t('done.mark', { title: i.title })}
-                    checked={i.doneByUser || i.submitted}
-                    disabled={i.submitted}
-                    onChange={(e) => void (e.target.checked ? markDone(i) : toggleDone(i.sourceKeys, false))}
-                    className="size-4 shrink-0 cursor-pointer"
-                  />
-                  <div className="min-w-0 grow">
-                    <ItemRow item={i} now={now} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {items.length === 0 ? (
+          <p className="m-0 rounded-xl bg-db-subtle px-4 py-6 text-center body-6 text-db-faint">{t('detail.noItems')}</p>
+        ) : (
+          GROUPS.map(([key, label]) => {
+            const group = groups[key];
+            if (group.length === 0) return null;
+            const headingId = `${titleId}-${key}`;
+            return (
+              <section key={key} aria-labelledby={headingId} className="flex flex-col gap-2">
+                <h3 id={headingId} className={`m-0 caption-3 tracking-wide ${key === 'overdue' ? 'text-db-urgent-fg' : 'text-db-muted'}`}>
+                  {t(label)}
+                </h3>
+                <ul className="m-0 list-none p-0">
+                  {group.map((i) => (
+                    <li key={i.id} data-testid="detail-item" className="flex items-center gap-3 border-t border-db-border-soft py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={t('done.mark', { title: i.title })}
+                        checked={i.doneByUser || i.submitted}
+                        disabled={i.submitted}
+                        onChange={(e) => void (e.target.checked ? markDone(i) : toggleDone(i.sourceKeys, false))}
+                        className="size-4 shrink-0 cursor-pointer"
+                      />
+                      <div className="min-w-0 grow">
+                        <ItemRow item={i} now={now} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })
+        )}
 
         <SyllabusSuggestions suggestions={suggestions} courses={[course]} showCourse={false} />
         {syllabusUnreadable && <p className="m-0 caption-5 text-db-faint">{t('syllabus.unreadable')}</p>}
