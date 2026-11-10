@@ -63,7 +63,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
           <span className="caption-5 text-db-faint">{course?.code}</span>
         )}
       </div>
-      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
+      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} score={item.score} now={now} />
       {item.type === 'manual' && (
         <button
           type="button"

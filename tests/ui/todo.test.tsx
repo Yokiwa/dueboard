@@ -41,6 +41,15 @@ describe('TodoView', () => {
     expect(within(group('Today')).getByText('CS 18000')).toBeTruthy();
   });
 
+  it('shows the score of finished work in its badge', () => {
+    const scored = dash({
+      courses: [ma],
+      items: [item('brightspace:z', 'brightspace:2', 'Wiley HW', '2026-11-20T19:00:00-05:00', { doneByUser: true, score: { text: '18/25', from: 'WileyPLUS' } })],
+    });
+    renderIn('en', <TodoView dashboard={scored} now={NOW} />);
+    expect(screen.getByText('Done · 18/25')).toBeTruthy();
+  });
+
   it('checkbox toggles done via toggleDone(item.sourceKeys)', async () => {
     renderIn('en', <TodoView dashboard={d} now={NOW} />);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Project 3' }));

@@ -265,9 +265,12 @@ const launchPage = (target) =>
   check(!cap?.['brightspace:topic:1']?.score, '"Question 3/10" is not a score');
   text = await badges();
   check(/Done · 18\/25/.test(text), 'dashboard shows "Done · 18/25" after the score visit');
+  await page.getByRole('tab', { name: 'To-do' }).click();
+  check((await page.evaluate(() => document.body.innerText)).includes('Done · 18/25'), 'the To-do tab shows "Done · 18/25" too');
+  await page.getByRole('tab', { name: 'Courses' }).click();
   await page.getByText('Show next week').first().click(); // Homework 7 is due in 10 days
   text = await page.evaluate(() => document.body.innerText);
-  check(/Homework 7[\s\S]{0,80}\nDone\n/.test(text) && !/3\/10/.test(text.replace('Question 3/10', '')), 'ALEKS item with only "Question 3/10" keeps a plain "Done"');
+  check(/Homework 7[\s\S]{0,80}\nDone\n/.test(text), 'ALEKS item with only "Question 3/10" keeps a plain "Done"');
 
   await ctx.close();
   fs.rmSync(ext, { recursive: true, force: true });

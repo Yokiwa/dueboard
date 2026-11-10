@@ -23,7 +23,7 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 • Calendar: week and month views show which days pile up
 • To-do list: tick work off; submitted work is ticked automatically where the platform reports it
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
-• Due dates from other platforms (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and more): when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the "Due" line and closes it. You allow each platform once.
+• Due dates from other platforms (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and more): when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the "Due" line and closes it. It also opens the pages of finished work to read their score. You allow each platform once.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own: anything DueBoard can't read can be added by hand
 • Syncs every 30 minutes using the sessions already in your browser
