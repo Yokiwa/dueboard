@@ -51,6 +51,18 @@ describe('gradescope parser', () => {
     expect(items.map((i) => i.submitted)).toEqual([true, false, true, false]);
   });
 
+  it('reads the score from .submissionStatus--score, none when absent', () => {
+    const items = domGradescopeParser.course(course, '123456');
+    const hw = items.find((i) => i.title === 'Homework 1')!;
+    expect(hw.score).toEqual({ text: '18/20', earned: 18, possible: 20, from: 'Gradescope', evidence: '18.0 / 20.0' });
+    expect(items.find((i) => i.title === 'Participation')!.score).toBeUndefined();
+  });
+
+  it('no score when possible is zero', () => {
+    const html = course.replace('18.0 / 20.0', '5 / 0');
+    expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();
+  });
+
   it('course page without the table throws', () => {
     expect(() => domGradescopeParser.course('<html></html>', '1')).toThrow(GradescopeParseError);
   });

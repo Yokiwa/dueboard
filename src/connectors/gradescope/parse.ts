@@ -1,5 +1,6 @@
 import { extractCourseCode, normalizeTitle } from '../../core/courseCode';
-import type { RawCourse, RawItem } from '../../core/types';
+import { formatPoints } from '../../core/scoreText';
+import type { RawCourse, RawItem, Score } from '../../core/types';
 
 export const GS_BASE = 'https://www.gradescope.com';
 
@@ -82,6 +83,14 @@ function course(html: string, courseId: string): RawItem[] {
     const dueEl = [...row.querySelectorAll('time.submissionTimeChart--dueDate')].find((t) => !/^\s*late/i.test(t.textContent ?? ''));
     const status = row.querySelector('.submissionStatus');
     const submitted = Boolean(status?.querySelector('.submissionStatus--score')) || /submitted/i.test(text(status));
+    const scoreText = text(status?.querySelector('.submissionStatus--score'));
+    const sm = scoreText.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    const earned = sm ? Number(sm[1]) : NaN;
+    const possible = sm ? Number(sm[2]) : NaN;
+    const score: Score | undefined =
+      Number.isFinite(earned) && Number.isFinite(possible) && possible > 0
+        ? { text: formatPoints(earned, possible), earned, possible, from: 'Gradescope', evidence: scoreText }
+        : undefined;
     items.push({
       source: 'gradescope',
       sourceItemId: assignmentId ?? `title:${normalizeTitle(title)}`,
@@ -91,6 +100,7 @@ function course(html: string, courseId: string): RawItem[] {
       dueAt: parseGsDate(dueEl?.getAttribute('datetime') ?? null),
       url,
       submitted: submitted && !/no submission/i.test(text(status)),
+      ...(score ? { score } : {}),
     });
   }
   return items;
