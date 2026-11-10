@@ -175,9 +175,23 @@ function gradeScore(g: GradeValue): Score | null {
  */
 export function attachGrades(items: RawItem[], grades: GradeValue[], gradeIdOf: Map<string, string>): void {
   const idCount = new Map<string, number>();
+  for (const g of grades) idCount.set(g.GradeObjectIdentifier, (idCount.get(g.GradeObjectIdentifier) ?? 0) + 1);
+
+  // Pass 1: ids. An id-bearing item never falls back to its name; a claimed grade is not offered to name matching.
+  const claimed = new Set<string>();
+  for (const it of items) {
+    const gid = gradeIdOf.get(it.sourceItemId);
+    if (gid === undefined || idCount.get(gid) !== 1) continue;
+    const match = grades.find((g) => g.GradeObjectIdentifier === gid);
+    const score = match ? gradeScore(match) : null;
+    if (score) it.score = score;
+    claimed.add(gid);
+  }
+
+  // Pass 2: names, among unclaimed grades and items without a grade id.
   const nameCount = new Map<string, number>();
   for (const g of grades) {
-    idCount.set(g.GradeObjectIdentifier, (idCount.get(g.GradeObjectIdentifier) ?? 0) + 1);
+    if (claimed.has(g.GradeObjectIdentifier)) continue;
     const k = normalizeTitle(g.GradeObjectName);
     if (k) nameCount.set(k, (nameCount.get(k) ?? 0) + 1);
   }
@@ -187,13 +201,10 @@ export function attachGrades(items: RawItem[], grades: GradeValue[], gradeIdOf: 
     if (k) itemCount.set(k, (itemCount.get(k) ?? 0) + 1);
   }
   for (const it of items) {
-    const gid = gradeIdOf.get(it.sourceItemId);
-    let match: GradeValue | undefined;
-    if (gid !== undefined && idCount.get(gid) === 1) match = grades.find((g) => g.GradeObjectIdentifier === gid);
-    if (!match) {
-      const k = normalizeTitle(it.title);
-      if (k && itemCount.get(k) === 1 && nameCount.get(k) === 1) match = grades.find((g) => normalizeTitle(g.GradeObjectName) === k);
-    }
+    if (gradeIdOf.has(it.sourceItemId)) continue;
+    const k = normalizeTitle(it.title);
+    if (!k || itemCount.get(k) !== 1 || nameCount.get(k) !== 1) continue;
+    const match = grades.find((g) => !claimed.has(g.GradeObjectIdentifier) && normalizeTitle(g.GradeObjectName) === k);
     const score = match ? gradeScore(match) : null;
     if (score) it.score = score;
   }

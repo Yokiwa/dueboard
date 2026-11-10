@@ -394,6 +394,28 @@ describe('brightspace gradebook scores', () => {
     expect(items[1]!.score).toBeUndefined();
   });
 
+  it('an id-matched grade is not also attached to a same-named item', () => {
+    const items = [item('dropbox:7', 'Project 3'), item('quiz:1', 'Unit project')];
+    attachGrades(items, [grade('55', 'Unit project', 18, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toEqual(pts);
+    expect(items[1]!.score).toBeUndefined();
+  });
+  it('an ambiguous grade id gives no score and no name fallback', () => {
+    const items = [item('dropbox:7', 'Project 3')];
+    attachGrades(items, [grade('55', 'Project 3', 18, 20), grade('55', 'Other', 1, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toBeUndefined();
+  });
+  it('keeps a real zero score', () => {
+    const items = [item('a', 'Lab 1')];
+    attachGrades(items, [grade('1', 'Lab 1', 0, 20)], new Map());
+    expect(items[0]!.score).toEqual({ text: '0/20', earned: 0, possible: 20, from: 'Brightspace' });
+  });
+  it('a 404 on the grades request behaves like a 403', async () => {
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { status: 404, body: {} } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.partial).toEqual([]);
+    expect(result.items.some((i) => i.score)).toBe(false);
+  });
   it('a failing grades request leaves items alone and the course not partial', async () => {
     const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { status: 403, body: {} } }));
     if (!result.ok) throw new Error('expected ok');
