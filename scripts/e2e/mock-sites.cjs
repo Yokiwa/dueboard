@@ -160,26 +160,31 @@ async function startServer(mocks, { port = 0 } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dueboard-e2e-cert-'));
   const key = path.join(dir, 'key.pem');
   const cert = path.join(dir, 'cert.pem');
-  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=dueboard-e2e'], { stdio: 'ignore' });
-  const server = https.createServer({ key: fs.readFileSync(key), cert: fs.readFileSync(cert) }, (req, res) => {
-    const host = String(req.headers.host ?? '').replace(/:\d+$/, '');
-    const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers });
-    res.writeHead(out.status, out.headers);
-    res.end(out.body);
-  });
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', resolve);
-  });
-  return {
-    port: server.address().port,
-    close: () =>
-      new Promise((resolve) => {
-        server.close(() => resolve());
-        server.closeAllConnections?.();
-        fs.rmSync(dir, { recursive: true, force: true });
-      }),
-  };
+  try {
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=dueboard-e2e'], { stdio: 'ignore' });
+    const server = https.createServer({ key: fs.readFileSync(key), cert: fs.readFileSync(cert) }, (req, res) => {
+      const host = String(req.headers.host ?? '').replace(/:\d+$/, '');
+      const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers });
+      res.writeHead(out.status, out.headers);
+      res.end(out.body);
+    });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', resolve);
+    });
+    return {
+      port: server.address().port,
+      close: () =>
+        new Promise((resolve) => {
+          server.close(() => resolve());
+          server.closeAllConnections?.();
+          fs.rmSync(dir, { recursive: true, force: true });
+        }),
+    };
+  } catch (e) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    throw e;
+  }
 }
 
 module.exports = { createMocks, startServer };

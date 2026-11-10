@@ -8,40 +8,40 @@ const path = require('path');
 const { createMocks, startServer } = require('./e2e/mock-sites.cjs');
 const { BUILT, extensionCopy } = require('./e2e/extension.cjs');
 
-const fail = (msg) => {
-  console.error(`e2e frames: FAILED — ${msg}`);
-  process.exit(1);
-};
 const check = (ok, msg) => {
-  if (!ok) fail(msg);
+  if (!ok) throw new Error(msg); // the catch at the bottom cleans up, then exits 1
   console.log(`  ok  ${msg}`);
 };
 const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: r?.landed, found: r?.found, clicked: r?.clicked, frames: r?.frames?.length });
 
 (async () => {
-  if (!fs.existsSync(path.join(BUILT, 'manifest.json'))) fail('build first (npm run build)');
+  if (!fs.existsSync(path.join(BUILT, 'manifest.json'))) throw new Error('build first (npm run build)');
   const mocks = createMocks();
-  const server = await startServer(mocks);
-  const ext = extensionCopy();
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'dueboard-e2e-profile-'));
-  const ctx = await chromium.launchPersistentContext(profile, {
-    headless: true,
-    channel: 'chromium',
-    args: [
-      `--disable-extensions-except=${ext}`,
-      `--load-extension=${ext}`,
-      `--host-resolver-rules=MAP * 127.0.0.1:${server.port}`,
-      '--ignore-certificate-errors',
-      '--no-proxy-server', // dev containers set HTTPS_PROXY, which Chromium would use instead of the host mapping
-    ],
-  });
+  let server;
+  let ext;
+  let profile;
+  let ctx;
   const cleanup = async () => {
-    await ctx.close().catch(() => {});
-    await server.close();
-    fs.rmSync(ext, { recursive: true, force: true });
-    fs.rmSync(profile, { recursive: true, force: true });
+    await ctx?.close().catch(() => {});
+    await server?.close().catch(() => {});
+    if (ext) fs.rmSync(ext, { recursive: true, force: true });
+    if (profile) fs.rmSync(profile, { recursive: true, force: true });
   };
   try {
+    server = await startServer(mocks);
+    ext = extensionCopy();
+    profile = fs.mkdtempSync(path.join(os.tmpdir(), 'dueboard-e2e-profile-'));
+    ctx = await chromium.launchPersistentContext(profile, {
+      headless: true,
+      channel: 'chromium',
+      args: [
+        `--disable-extensions-except=${ext}`,
+        `--load-extension=${ext}`,
+        `--host-resolver-rules=MAP * 127.0.0.1:${server.port}`,
+        '--ignore-certificate-errors',
+        '--no-proxy-server', // dev containers set HTTPS_PROXY, which Chromium would use instead of the host mapping
+      ],
+    });
     let [sw] = ctx.serviceWorkers();
     if (!sw) sw = await ctx.waitForEvent('serviceworker', { timeout: 15000 });
     const logs = [];
@@ -50,6 +50,12 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     const id = new URL(sw.url()).host;
     const page = await ctx.newPage();
     await page.goto(`chrome-extension://${id}/dashboard.html`);
+    // Record every tab and window created from here on, so one opened and closed in between cannot go unseen.
+    await page.evaluate(() => {
+      window.__created = [];
+      chrome.tabs.onCreated.addListener((t) => window.__created.push(`tab ${t.id} ${t.url ?? ''}`));
+      chrome.windows.onCreated.addListener((w) => window.__created.push(`window ${w.id}`));
+    });
 
     const layout = () =>
       page.evaluate(async () => ({
@@ -67,20 +73,26 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     console.log(`  FrameResult: ${brief(found)}`);
     const expected = await page.evaluate(() => new Date(2026, 10, 20, 23, 59).toISOString());
     check(mocks.state.hits.framed > hitsBefore, 'the hidden frame reached the local server');
+    check(found?.frames?.length >= 1, `the result lists the frame (${found?.frames?.length})`);
     check(found?.status === 'found' && found.found?.dueAt === expected, `page that refuses framing was read (${found?.found?.title}, ${found?.found?.dueAt})`);
 
     console.log('e2e frames: same visit without begin()');
+    const hitsMid = mocks.state.hits.framed;
     const blocked = await probe('t2', target, false);
     console.log(`  FrameResult: ${brief(blocked)}`);
+    check(mocks.state.hits.framed > hitsMid, 'the server was reached again, so blocked comes from the refused frame and not the network');
     check(blocked?.status === 'blocked', `without the header rule the visit ends blocked (${blocked?.status})`);
 
     const after = await layout();
+    const created = await page.evaluate(() => window.__created);
+    check(created.length === 0, `no tab or window was created during the run (${created.join('; ') || 'none'})`);
     check(JSON.stringify(after) === JSON.stringify(before), `windows and tabs are the same (${before.windows} windows, ${before.tabs.length} tabs, before and after)`);
     if (process.env.E2E_DEBUG) console.log(logs.join('\n'));
     await cleanup();
     console.log('e2e frames: all checks passed');
   } catch (e) {
     await cleanup();
-    throw e;
+    console.error(`e2e frames: FAILED — ${e.stack || e}`);
+    process.exit(1);
   }
-})().catch((e) => fail(e.stack || String(e)));
+})();
