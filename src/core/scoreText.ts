@@ -25,7 +25,7 @@ const PENALTY_AFTER = /^\s*(?:\S+\s+){0,3}?(?:reduction|penalty|late|off)\b/i;
 /** A threshold written after a percentage ("70% required to pass"). */
 const THRESHOLD_AFTER = /^\s*(?:required|or higher|to pass|needed)\b/i;
 /** A label qualified by one of these words names a threshold, an average or a maximum, not the student's score. */
-const QUALIFIED_BEFORE = /\b(?:passing|minimum|min|average|avg|class|required|target|max|maximum|possible|total)\s*$/i;
+const QUALIFIED_BEFORE = /\b(?:passing|minimum|min|average|avg|class|required|target|max|maximum|possible)\s*(?:score|grade|points)?\s*:?\s*$/i;
 
 /** "18/20" and "1.5/25". */
 export function formatPoints(earned: number, possible: number): string {
@@ -49,7 +49,7 @@ function candidates(line: string): Candidate[] {
   const out: Candidate[] = [];
   for (const re of [FRACTION_UNIT, FRACTION_EARNED, FRACTION_LABELED]) {
     for (const m of matches(re, line)) {
-      if (re === FRACTION_LABELED && QUALIFIED_BEFORE.test(line.slice(0, m.index))) continue;
+      if (QUALIFIED_BEFORE.test(line.slice(0, m.index))) continue;
       const earned = Number(m[1]);
       const possible = Number(m[2]);
       if (!(possible > 0) || earned > possible * MAX_OVER) continue;

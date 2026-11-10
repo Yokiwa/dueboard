@@ -47,6 +47,7 @@ describe('findScore', () => {
     'Question 3 of 10 points', 'Step 2 of 5 pts',
     'Passing score: 70%', 'Minimum grade 80%', 'Average score: 15/25', 'Grade 70% required to pass',
     'Score: 11/10/2026',
+    'Class average: 15 / 25 points', 'Passing: 20 / 25 points', 'Minimum 18/25 pts',
   ];
   it.each(rejected)('rejects %s', (line) => {
     expect(findScore([line], 'X')).toBeNull();
@@ -57,8 +58,14 @@ describe('findScore', () => {
     expect(findScore(['30 / 20 points'], 'X')?.text).toBe('30/20');
     expect(findScore(['Your score: 18 / 25 points'], 'X')?.text).toBe('18/25');
   });
-  it('gives null for two different labeled scores', () => {
-    expect(findScore(['Your score: 18 / 25 points', 'Class average: 15 / 25 points'], 'X')).toBeNull();
+  it('ignores a class average next to the own score', () => {
+    expect(findScore(['Your score: 18 / 25 points', 'Class average: 15 / 25 points'], 'X')?.text).toBe('18/25');
+  });
+  it('keeps a total label', () => {
+    expect(findScore(['Total score: 18/20'], 'X')?.text).toBe('18/20');
+  });
+  it('gives null for two different unqualified scores', () => {
+    expect(findScore(['Score: 18/25', '20 / 25 points'], 'X')).toBeNull();
   });
   it('accepts the same score repeated', () => {
     expect(findScore(['18 / 25 points', 'Score: 18/25'], 'X')?.text).toBe('18/25');
