@@ -632,6 +632,21 @@ describe('due dates written in the homework title', () => {
   });
 });
 
+describe('score-only captured entries', () => {
+  it('do not hide a title-captured date, and still give the score', () => {
+    const i = input({
+      snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [item({ source: 'brightspace', sourceItemId: 'topic:7', sourceCourseId: '1', title: 'HW 7', dueAt: null, submitted: true })]) },
+    });
+    i.captured = {
+      'title:hw7': { title: 'HW 7', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
+      'brightspace:topic:7': { itemKey: 'brightspace:topic:7', title: 'HW 7', dueAt: null, platform: 'wileyplus', via: 'visit', checkedAt: 'x', score: { text: '18/25', from: 'WileyPLUS' }, scoreCheckedAt: 'x' },
+    };
+    const it = buildDashboard(i, now).items[0]!;
+    expect(it.dueAt).toBe('2026-11-10T04:59:00.000Z');
+    expect(it.score?.text).toBe('18/25');
+  });
+});
+
 describe('scores', () => {
   const sc = (text: string, from: string) => ({ text, from });
   const bsItem = (p: Partial<RawItem> = {}) =>

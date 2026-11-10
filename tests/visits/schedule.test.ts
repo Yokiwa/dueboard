@@ -209,10 +209,17 @@ describe('dueVisits: signing back in to Gradescope through any course', () => {
   });
 });
 
+describe('score-only entries', () => {
+  it('an unfinished item with only a score-only entry is a due-visit candidate at once', () => {
+    const c = cap(1, { checkedAt: ago(1), score: { text: '1/2', from: 'ALEKS' }, scoreCheckedAt: ago(1) });
+    expect(keys(store([topic(1)], c))).toEqual(['brightspace:topic:1']);
+  });
+});
+
 describe('scoreVisits', () => {
   const dueAgo = (d: number) => new Date(now.getTime() - d * 24 * H).toISOString();
   const wiley = (n: number, p: Partial<RawItem> = {}) => topic(n, `WileyPLUS HW ${n}`, { submitted: true, dueAt: dueAgo(2), ...p });
-  const sk = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => scoreVisits(s, now, trigger, granted, ).map((t) => t.key);
+  const sk = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => scoreVisits(s, now, trigger, granted).map((t) => t.key);
   const K = 'brightspace:topic:1';
 
   it('targets a submitted platform homework with a launch', () => {

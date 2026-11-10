@@ -5,7 +5,7 @@ import { platformByHost, platformById, platformByTitle } from '../core/platformR
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
-import type { CapturedDue, RawItem, Score, StoreShape } from '../core/types';
+import { isScoreOnly, type CapturedDue, type RawItem, type Score, type StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
 
 export { applyOutcomes } from './apply';
@@ -41,7 +41,7 @@ export const MAX_VISITS = 25;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {
-  if (!c) return 0;
+  if (!c || isScoreOnly(c)) return 0;
   if (c.blocked) return originAllowed(granted, c.blocked) ? 0 : null;
   if (c.dueAt && Date.parse(c.dueAt) < now) return null;
   const age = now - Date.parse(c.checkedAt);

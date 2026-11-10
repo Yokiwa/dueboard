@@ -2,6 +2,7 @@ import { platformById } from './platformRegistry';
 import { findDueMatches } from './dueText';
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
 import { classifyLink } from './links';
+import { isScoreOnly } from './types';
 import type {
   Course,
   CourseLink,
@@ -220,7 +221,7 @@ function fillFromTitle(m: Item, now: Date): void {
 function fillFromCaptured(m: Item, captured: StoreShape['captured'] | undefined): void {
   if (!captured) return;
   // An item with its own visit record uses only that; a title match could be another course's homework.
-  const own = m.sourceKeys.map((k) => captured[k]).filter((x) => x !== undefined);
+  const own = m.sourceKeys.map((k) => captured[k]).filter((x): x is NonNullable<typeof x> => x !== undefined && !isScoreOnly(x));
   const c = own.length ? own.find((x) => x.dueAt) : captured[`title:${normalizeTitle(m.title)}`];
   if (!c?.dueAt) return;
   m.dueAt = c.dueAt;

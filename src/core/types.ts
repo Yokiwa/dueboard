@@ -206,6 +206,14 @@ export interface CapturedDue {
   scoreCheckedAt?: string;
 }
 
+/**
+ * An entry only a score visit created: no date, and none of the counters every due-date outcome sets. It says
+ * nothing about the due date, so date lookups and visit scheduling treat it as absent.
+ */
+export function isScoreOnly(c: CapturedDue): boolean {
+  return c.dueAt === null && c.misses === undefined && c.failures === undefined && c.blocked === undefined;
+}
+
 export interface StoreShape {
   schemaVersion: 1;
   snapshots: Partial<Record<SourceId, Snapshot>>;

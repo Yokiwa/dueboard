@@ -82,6 +82,7 @@ export function applyOutcomes(
 /**
  * After an update: forget visits that found no date (misses, failures, blocks), so the new version reads those
  * homeworks again on the next sync instead of waiting out the old backoff. Found dates and page captures stay.
+ * Also drops score-only entries (no date, no counters); the score is re-read on the next Refresh.
  */
 export function forgetUnfoundVisits(captured: StoreShape['captured']): StoreShape['captured'] {
   return Object.fromEntries(Object.entries(captured).filter(([, c]) => !(c.via === 'visit' && !c.dueAt)));
