@@ -89,12 +89,11 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
 
   /** run(), but a throw becomes a failed outcome for this target (if none was reported yet) and the slot is freed. */
   async function guarded(t: VisitTarget): Promise<void> {
-    const before = results.length;
     try {
       await run(t);
     } catch (e) {
       console.warn('DueBoard: frame visit failed', e);
-      if (results.some((d) => d.target === t) || results.length > before) return;
+      if (results.some((d) => d.target === t)) return;
       const outcome: VisitOutcome = { key: t.key, status: 'failed', reason: 'frame' };
       const log: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, opened: stripUrl(t.launchUrl), frames: [], result: 'failed', detail: 'frame', mode: 'frame' };
       await finish({ target: t, outcome, fallback: true, listed: [], log });

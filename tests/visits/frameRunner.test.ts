@@ -98,6 +98,27 @@ describe('runFrameVisits', () => {
     warn.mockRestore();
   });
 
+  it('reports a throwing target once as failed/frame even when a sibling finished while it ran', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const f = fake();
+    const done: FrameVisitDone[] = [];
+    const p = runFrameVisits([target(1, { platform: 'a' }), target(2, { platform: 'b' })], f.api, { ...base({ done }), concurrency: 3 });
+    await tick();
+    f.pending.find((x) => urlN(x.req) === 2)!.resolve(res());
+    await tick();
+    expect(done.map((d) => d.target.key)).toEqual(['brightspace:topic:2']);
+    f.pending.find((x) => urlN(x.req) === 1)!.resolve({ status: 'none', host: 'h', listed: [], frames: null } as unknown as FrameResult);
+    const out = await p;
+    expect(out.filter((d) => d.target.key === 'brightspace:topic:1')).toHaveLength(1);
+    const a = out.find((d) => d.target.key === 'brightspace:topic:1')!;
+    expect(a.outcome).toEqual({ key: 'brightspace:topic:1', status: 'failed', reason: 'frame' });
+    expect(a.fallback).toBe(true);
+    expect(out.find((d) => d.target.key === 'brightspace:topic:2')!.outcome.status).toBe('none');
+    expect(out).toHaveLength(2);
+    expect(f.calls.at(-1)).toBe('end');
+    warn.mockRestore();
+  });
+
   it('runs at most 3 at once, in input order', async () => {
     const f = fake();
     const p = runFrameVisits([1, 2, 3, 4, 5].map((n) => target(n)), f.api, base());
