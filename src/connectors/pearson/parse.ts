@@ -1,4 +1,4 @@
-import type { ItemType, RawItem } from '../../core/types';
+import type { ItemType, RawItem, Score } from '../../core/types';
 
 export const PEARSON_ASSIGNMENTS_URL = 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all';
 
@@ -12,6 +12,29 @@ export class PearsonParseError extends Error {
 export interface PearsonPage {
   courseId: string;
   items: RawItem[];
+  /** Rows whose score cell still holds a "see score" link (plain data: it crosses runtime.sendMessage). */
+  scoreCells: { itemId: string; cellId: string; dueAt: string }[];
+  /** Every named input of #aspnetForm, as WebForm_InitCallback collects them. */
+  form: Record<string, string>;
+}
+
+/** A percentage ("92 %" → "92%"); anything else is not trusted as a score. */
+function percent(raw: string): string | null {
+  const m = raw.replace(/\s+/g, ' ').trim().match(/^(\d{1,3}(?:\.\d+)?)\s?%$/);
+  return m ? `${m[1]}%` : null;
+}
+
+/**
+ * The callback answer: `[<n>|<n characters of event validation>]s<type>_<id>_<IV>_<category>_<average>_<score>`.
+ * Returns the score, or null for an error, a sign-in page or anything of another shape.
+ */
+export function parseScoreAnswer(body: string): string | null {
+  let rest = body.trim();
+  const v = rest.match(/^(\d+)\|/);
+  if (v) rest = rest.slice(v[0].length + Number(v[1]));
+  if (!rest.startsWith('s')) return null;
+  const parts = rest.slice(1).split('_');
+  return parts.length === 6 ? percent(parts[5]!) : null;
 }
 
 const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -43,6 +66,7 @@ export function parsePearson(html: string): PearsonPage {
   const courseId = html.match(/courseId\s*:\s*'(\d+)'/)?.[1] ?? html.match(/courseId'\s*:\s*'(\d+)'/)?.[1] ?? 'mylab';
 
   const items: RawItem[] = [];
+  const scoreCells: PearsonPage['scoreCells'] = [];
   for (const row of table.querySelectorAll('tr')) {
     const dateCell = row.querySelector('td div');
     const nameCell = row.querySelector('th[scope="row"]');
@@ -56,6 +80,17 @@ export function parsePearson(html: string): PearsonPage {
     const kind = nameCell.querySelector('i[title]')?.getAttribute('title')?.toLowerCase() ?? 'homework';
     const workable = /^javascript:do\w+\(/.test(href);
     const pastDue = /\bpast\b/.test(dateCell.className);
+    const cell = [...row.querySelectorAll('div[id]')].find((d) => /^[A-Z]_\d+_/.test(d.id));
+    const cellId = cell?.id ?? '';
+    let score: Score | undefined;
+    if (cell && /^[A-Z]_\d+_/.test(cellId)) {
+      if (cell.querySelector('a')) {
+        if (/see score/i.test(text(cell))) scoreCells.push({ itemId: id, cellId, dueAt });
+      } else {
+        const shown = percent(text(cell));
+        if (shown) score = { text: shown, from: 'Pearson' };
+      }
+    }
     items.push({
       source: 'pearson',
       sourceItemId: id,
@@ -65,7 +100,16 @@ export function parsePearson(html: string): PearsonPage {
       dueAt,
       url: PEARSON_ASSIGNMENTS_URL,
       submitted: pastDue && !workable,
+      ...(score ? { score } : {}),
     });
   }
-  return { courseId, items };
+  const form: Record<string, string> = {};
+  for (const input of doc.querySelectorAll('#aspnetForm input[name]')) {
+    const name = input.getAttribute('name')!;
+    const type = (input.getAttribute('type') ?? 'text').toLowerCase();
+    if (['submit', 'button', 'image', 'file', 'reset'].includes(type)) continue;
+    if ((type === 'checkbox' || type === 'radio') && !input.hasAttribute('checked')) continue;
+    form[name] = input.getAttribute('value') ?? '';
+  }
+  return { courseId, items, scoreCells, form };
 }

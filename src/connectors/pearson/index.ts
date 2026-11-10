@@ -1,11 +1,17 @@
 import type { Connector, ConnectorResult } from '../../core/types';
-import { PEARSON_ASSIGNMENTS_URL, type PearsonPage } from './parse';
+import { PEARSON_ASSIGNMENTS_URL, parseScoreAnswer, type PearsonPage } from './parse';
+import { createLimiter } from '../limit';
 
 export interface PearsonOptions {
   /** Runs parsePearson where a DOM exists (offscreen document in the service worker). */
   parse(html: string): Promise<PearsonPage>;
   fetchImpl?: typeof fetch;
+  /** For the dashboard-window check on score requests. */
+  now?: () => Date;
 }
+
+const DAY = 86_400_000;
+const MAX_SCORE_REQUESTS = 10;
 
 const SIGN_IN = /sign\s*in|log\s*in|session (has )?expired|signin|piapi\/login/i;
 
@@ -15,6 +21,38 @@ const SIGN_IN = /sign\s*in|log\s*in|session (has )?expired|signin|piapi\/login/i
  */
 export function createPearsonConnector(opts: PearsonOptions): Connector {
   const fetchImpl = opts.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  /** The same read-only callback the "see score" link sends. Failures leave the row without a score. */
+  async function addScores(page: PearsonPage) {
+    const cutoff = (opts.now?.() ?? new Date()).getTime() - 7 * DAY;
+    const targets = (page.scoreCells ?? [])
+      .filter((c) => new Date(c.dueAt).getTime() > cutoff)
+      .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+      .slice(0, MAX_SCORE_REQUESTS);
+    if (!targets.length) return;
+    const url = new URL('./DoAssignments.aspx?view=all', PEARSON_ASSIGNMENTS_URL).href;
+    const limit = createLimiter(2);
+    await Promise.all(
+      targets.map((t) =>
+        limit(async () => {
+          try {
+            const res = await fetchImpl(url, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+              body: new URLSearchParams({ ...page.form, __CALLBACKID: '__Page', __CALLBACKPARAM: t.cellId }).toString(),
+              signal: AbortSignal.timeout(10_000),
+            });
+            if (!res.ok) return;
+            const score = parseScoreAnswer(await res.text());
+            const item = page.items.find((i) => i.sourceItemId === t.itemId);
+            if (score && item) item.score = { text: score, from: 'Pearson' };
+          } catch {
+            /* no score; the sync still succeeds */
+          }
+        }),
+      ),
+    );
+  }
   async function fetchAll(): Promise<ConnectorResult> {
     let res: Response;
     try {
@@ -38,6 +76,7 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
     }
     try {
       const page = await opts.parse(html);
+      await addScores(page);
       return {
         ok: true,
         courses: [{ source: 'pearson', sourceCourseId: page.courseId, name: 'Pearson MyLab', code: null, url: PEARSON_ASSIGNMENTS_URL }],
