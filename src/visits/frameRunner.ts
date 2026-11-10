@@ -1,4 +1,3 @@
-import type { FoundDue } from './finders/types';
 import type { FrameApi } from './frame/api';
 import type { FrameResult, FrameVisitRequest } from './frame/protocol';
 import { stripUrl } from './messages';
@@ -55,8 +54,9 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
     results.push(d);
     try {
       await opts.onDone(d);
-    } catch {
-      // A failing consumer must not stall the run.
+    } catch (e) {
+      // A failing consumer must not stall the run, but a result that was not saved should not vanish silently.
+      console.warn('DueBoard: could not record a visit result', e);
     }
   };
 
@@ -72,7 +72,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
           active.add(group);
           inflight++;
           started++;
-          void run(t).finally(() => {
+          void guarded(t).finally(() => {
             active.delete(group);
             inflight--;
             pump();
@@ -87,6 +87,20 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
   }
   return results;
 
+  /** run(), but a throw becomes a failed outcome for this target (if none was reported yet) and the slot is freed. */
+  async function guarded(t: VisitTarget): Promise<void> {
+    const before = results.length;
+    try {
+      await run(t);
+    } catch (e) {
+      console.warn('DueBoard: frame visit failed', e);
+      if (results.some((d) => d.target === t) || results.length > before) return;
+      const outcome: VisitOutcome = { key: t.key, status: 'failed', reason: 'frame' };
+      const log: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, opened: stripUrl(t.launchUrl), frames: [], result: 'failed', detail: 'frame', mode: 'frame' };
+      await finish({ target: t, outcome, fallback: true, listed: [], log });
+    }
+  }
+
   async function run(t: VisitTarget): Promise<void> {
     const req: FrameVisitRequest = { token: newToken(), url: t.launchUrl, mode: t.mode };
     if (t.platform) req.platform = t.platform;
@@ -97,7 +111,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
 
     // Titles listed on this page: this target's own date turns a "nothing here" into a date; the other waiting targets
     // are dated without a visit of their own.
-    const listed: { target: VisitTarget; outcome: VisitOutcome & { status: 'found' }; found: FoundDue }[] = [];
+    const listed: { target: VisitTarget; outcome: VisitOutcome & { status: 'found' } }[] = [];
     if (res.host !== undefined) {
       for (const l of res.listed) {
         if (l.key === t.key) {
@@ -110,7 +124,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
         const j = waiting.findIndex((w) => w.key === l.key);
         if (j < 0) continue;
         const other = waiting.splice(j, 1)[0]!;
-        listed.push({ target: other, outcome: { key: other.key, status: 'found', found: l.found, host: res.host }, found: l.found });
+        listed.push({ target: other, outcome: { key: other.key, status: 'found', found: l.found, host: res.host } });
       }
     }
 
@@ -136,13 +150,13 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
       case 'blocked':
         return failed();
       default:
-        // A result that read a page names its host; without one it cannot be trusted.
-        if (r.host === undefined) return { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true };
+        // A result that read a page names its host; without one it is treated like blocked.
+        if (r.host === undefined) return failed();
     }
     const host = r.host;
     switch (r.status) {
       case 'found':
-        return r.found ? { outcome: { key, status: 'found', found: r.found, host }, fallback: false } : { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true };
+        return r.found ? { outcome: { key, status: 'found', found: r.found, host }, fallback: false } : failed();
       case 'none':
         return { outcome: { key, status: 'none', host }, fallback: true };
       case 'text':

@@ -32,27 +32,49 @@ async function askOffscreen<T>(msg: Record<string, unknown>): Promise<T | undefi
   return (await browser.runtime.sendMessage({ target: 'offscreen', ...msg })) as T | undefined;
 }
 
-/** How many callers have begun without ending: the header rule is on while this is above 0. */
-let users = 0;
-let enabling: Promise<void> = Promise.resolve();
+/**
+ * Each begin() takes a hold, stamped with the generation it was taken in; the header rule is on while any hold of the
+ * current generation exists. reset() starts a new generation, so an end() that belongs to a run from before the reset
+ * only gives back its stale hold and never drops one taken after it. begin, end and reset run one after another, so an
+ * enable and a disable never interleave.
+ */
+let generation = 0;
+const holds: number[] = [];
+let chain: Promise<void> = Promise.resolve();
+const serial = <T>(work: () => Promise<T>): Promise<T> => {
+  const r = chain.then(work, work);
+  chain = r.then(
+    () => undefined,
+    () => undefined,
+  );
+  return r;
+};
+const current = () => holds.filter((g) => g === generation).length;
 
 export function createFrameApi(): FrameApi {
   return {
-    async begin() {
-      users++;
-      if (users === 1) enabling = enableFrameHeaders();
-      try {
-        await enabling;
-      } catch (e) {
-        users = Math.max(0, users - 1);
-        throw e;
-      }
-    },
-    async end() {
-      if (users === 0) return;
-      users--;
-      if (users === 0) await disableFrameHeaders();
-    },
+    begin: () =>
+      serial(async () => {
+        holds.push(generation);
+        if (current() !== 1) return;
+        try {
+          await enableFrameHeaders();
+        } catch (e) {
+          holds.pop();
+          throw e;
+        }
+      }),
+    end: () =>
+      serial(async () => {
+        const stale = holds.findIndex((g) => g !== generation);
+        if (stale >= 0) {
+          holds.splice(stale, 1);
+          return;
+        }
+        if (holds.length === 0) return;
+        holds.pop();
+        if (holds.length === 0) await disableFrameHeaders();
+      }),
     async visit(req) {
       try {
         if (IS_FIREFOX) return await getBackgroundFrameHost().visit(req);
@@ -64,8 +86,10 @@ export function createFrameApi(): FrameApi {
       }
     },
     async reset() {
-      users = 0;
-      await disableFrameHeaders();
+      await serial(async () => {
+        generation++;
+        await disableFrameHeaders();
+      });
       if (IS_FIREFOX) {
         backgroundHost?.reset();
         return;

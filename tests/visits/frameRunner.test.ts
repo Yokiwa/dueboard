@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { runFrameVisits, type FrameVisitDone } from '../../src/visits/frameRunner';
 import type { FrameApi } from '../../src/visits/frame/api';
 import type { FrameResult, FrameVisitRequest } from '../../src/visits/frame/protocol';
@@ -68,7 +68,8 @@ describe('runFrameVisits', () => {
     expect(f.calls.at(-1)).toBe('end');
   });
 
-  it('ends when onDone throws, and goes on', async () => {
+  it('keeps going and warns when onDone throws', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const f = fake(() => res());
     const out = await runFrameVisits([target(1), target(2)], f.api, {
       ...base(),
@@ -78,6 +79,23 @@ describe('runFrameVisits', () => {
     });
     expect(out).toHaveLength(2);
     expect(f.calls.at(-1)).toBe('end');
+    expect(warn).toHaveBeenCalledWith('DueBoard: could not record a visit result', expect.any(Error));
+    warn.mockRestore();
+  });
+
+  it('reports a failed/frame outcome with fallback and frees the slot when handling a result throws', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const f = fake((r) => (urlN(r) === 1 ? ({ status: 'none', host: 'h', listed: [], frames: null } as unknown as FrameResult) : res()));
+    const done: FrameVisitDone[] = [];
+    const out = await runFrameVisits([1, 2].map((n) => target(n)), f.api, { ...base({ done }), concurrency: 1 });
+    expect(out).toHaveLength(2);
+    const d1 = out.find((d) => d.target.key === 'brightspace:topic:1')!;
+    expect(d1.outcome).toEqual({ key: 'brightspace:topic:1', status: 'failed', reason: 'frame' });
+    expect(d1.fallback).toBe(true);
+    expect(d1.log).toMatchObject({ mode: 'frame', result: 'failed' });
+    expect(done).toHaveLength(2);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('runs at most 3 at once, in input order', async () => {
@@ -162,10 +180,21 @@ describe('runFrameVisits', () => {
       expect(d.outcome).toEqual({ key, status: 'signed_out' });
       expect(d.fallback).toBe(false);
     });
-    it('a hello-bearing result without a host is blocked', async () => {
+    it('a hello-bearing result without a host is handled like blocked', async () => {
       const d = await run(res({ status: 'none', host: undefined }));
       expect(d.outcome).toEqual({ key, status: 'failed', reason: 'frame' });
       expect(d.fallback).toBe(true);
+      const s = await run(res({ status: 'text', host: undefined }), { signedIn: false });
+      expect(s.outcome).toEqual({ key, status: 'signed_out' });
+      expect(s.fallback).toBe(false);
+    });
+    it('found without a payload is handled like blocked', async () => {
+      const d = await run(res({ status: 'found' }));
+      expect(d.outcome).toEqual({ key, status: 'failed', reason: 'frame' });
+      expect(d.fallback).toBe(true);
+      const s = await run(res({ status: 'found' }), { signedIn: false });
+      expect(s.outcome).toEqual({ key, status: 'signed_out' });
+      expect(s.fallback).toBe(false);
     });
   });
 

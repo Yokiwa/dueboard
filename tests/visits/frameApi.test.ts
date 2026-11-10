@@ -17,7 +17,9 @@ describe('frame api (Chrome)', () => {
     b.runtime.sendMessage = send;
     b.runtime.getContexts = getContexts;
     b.runtime.getURL = (p: string) => `chrome-extension://abc${p}`;
+    // Drop every hold an earlier test left: reset makes them stale, and each end() gives one stale hold back.
     await createFrameApi().reset();
+    for (let i = 0; i < 10; i++) await createFrameApi().end();
     update.mockClear();
     send.mockClear();
     getContexts.mockClear();
@@ -69,5 +71,26 @@ describe('frame api (Chrome)', () => {
     send.mockRejectedValue(new Error('Receiving end does not exist'));
     const r = await createFrameApi().visit({ token: 't', url: 'https://x.test/', mode: 'due' });
     expect(r).toEqual({ status: 'blocked', listed: [], frames: [], clicked: [], pages: [] });
+  });
+
+  it('end() followed at once by begin() leaves the rule enabled', async () => {
+    const api = createFrameApi();
+    await api.begin();
+    update.mockClear();
+    await Promise.all([api.end(), api.begin()]);
+    const calls = update.mock.calls.map((c) => ((c[0] as { addRules?: unknown[] }).addRules ? 'on' : 'off'));
+    expect(calls).toEqual(['off', 'on']);
+  });
+
+  it('an end() from before a reset does not drop a hold taken after it', async () => {
+    const api = createFrameApi();
+    await api.begin();
+    await api.reset();
+    await api.begin();
+    update.mockClear();
+    await api.end();
+    expect(update).not.toHaveBeenCalled();
+    await api.end();
+    expect(update).toHaveBeenCalledWith({ removeRuleIds: [FRAME_RULE_ID] });
   });
 });
