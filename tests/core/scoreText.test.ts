@@ -43,11 +43,20 @@ describe('findScore', () => {
     '50% score reduction after third attempt',
     'Score: 10% late penalty',
     '31 / 20 points', '5 / 0 points',
+    'Result: 100%', 'Mark 50%', 'Points: 50%',
+    'Question 3 of 10 points', 'Step 2 of 5 pts',
+    'Passing score: 70%', 'Minimum grade 80%', 'Average score: 15/25', 'Grade 70% required to pass',
+    'Score: 11/10/2026',
   ];
   it.each(rejected)('rejects %s', (line) => {
     expect(findScore([line], 'X')).toBeNull();
   });
 
+  it('normalizes decimals and pins the strict 1.5x rule', () => {
+    expect(findScore(['18.0 / 20.0 points'], 'X')?.text).toBe('18/20');
+    expect(findScore(['30 / 20 points'], 'X')?.text).toBe('30/20');
+    expect(findScore(['Your score: 18 / 25 points'], 'X')?.text).toBe('18/25');
+  });
   it('gives null for two different labeled scores', () => {
     expect(findScore(['Your score: 18 / 25 points', 'Class average: 15 / 25 points'], 'X')).toBeNull();
   });
