@@ -28,7 +28,7 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
       .filter((c) => new Date(c.dueAt).getTime() > cutoff)
       .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
       .slice(0, MAX_SCORE_REQUESTS);
-    if (!targets.length) return;
+    if (!targets.length || !Object.keys(page.form ?? {}).length) return;
     const url = new URL('./DoAssignments.aspx?view=all', PEARSON_ASSIGNMENTS_URL).href;
     const limit = createLimiter(2);
     await Promise.all(
@@ -43,7 +43,7 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
               signal: AbortSignal.timeout(10_000),
             });
             if (!res.ok) return;
-            const score = parseScoreAnswer(await res.text());
+            const score = parseScoreAnswer(await res.text(), t.cellId);
             const item = page.items.find((i) => i.sourceItemId === t.itemId);
             if (score && item) item.score = { text: score, from: 'Pearson' };
           } catch {

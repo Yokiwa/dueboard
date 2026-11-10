@@ -125,12 +125,21 @@ describe('pearson scores', () => {
   });
 
   it('parseScoreAnswer', () => {
-    expect(parseScoreAnswer('sH_100_IVF_2_False_92%')).toBe('92%');
-    expect(parseScoreAnswer('12|abcdefghijklsH_100_IVF_2_False_92%')).toBe('92%');
-    expect(parseScoreAnswer('sH_100_IVF_2_False_92 %')).toBe('92%');
-    expect(parseScoreAnswer('eError')).toBeNull();
-    expect(parseScoreAnswer('sH_100_92%')).toBeNull();
-    expect(parseScoreAnswer('<html>Sign in</html>')).toBeNull();
+    const id = 'H_100_IVF_2_False';
+    expect(parseScoreAnswer('sH_100_IVF_2_False_92%', id)).toBe('92%');
+    expect(parseScoreAnswer('12|abcdefghijklsH_100_IVF_2_False_92%', id)).toBe('92%');
+    expect(parseScoreAnswer('sH_100_IVF_2_False_92 %', id)).toBe('92%');
+    expect(parseScoreAnswer('sH_100_IVF_2_False_105%', id)).toBe('105%');
+    expect(parseScoreAnswer('sH_100_IVF_2_False_999%', id)).toBeNull();
+    expect(parseScoreAnswer('eError', id)).toBeNull();
+    expect(parseScoreAnswer('sH_100_92%', id)).toBeNull();
+    expect(parseScoreAnswer('sH_999_IVF_2_False_92%', id)).toBeNull();
+    expect(parseScoreAnswer('<html>Sign in</html>', id)).toBeNull();
+  });
+
+  it('collects selects and textareas, skips disabled controls', () => {
+    const html = scores.replace('<input type="submit" id="nameless">', '<select name="S"><option value="a">A</option><option value="b" selected>B</option></select><textarea name="T">hi</textarea><input type="hidden" name="D" value="x" disabled>');
+    expect(parsePearson(html).form).toEqual({ __VIEWSTATE: 'VS', __EVENTTARGET: '', S: 'b', T: 'hi' });
   });
 
   interface Call { url: string; init?: RequestInit }
@@ -189,5 +198,43 @@ describe('pearson scores', () => {
       expect(r.items).toHaveLength(3);
       expect(r.items.find((i) => i.sourceItemId === '100')!.score).toBeUndefined();
     }
+  });
+
+  const postsOf = (s: { calls: { url: string; init?: RequestInit }[] }) => s.calls.filter((c) => c.init?.method === 'POST');
+
+  it('a crossed answer for another assignment gives no score', async () => {
+    const r = await make(spy(() => 'sH_999_IVF_2_False_92%').impl).fetchAll();
+    if (!r.ok) throw new Error('not ok');
+    expect(r.items.find((i) => i.sourceItemId === '100')!.score).toBeUndefined();
+  });
+
+  it('no form, no requests', async () => {
+    const s = spy(() => 'x', scores.replace('id="aspnetForm"', 'id="other"'));
+    const r = await make(s.impl).fetchAll();
+    expect(r.ok).toBe(true);
+    expect(postsOf(s)).toHaveLength(0);
+  });
+
+  it('an existing __CALLBACKID input is overridden, not duplicated', async () => {
+    const s = spy((b) => `s${b.get('__CALLBACKPARAM')}_92%`, scores.replace('<input type="submit"', '<input type="hidden" name="__CALLBACKID" value="other"><input type="submit"'));
+    await make(s.impl).fetchAll();
+    const body = new URLSearchParams(String(postsOf(s)[0]!.init!.body));
+    expect(body.getAll('__CALLBACKID')).toEqual(['__Page']);
+  });
+
+  it('a redirect answer gives no score but the sync is ok', async () => {
+    const impl = (async (_u: RequestInfo | URL, init?: RequestInit) =>
+      init?.method === 'POST' ? new Response('', { status: 302, headers: { location: 'https://login.example/' } }) : new Response(scores)) as typeof fetch;
+    const r = await make(impl).fetchAll();
+    if (!r.ok) throw new Error('not ok');
+    expect(r.items).toHaveLength(3);
+    expect(r.items.find((i) => i.sourceItemId === '100')!.score).toBeUndefined();
+  });
+
+  it('a row due exactly 7 days before now gets no request', async () => {
+    const edge = scores.replace('11/09/26<br>11:59pm', '11/03/26<br>12:00pm');
+    const s = spy(() => 'x', edge);
+    await make(s.impl).fetchAll();
+    expect(postsOf(s)).toHaveLength(0);
   });
 });
