@@ -41,7 +41,15 @@ describe('frame reader', () => {
     document.head.innerHTML = '';
     document.body.innerHTML = '<h1>HW 7</h1><p>Due Date: 11/10/2026 11:59 PM</p>';
   });
-  afterEach(() => vi.useRealTimers());
+  // happy-dom refuses to load script files and prints a DOMException for each one; the tests look at what was appended.
+  let appended: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    appended = vi.spyOn(document.head, 'appendChild').mockImplementation(((n: Node) => n) as never);
+  });
+  afterEach(() => {
+    appended.mockRestore();
+    vi.useRealTimers();
+  });
 
   it('does nothing in a normal tab', async () => {
     const before = document.documentElement.outerHTML;
@@ -131,11 +139,11 @@ describe('frame reader', () => {
   it('adds the open-here script once when allowOpen, never otherwise', async () => {
     setup({ top: false, config: { mode: 'due', allowOpen: true, titles: [] } });
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(document.querySelectorAll(`script[src="${OPEN_HERE}"]`).length).toBe(1);
-    document.head.innerHTML = '';
-    document.documentElement.querySelectorAll('script').forEach((s) => s.remove());
+    const scripts = () => appended.mock.calls.map((c: unknown[]) => c[0] as HTMLScriptElement).filter((n: HTMLScriptElement) => n.tagName === 'SCRIPT');
+    expect(scripts().map((n: HTMLScriptElement) => n.getAttribute('src'))).toEqual([OPEN_HERE]);
+    appended.mockClear();
     setup({ top: false, config: { mode: 'due', allowOpen: false, titles: [] } });
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(document.querySelectorAll('script').length).toBe(0);
+    expect(scripts().length).toBe(0);
   });
 });

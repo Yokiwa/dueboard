@@ -1,4 +1,5 @@
 import { stripUrl, type VisitMessage } from './messages';
+import { BRIGHTSPACE_HOST, SIGN_IN } from './hosts';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -37,9 +38,7 @@ export interface VisitApi {
   remember(windowId: number | null): Promise<void>;
 }
 
-/** Brightspace's own sign-in page, Purdue's identity provider, and Duo. */
-export const SIGN_IN = /\/d2l\/login|login\.purdue\.edu|\/idp\/profile\/|duosecurity\.com/i;
-const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
+export { SIGN_IN };
 
 export interface PageSample {
   url: string;

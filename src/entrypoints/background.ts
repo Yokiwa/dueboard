@@ -17,6 +17,10 @@ import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visit
 import { isVisitMessage } from '../visits/messages';
 import type { Connector, SourceId } from '../core/types';
 import { withKeepAlive } from '../sync/keepAlive';
+import { IS_FIREFOX } from '../core/env';
+import { createFrameApi, getBackgroundFrameHost } from '../visits/frame/api';
+import { isOwnPageSender } from '../visits/frame/probe';
+import type { FrameVisitRequest } from '../visits/frame/protocol';
 
 const ALARM = 'dueboard-sync';
 
@@ -26,6 +30,7 @@ const CONNECTORS: Record<SourceId, () => Connector> = {
   pearson: () => createPearsonConnector({ parse: parsers.pearson }),
 };
 const visitApi = createBrowserVisitApi();
+const frameApi = createFrameApi();
 
 /**
  * One full sync: every source, then platform visits (alarm and page loads are 'auto'; Refresh is 'manual').
@@ -78,6 +83,8 @@ export default defineBackground({
   type: import.meta.env.FIREFOX ? 'module' : undefined,
   main: () => {
   void closeOldVisitWindow();
+  // Frames a dead run left in the frame host, and the header rule it left on, are cleared whenever the background starts.
+  void frameApi.reset().then(() => frameApi.end()).catch(() => undefined);
   const ensureAlarm = async () => {
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };
@@ -107,6 +114,17 @@ export default defineBackground({
     visitFrame: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitClick: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitSample: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
+    // Diagnostic entry for the extension's own pages: reads one page in a hidden frame.
+    frameProbe: async (msg, sender) => {
+      if (!isOwnPageSender(sender, browser.runtime.getURL(''))) return undefined;
+      const req = msg.req as FrameVisitRequest;
+      if (msg.headers !== false) await frameApi.begin();
+      try {
+        return await frameApi.visit(req);
+      } finally {
+        if (msg.headers !== false) await frameApi.end();
+      }
+    },
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
     captureDue: async (msg, sender) => {
@@ -117,7 +135,15 @@ export default defineBackground({
   });
 
   browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    const pending = route(msg, { url: sender.url, tab: sender.tab, frameId: sender.frameId });
+    if (IS_FIREFOX) {
+      // On Firefox this page hosts the frames, so it answers the readers in them.
+      const answer = getBackgroundFrameHost().onMessage(msg);
+      if (answer !== undefined) {
+        sendResponse(answer);
+        return undefined;
+      }
+    }
+    const pending = route(msg, { url: sender.url, origin: (sender as { origin?: string }).origin, tab: sender.tab, frameId: sender.frameId });
     if (!pending) return undefined;
     pending.then(sendResponse, (e) => sendResponse({ error: String(e) }));
     return true; // keep the channel open for the async answer
