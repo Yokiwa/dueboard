@@ -22,8 +22,7 @@ Decided with the user:
 - In the user's courses, only some instructors send platform grades to the Brightspace gradebook, so both the
   gradebook and the platform pages are needed.
 
-Not in this version: scores for unfinished work, colors by score, grade averages or course totals, and Pearson's
-"see score" link (section 3.3).
+Not in this version: scores for unfinished work, colors by score, and grade averages or course totals.
 
 ## 2. What a score is
 
@@ -67,12 +66,35 @@ An item takes the first source that has a score for it.
 - `parse.ts` already finds `.submissionStatus--score` ("18.0 / 20.0") to mark work submitted. It now also keeps the
   score on the raw item.
 
-### 3.3 Pearson MyLab (no window, later)
+### 3.3 Pearson MyLab (no window)
 
-- The assignment list loads each score through an ASP.NET callback behind "see score", which is not plain HTML.
-- Until a Pearson Results page export shows a readable layout, Pearson scores come only from the Brightspace gradebook
-  (3.1).
-- Follow-up: once the export arrives, read Results with the existing Pearson connector.
+What the student's export of the "Homework and Tests" page (`DoAssignments.aspx`) shows:
+
+- Each row's "Gradebook Score" cell is a `<div id="H_<assignmentId>_IVF_2_False">`. Before a click it holds a "see score"
+  link that calls `WebForm_DoCallback('__Page', '<div id>', scoreCallBack, …)`. After the click it holds the score,
+  for example `<span>100%</span>`.
+- The callback answers `<type>_<assignmentId>_<IV flag>_<grade category>_<allow average>_<score>`, for example
+  `H_729259668_IVF_2_False_100%`, and the page puts the last part into the cell.
+
+What the connector does:
+
+- It already fetches this page and finds each row's assignment id from `H_<id>`.
+- It now also keeps each row's score-cell id and the page form's hidden fields (`__VIEWSTATE` and the other inputs
+  of `aspnetForm`).
+- **Which rows:** rows with a "see score" link (Pearson shows the link only once a score exists) and a due date the
+  dashboard still shows (within the last 7 days, or later). Soonest-due first.
+- **How:** the connector asks for each row's score the same way the page does: a POST to
+  `DoAssignments.aspx?view=all` with the form's fields plus `__CALLBACKID=__Page` and `__CALLBACKPARAM=<cell id>`.
+- The score is shown only on finished work, the same as every other source.
+- **Answer handling:**
+  - ASP.NET may put an event-validation block before the answer; that block is skipped.
+  - A leading `s` means success; the text after it is split on `_`, and part 6 is the score.
+  - An `e` answer, or anything that does not have 6 parts, gives no score.
+- A cell that already holds a score (`<span>92%</span>`) is read directly, with no request.
+- **Limits:**
+  - At most 10 score requests per sync, two at a time, with a 10-second timeout each.
+  - A failed request gives no score and never fails the Pearson sync.
+- This is the read-only request the "see score" link sends. It does not open, start or submit anything.
 
 ### 3.4 Platform pages (visit window, on Refresh)
 
@@ -117,10 +139,10 @@ Achieve and Pearson exports, plus synthetic cases for each rejected form.
 
 ## 5. Data flow
 
-- `RawItem.score?: Score`: Brightspace (from 3.1, joined in the connector) and Gradescope (3.2). It is stored in the
+- `RawItem.score?: Score`: Brightspace (from 3.1, joined in the connector), Gradescope (3.2) and Pearson (3.3). It is stored in the
   snapshot like the rest of the item.
 - `CapturedDue.score?` and `scoreCheckedAt?`: platform pages (3.4).
-- `buildDashboard`: `Item.score` is taken from the merged raw items (Brightspace first, then Gradescope), else from
+- `buildDashboard`: `Item.score` is taken from the merged raw items (Brightspace first, then Gradescope, then Pearson), else from
   `captured[ownKey].score`. It is set only when the item is finished: `doneByUser || submitted`.
 - `dueVisits` returns due targets first, then score targets (section 3.4). The `VisitTarget.mode` union gains
   `'score'`.
@@ -137,8 +159,8 @@ Achieve and Pearson exports, plus synthetic cases for each rejected form.
 
 ## 7. Privacy and store listings
 
-- Privacy policy: add "DueBoard also reads the scores of your finished work from Brightspace's gradebook, Gradescope
-  and the assignment pages it already opens. Scores stay in your browser."
+- Privacy policy: add "DueBoard also reads the scores of your finished work from Brightspace's gradebook, Gradescope,
+  Pearson MyLab and the assignment pages it already opens. Scores stay in your browser."
 - Chrome listing: single purpose becomes "...assignments, deadlines, scores and course resource links...". The
   Brightspace host permission justification adds "grades".
 - Firefox listing: one line under "What you get".
@@ -151,6 +173,13 @@ Achieve and Pearson exports, plus synthetic cases for each rejected form.
   - Gradebook mapping: id match, unique name match, ambiguous name skipped, ungraded value ignored, 403 course
     tolerated.
   - Gradescope parse keeps "18.0 / 20.0" as "18/20".
+  - Pearson:
+    - reads a shown `<span>100%</span>`;
+    - builds the callback body from the form's fields;
+    - parses `s…H_729259668_IVF_2_False_100%` and an answer with a validation prefix;
+    - gives no score for `e…` or malformed answers;
+    - sends at most 10 requests;
+    - built from the student's export.
   - `buildDashboard`: no score on unfinished work, and source precedence.
   - `dueVisits`: score targets come after due targets, are only finished work, and are left out when a fetched
     score exists.
