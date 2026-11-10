@@ -700,4 +700,44 @@ describe('scores', () => {
     const i = input({ snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [bsItem({ score: sc('18/25', 'Brightspace') })]) } });
     expect(only(i).score).toBeUndefined();
   });
+
+  describe('Pearson scores', () => {
+    const launch = '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=14&type=lti&rcode=X-126';
+    const pItem = (p: Partial<RawItem> = {}) =>
+      item({ source: 'pearson', sourceItemId: '729259669', sourceCourseId: '14285764', title: 'HW 1', submitted: true, ...p });
+    const withPearson = (gs: RawItem[], pe: RawItem) =>
+      input({
+        snapshots: {
+          brightspace: { ...snap([bsCourse('14', 'Fall 2026 MA 26100-300 LEC', 'MA 26100')]), links: [{ source: 'brightspace', sourceCourseId: '14', title: 'Access Pearson', url: launch }] },
+          gradescope: snap([gsCourse('g', 'MA 26100', 'MA 26100')], gs),
+          pearson: snap([{ source: 'pearson', sourceCourseId: '14285764', name: 'Pearson MyLab', code: null, url: 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all' }], [pe]),
+        },
+      });
+
+    it('a Pearson-only score is used', () => {
+      const it = only(withPearson([], pItem({ score: sc('100%', 'Pearson') })));
+      expect(it.sources).toEqual(['pearson']);
+      expect(it.score).toMatchObject({ text: '100%', from: 'Pearson' });
+    });
+    it('Gradescope wins over a Pearson twin', () => {
+      const it = only(withPearson([gsItem({ submitted: true, score: sc('20/25', 'Gradescope') })], pItem({ score: sc('100%', 'Pearson') })));
+      expect(it.sources.sort()).toEqual(['gradescope', 'pearson']);
+      expect(it.score).toMatchObject({ text: '20/25', from: 'Gradescope' });
+    });
+  });
+});
+
+describe('own captured records and the title fallback', () => {
+  it('an own record with misses and a score still blocks a title-captured date', () => {
+    const i = input({
+      snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [item({ source: 'brightspace', sourceItemId: 'topic:7', sourceCourseId: '1', title: 'HW 7', dueAt: null, submitted: true })]) },
+    });
+    i.captured = {
+      'title:hw7': { title: 'HW 7', dueAt: '2026-11-10T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
+      'brightspace:topic:7': { itemKey: 'brightspace:topic:7', title: 'HW 7', dueAt: null, platform: 'wileyplus', via: 'visit', checkedAt: 'x', misses: 1, score: { text: '18/25', from: 'WileyPLUS' }, scoreCheckedAt: 'x' },
+    };
+    const it = buildDashboard(i, now).items[0]!;
+    expect(it.dueAt).toBeNull();
+    expect(it.score?.text).toBe('18/25');
+  });
 });

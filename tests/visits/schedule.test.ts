@@ -219,11 +219,11 @@ describe('score-only entries', () => {
 describe('scoreVisits', () => {
   const dueAgo = (d: number) => new Date(now.getTime() - d * 24 * H).toISOString();
   const wiley = (n: number, p: Partial<RawItem> = {}) => topic(n, `WileyPLUS HW ${n}`, { submitted: true, dueAt: dueAgo(2), ...p });
-  const sk = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => scoreVisits(s, now, trigger, granted).map((t) => t.key);
+  const sk = (s: StoreShape, trigger: 'auto' | 'manual' = 'manual', granted: string[] = ['https://*/*']) => scoreVisits(s, now, trigger, granted).map((t) => t.key);
   const K = 'brightspace:topic:1';
 
   it('targets a submitted platform homework with a launch', () => {
-    const t = scoreVisits(store([wiley(1)]), now, 'auto', ['https://*/*']);
+    const t = scoreVisits(store([wiley(1)]), now, 'manual', ['https://*/*']);
     expect(t).toHaveLength(1);
     expect(t[0]).toMatchObject({ key: K, mode: 'score', launchUrl: launch(1), title: 'WileyPLUS HW 1' });
     expect(t[0]!.platform).toBeTruthy();
@@ -256,7 +256,22 @@ describe('scoreVisits', () => {
   });
 
   it('a known platform needs its hosts granted', () => {
-    expect(sk(store([wiley(1)]), 'auto', [])).toEqual([]);
+    expect(sk(store([wiley(1)]), 'manual', [])).toEqual([]);
+  });
+
+  it('skips an item whose captured page host is not granted', () => {
+    const c = cap(1, { platform: '', blocked: 'example.edu' });
+    const s = store([topic(1, 'HW 1', { submitted: true, dueAt: dueAgo(2) })], c);
+    expect(sk(s, 'manual', [])).toEqual([]);
+    expect(sk(s, 'manual', ['https://example.edu/*'])).toEqual([K]);
+  });
+
+  it('runs on Refresh only, never on a background sync', () => {
+    expect(sk(store([wiley(1)]), 'auto')).toEqual([]);
+    // visits 'auto' + a background sync: due targets still come, score targets do not.
+    const t = dueVisits(store([wiley(1), topic(2)]), now, 'auto', ['https://*/*']);
+    expect(t.map((x) => x.key)).toEqual(['brightspace:topic:2']);
+    expect(t.some((x) => x.mode === 'score')).toBe(false);
   });
 
   it('follows the visits setting', () => {

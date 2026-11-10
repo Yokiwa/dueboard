@@ -125,7 +125,10 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
           entry.due = outcome.found.dueAt;
           entry.evidence = outcome.found.evidence;
         }
-        if (outcome.status === 'score' && outcome.score) entry.score = outcome.score.text;
+        if (outcome.status === 'score' && outcome.score) {
+          entry.score = outcome.score.text;
+          if (outcome.score.evidence) entry.evidence = outcome.score.evidence;
+        }
         const clicked = await api.clicksSeen(tabId).catch(() => []);
         if (clicked.length) entry.clicked = clicked;
         if (outcome.status !== 'found' && !(outcome.status === 'score' && outcome.score)) {

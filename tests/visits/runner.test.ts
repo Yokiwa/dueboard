@@ -345,12 +345,13 @@ describe('runVisits: visit log of found dates', () => {
 
 describe('runVisits: score visits', () => {
   it('reads a score and logs it', async () => {
-    const score = { text: '18/25', earned: 18, possible: 25, from: 'WileyPLUS' };
+    const score = { text: '18/25', earned: 18, possible: 25, from: 'WileyPLUS', evidence: 'Score: 18 / 25 points' };
     const f = fakeApi({ landings: [at('https://education.wiley.com/x')], messages: [{ type: 'visitScore', score, frameUrl: 'https://education.wiley.com/x', top: true }] });
-    const log: { score?: string }[] = [];
+    const log: { score?: string; evidence?: string }[] = [];
     const out = await runVisits([target(1, 'score')], f.api, { onLog: (e) => log.push(e) });
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'score', score, host: 'education.wiley.com' }]);
     expect(log[0]!.score).toBe('18/25');
+    expect(log[0]!.evidence).toBe('Score: 18 / 25 points');
     expect(f.calls).toContain('inject score');
   });
 

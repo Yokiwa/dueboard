@@ -77,8 +77,8 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
             return fallback;
           }
         };
-        // Scores are a bonus; this lookup swallows every error, 401 included, because the other endpoints already surface sign-out.
-        // Scores are a bonus: a failed gradebook request never marks the course partial.
+        // Scores are a bonus: a failed gradebook request never marks the course partial. Every error is swallowed, 401
+        // included, because the other endpoints already surface sign-out.
         const gradesPromise = get<GradeValue[]>(u.grades(ou)).then(
           (g) => (Array.isArray(g) ? g : []),
           () => [] as GradeValue[],

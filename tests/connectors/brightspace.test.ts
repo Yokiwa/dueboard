@@ -394,6 +394,21 @@ describe('brightspace gradebook scores', () => {
     expect(items[1]!.score).toBeUndefined();
   });
 
+  it('uses a displayed grade only as a percentage, a letter or x / y', () => {
+    const shownAs = (shown: string) => {
+      const items = [item('a', 'Essay')];
+      attachGrades(items, [grade('1', 'Essay', null, null, shown)], new Map());
+      return items[0]!.score;
+    };
+    expect(shownAs('92 %')).toEqual({ text: '92%', from: 'Brightspace' });
+    expect(shownAs('92%')).toEqual({ text: '92%', from: 'Brightspace' });
+    expect(shownAs('87.50 %')?.text).toBe('87.5%');
+    expect(shownAs('B+')).toEqual({ text: 'B+', from: 'Brightspace' });
+    expect(shownAs('F')?.text).toBe('F');
+    expect(shownAs('18 / 20')).toEqual({ text: '18/20', earned: 18, possible: 20, from: 'Brightspace' });
+    for (const bad of ['-', '--', 'Excellent work', 'Pass', 'G', 'A+-', '18 / 0', '92% late']) expect(shownAs(bad)).toBeUndefined();
+  });
+
   it('an id-matched grade is not also attached to a same-named item', () => {
     const items = [item('dropbox:7', 'Project 3'), item('quiz:1', 'Unit project')];
     attachGrades(items, [grade('55', 'Unit project', 18, 20)], new Map([['dropbox:7', '55']]));

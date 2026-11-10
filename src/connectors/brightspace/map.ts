@@ -164,8 +164,21 @@ function gradeScore(g: GradeValue): Score | null {
   if (typeof n === 'number' && typeof d === 'number' && Number.isFinite(n) && Number.isFinite(d) && d > 0) {
     return { text: formatPoints(n, d), earned: n, possible: d, from: 'Brightspace' };
   }
-  const shown = g.DisplayedGrade?.trim();
-  return shown ? { text: shown, from: 'Brightspace' } : null;
+  return displayedScore(g.DisplayedGrade?.trim() ?? '');
+}
+
+/** A displayed grade is used only as a percentage, a letter grade or "x / y"; "-" or free text gives no score. */
+function displayedScore(shown: string): Score | null {
+  const pct = /^(\d+(?:\.\d+)?)\s*%$/.exec(shown);
+  if (pct) return { text: `${Number(Number(pct[1]).toFixed(2))}%`, from: 'Brightspace' };
+  if (/^[A-F][+-]?$/.test(shown)) return { text: shown, from: 'Brightspace' };
+  const frac = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(shown);
+  if (frac && Number(frac[2]) > 0) {
+    const earned = Number(frac[1]);
+    const possible = Number(frac[2]);
+    return { text: formatPoints(earned, possible), earned, possible, from: 'Brightspace' };
+  }
+  return null;
 }
 
 /**

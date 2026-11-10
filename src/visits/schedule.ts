@@ -133,13 +133,12 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
 const FETCHED_FROM = ['Brightspace', 'Gradescope', 'Pearson'];
 
 /**
- * Finished homework whose score a platform page may show: read on every Refresh, after the due-date visits. Skips
- * scores already fetched from Brightspace, Gradescope or Pearson, quizzes and exams, and platforms read another way.
- * See spec 3.4.
+ * Finished homework whose score a platform page may show: read on every Refresh (never on a background sync, whatever
+ * the visits setting), after the due-date visits. Skips scores already fetched from Brightspace, Gradescope or Pearson,
+ * quizzes and exams, platforms read another way, and sites the student has not granted. See spec 3.4.
  */
 export function scoreVisits(store: StoreShape, now: Date, trigger: Trigger, granted: string[]): VisitTarget[] {
-  const mode = store.settings.visits;
-  if (mode === 'off' || (mode === 'manual' && trigger === 'auto')) return [];
+  if (store.settings.visits === 'off' || trigger !== 'manual') return [];
 
   const raw = new Map<string, RawItem>();
   for (const r of store.snapshots.brightspace?.items ?? []) raw.set(`brightspace:${r.sourceItemId}`, r);
@@ -159,6 +158,8 @@ export function scoreVisits(store: StoreShape, now: Date, trigger: Trigger, gran
     const platform = platformByTitle(r.title) ?? platformById(store.captured[key]?.platform ?? '');
     if (platform && platform.reader !== 'page' && platform.reader !== 'universal') continue;
     if (platform && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
+    const blocked = store.captured[key]?.blocked;
+    if (blocked && !originAllowed(granted, blocked)) continue;
     const target: VisitTarget = { key, title: r.title, courseId: item.courseId, launchUrl: r.launchUrl!, mode: 'score' };
     if (platform) target.platform = platform.id;
     out.push(target);
