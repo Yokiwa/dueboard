@@ -153,8 +153,8 @@ Achieve and Pearson exports, plus synthetic cases for each rejected form.
 
 - `DueBadge` takes an optional `score`. The label becomes "Done · 18/25" or "Submitted · 92%", and the `title`
   attribute reads "Score from WileyPLUS". The same tone as today is used, with no color by value.
-- Every place that uses `ItemRow` shows it: course cards, course detail, "Done this week", To-do and Calendar
-  details.
+- Every place that uses `ItemRow` shows it: course cards, course detail, "Done this week" and To-do.
+- The calendar shows no score badge.
 - Diagnostics visit log: score visits are logged with `result: 'score'`, the score text and the evidence line.
 
 ## 7. Privacy and store listings
