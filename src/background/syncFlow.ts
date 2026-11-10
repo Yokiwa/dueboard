@@ -2,7 +2,7 @@ import type { Connector, SourceId, StoreShape } from '../core/types';
 import type { SyncReport } from '../sync/runSync';
 import { activeSourceIds } from './sources';
 import { platformByHost } from '../core/platformRegistry';
-import { applyOutcomes, dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
+import { dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
 
 /**
  * One sync: the platforms known so far, then — in the same run — any platform the fresh Brightspace data just
@@ -24,6 +24,7 @@ export interface SyncAndVisitDeps {
   load: () => Promise<StoreShape>;
   sync: () => Promise<SyncReport>;
   granted: () => Promise<string[]>;
+  /** The visit pass: reads the targets, saves their results itself, and returns the final outcome per target. */
   visit: (targets: VisitTarget[]) => Promise<VisitOutcome[]>;
   save: (patch: Partial<StoreShape>) => Promise<void>;
   /** Reads syllabus files and checks course navigation bars; returns what changed. */
@@ -97,7 +98,6 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     console.warn('DueBoard: platform visits stopped early', e);
     return [] as VisitOutcome[];
   });
-  await deps.save(applyOutcomes(await deps.load(), targets, outcomes, deps.now()));
   // A visit that reached Gradescope or Pearson signed the student in there (sign-in visits often end on pages DueBoard
   // can't see): read that platform again in this same run.
   for (const src of ['gradescope', 'pearson'] as const) {
@@ -112,8 +112,11 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     const { visitState } = await deps.load();
     const prev = visitState.sessions?.[src];
     const at = prev?.at ?? deps.now().toISOString();
-    const failures = again[src] === 'ok' ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
-    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: { at, failures } } } });
+    const ok = again[src] === 'ok';
+    const failures = ok ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
+    // A hidden frame that "signed in" without the platform noticing: next time go straight to the window.
+    const entry = !ok && session.status === 'landed' && session.via === 'frame' ? { at, failures, frame: 'failed' as const } : { at, failures };
+    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: entry } } });
   }
   return report;
 }

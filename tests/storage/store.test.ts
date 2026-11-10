@@ -30,7 +30,7 @@ describe('store', () => {
     const s = await loadStore();
     expect(s.schemaVersion).toBe(1);
     expect(s.settings).toEqual(DEFAULT_SETTINGS);
-    expect(s.visitState).toEqual({ needsPermission: [], snoozed: {} });
+    expect(s.visitState).toEqual({ needsPermission: [], snoozed: {}, frame: {} });
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
     expect(s.manualLinks).toEqual([]);
@@ -82,7 +82,7 @@ describe('store', () => {
   it('migrate tolerates garbage', () => {
     expect(migrate(null).settings).toEqual(DEFAULT_SETTINGS);
     expect(migrate({ settings: { visits: 'sometimes', syllabus: 'yes' } }).settings).toEqual(DEFAULT_SETTINGS);
-    expect(migrate({ visitState: { needsPermission: 'x', snoozed: [] } }).visitState).toEqual({ needsPermission: [], snoozed: {} });
+    expect(migrate({ visitState: { needsPermission: 'x', snoozed: [] } }).visitState).toEqual({ needsPermission: [], snoozed: {}, frame: {} });
     expect(migrate('x').manualItems).toEqual([]);
   });
 
@@ -123,8 +123,18 @@ describe('store', () => {
     expect((await loadStore()).userState).toMatchObject({ hidden: { 'brightspace:51': true }, shown: {} });
   });
 
+  it('migrate: windowFallback defaults to true and keeps a stored boolean; visitState.frame and session frame survive', () => {
+    expect(migrate({}).settings.windowFallback).toBe(true);
+    expect(migrate({ settings: { windowFallback: false } }).settings.windowFallback).toBe(false);
+    expect(migrate({ settings: { windowFallback: 'no' } }).settings.windowFallback).toBe(true);
+    expect(migrate({}).visitState.frame).toEqual({});
+    const v = migrate({ visitState: { frame: { aleks: { blocked: 2, skipUntil: 'x' }, bad: { blocked: 'y' } }, sessions: { pearson: { at: 'a', failures: 1, frame: 'failed' } } } }).visitState;
+    expect(v.frame).toEqual({ aleks: { blocked: 2, skipUntil: 'x' } });
+    expect(v.sessions?.pearson).toEqual({ at: 'a', failures: 1, frame: 'failed' });
+  });
+
   it('migrate keeps valid settings', () => {
-    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section' });
+    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: true });
   });
 
   it('finished work shows in the course cards unless set to its own section', () => {
@@ -159,13 +169,13 @@ describe('store', () => {
 
   it('saveSettings merges into the current settings', async () => {
     await saveSettings({ visits: 'off' });
-    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card' });
+    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card', windowFallback: true });
   });
 
   it('patchVisitState merges into the current visit state', async () => {
     await patchVisitState({ windowId: 7 });
     await patchVisitState({ needsPermission: ['learn.example.com'] });
-    expect((await loadStore()).visitState).toEqual({ windowId: 7, needsPermission: ['learn.example.com'], snoozed: {} });
+    expect((await loadStore()).visitState).toEqual({ windowId: 7, needsPermission: ['learn.example.com'], snoozed: {}, frame: {} });
   });
 });
 

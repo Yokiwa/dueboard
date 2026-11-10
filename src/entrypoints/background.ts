@@ -9,6 +9,8 @@ import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
 import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
+import { runVisitPass } from '../background/visitPass';
+import { runFrameVisits } from '../visits/frameRunner';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
 import { closeLeftover, runVisits, type VisitLogEntry } from '../visits/runner';
@@ -49,10 +51,19 @@ const syncNow = (trigger: Trigger = 'auto') => {
           let logged = Promise.resolve();
           const log = (entry: VisitLogEntry) => (logged = logged.then(() => appendVisitLog([entry])).catch(() => undefined));
           try {
-            return await runVisits(targets, visitApi, {
-              onProgress: (done, total) => void setVisitProgress({ done, total }),
-              onLog: log,
-            });
+            return await runVisitPass(
+              {
+                load: loadStore,
+                save: (patch) => patchStore(patch),
+                now: () => new Date(),
+                frames: (ts, opts) => runFrameVisits(ts, frameApi, opts),
+                windows: (ts, onLog) => runVisits(ts, visitApi, { onProgress: () => undefined, onLog }),
+                signedIn: () => visitApi.signedIn(),
+                progress: (done, total) => void setVisitProgress({ done, total }),
+                log,
+              },
+              targets,
+            );
           } finally {
             await logged;
             await setVisitProgress(null);

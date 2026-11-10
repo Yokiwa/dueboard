@@ -46,6 +46,17 @@ describe('applyOutcomes', () => {
     expect(r.visitState.needsPermission).toEqual(['learn.example.com']);
   });
 
+  it('counts a frame failure like any other failure', () => {
+    const r = run([{ key: 'brightspace:topic:1', status: 'failed', reason: 'frame' }], { 'brightspace:topic:1': prev({ failures: 1 }) });
+    expect(r.captured['brightspace:topic:1']!.failures).toBe(2);
+  });
+
+  it('a session target that landed in a frame is handled like a window landing', () => {
+    const session: VisitTarget = { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: 'x', platform: 'pearson', mode: 'session' };
+    const r = applyOutcomes(migrate({}), [session], [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com', via: 'frame' }], now);
+    expect(r.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 0 });
+  });
+
   it('clears the block once a visit gets through', () => {
     const r = run([{ key: 'brightspace:topic:1', status: 'none', host: 'learn.example.com' }], { 'brightspace:topic:1': prev({ blocked: 'learn.example.com' }) });
     expect(r.captured['brightspace:topic:1']!.blocked).toBeUndefined();

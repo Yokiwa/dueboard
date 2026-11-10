@@ -74,9 +74,12 @@ const check = (ok, msg) => {
   check(hw11?.dueAt === '2026-11-17T04:59:00.000Z' && hw11?.platform === 'wileyplus', `Wiley HW11 read after its launcher's "Open Assignment" button (${hw11?.dueAt})`);
   check(hw10?.dueAt === '2026-11-10T04:59:00.000Z', `Wiley HW10 read after its launcher's "Launch" link (${hw10?.dueAt})`);
   const vlog = await page.evaluate(async () => (await chrome.storage.local.get('visitLog')).visitLog ?? []);
-  const hw11Log = vlog.find((e) => e.key === 'brightspace:topic:5');
+  // Each page now has a frame entry first (the hidden frame could not read these mocks) and then its window entry.
+  const windowLog = vlog.filter((e) => e.mode === 'window');
+  check(vlog.some((e) => e.key === 'brightspace:topic:5' && e.mode === 'frame') && windowLog.some((e) => e.key === 'brightspace:topic:5'), 'a page the hidden frame could not read was read in the window in the same run');
+  const hw11Log = windowLog.find((e) => e.key === 'brightspace:topic:5');
   check(hw11Log?.siteNote?.startsWith('no launch target on') && !hw11Log.site, `visit log says why the site wasn't known (${hw11Log?.siteNote})`);
-  check(vlog.find((e) => e.key === 'brightspace:topic:6')?.clicked?.[0] === 'Launch (education.wiley.com)', 'HW10\'s "Launch" link (meant for a new tab) was followed in the hidden tab');
+  check(windowLog.find((e) => e.key === 'brightspace:topic:6')?.clicked?.[0] === 'Launch (education.wiley.com)', 'HW10\'s "Launch" link (meant for a new tab) was followed in the hidden tab');
   check(hw11Log?.result === 'found' && hw11Log.clicked?.[0] === 'Open Assignment (education.wiley.com)', `HW11's launcher button was pressed (${hw11Log?.clicked})`);
   check(!JSON.stringify(vlog).includes('Start Over'.replace(' ', '')) && !(vlog.flatMap((e) => e.clicked ?? []).some((c) => /start/i.test(c))), 'never pressed a "Start" button');
   const gsMeta = await page.evaluate(async () => (await chrome.storage.local.get('syncMeta')).syncMeta?.gradescope);
