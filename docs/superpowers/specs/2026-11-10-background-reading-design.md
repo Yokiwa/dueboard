@@ -10,8 +10,9 @@ platform pages are read.
 
 Decided with the user:
 
-- **No visible windows.** Platform pages are read inside a hidden page of the extension. A minimized window is only a
-  fallback, and only when the student clicks Refresh.
+- **No visible windows where the background can read.** Platform pages are read inside a hidden page of the
+  extension. A page that can't be read there is read in a minimized window right away, as in 1.2.4, so no date is
+  left blank. The user found the minimized window acceptable as a fallback.
 - **Zero prompts after install.** Access to every known homework platform is requested once, at install.
 - **Automatic by default.** Everything syncs in the background; Refresh is for "update right now".
 - **Sign-in flow:** "Log in to Brightspace" → after sign-in the tab returns to the DueBoard dashboard and the sync
@@ -107,22 +108,26 @@ one by one while the run continues, and a run that is cut short keeps what it re
 
 ### 3.6 Fallback and learning
 
-- **Automatic syncs never open a window.** If frame mode can't read a page, the item simply stays undated until a
-  Refresh.
-- **On Refresh**, items whose frame visit ended `blocked` or `none` are tried again in a minimized window, as in
-  1.2.4, unless the student turned that off (section 9).
+- **A page the background can't read is read in a minimized window in the same run**, on automatic syncs and on
+  Refresh alike. Frame results `blocked` and `none` both fall back; `signed_out` does not (the run stops, as today).
+- **Window visits keep the 1.2.4 rules**, so windows do not open every 30 minutes:
+  - one window per run, pages one at a time, at most 25 pages and 5 minutes;
+  - an item with no date found is tried again after 24 hours, at most 3 times, then only on Refresh;
+  - a found date is read again after 24 hours when due within 3 days, else after 3 days.
+- **The window opens only if at least one page needs it**, after the frame visits of the run, and closes when done.
 - **Per platform memory:** after 3 frame visits in a row to a platform end `blocked` with none succeeding, frame mode
-  is skipped for that platform for 7 days (straight to the window on Refresh, nothing on automatic syncs).
+  is skipped for that platform for 7 days and its pages go straight to the window.
+- **The student can turn the window off** (section 9). Then unreadable pages stay undated and can be added by hand.
 - **Visit log:** every entry records `mode: 'frame' | 'window'`, so a log from a real account shows which platforms
   work in the background.
 - **Unknown platforms** (not in the registry) keep the 1.2.4 behavior: the banner asks for access to that site, and
-  after "Allow" it is read in a window on Refresh.
+  after "Allow" it is read in a window.
 
 ### 3.7 Firefox
 
 - Same frame host in the background page; header rule through Firefox's `declarativeNetRequest`.
-- This cannot be run in the build environment. If frame mode fails there, Firefox behaves like 3.6: no windows on
-  automatic syncs, window fallback on Refresh. A Firefox tester decides whether more work is needed.
+- This cannot be run in the build environment. If frame mode fails there, Firefox behaves like 3.6: every page falls
+  back to the minimized window. A Firefox tester decides whether more work is needed.
 
 ## 4. Permissions at install
 
@@ -152,9 +157,10 @@ one by one while the run continues, and a run that is cut short keeps what it re
 ## 6. Automatic by default
 
 - `settings.visits` defaults to `auto`. On update to 1.4.0, a stored `manual` becomes `auto` once (it was the old
-  default and windows no longer appear); `off` is kept.
-- The 30-minute background sync includes frame visits for items that are due for a visit.
-- Refresh does the same, immediately, plus the window fallback of 3.6.
+  default, and windows now appear only as a fallback); `off` is kept.
+- The 30-minute background sync includes frame visits for items that are due for a visit, and the window fallback of
+  3.6 for pages the background can't read.
+- Refresh does the same, immediately.
 
 ## 7. Platforms
 
@@ -217,8 +223,7 @@ with the platforms the visit log shows as slowest.
   - "Automatically, in the background" (default);
   - "Only when I click Refresh";
   - "Never".
-- New checkbox, on by default: "On Refresh, use a small minimized window for pages that can't be read in the
-  background".
+- New checkbox, on by default: "Use a small minimized window for pages that can't be read in the background".
 - The progress line ("Reading 3 of 22 platform pages…") stays and now also shows during automatic syncs.
 - Diagnostics visit log: a "Mode" column (Background / Window).
 - First-run page: section 5.
@@ -248,8 +253,8 @@ with the platforms the visit log shows as slowest.
 - Reader: silent in a normal tab (top page is not the extension); hello and results only to the extension origin.
 - Runner: frame outcomes mapped to visit outcomes; concurrency never runs two visits of one platform together;
   results saved after each visit; limits of 3.4.
-- Fallback: automatic syncs never produce window targets; Refresh retries `blocked` and `none` items in a window;
-  per-platform skip after 3 blocked.
+- Fallback: `blocked` and `none` items are retried in a window in the same run, on automatic syncs too; none when the
+  checkbox is off; window visits obey the 1.2.4 recheck rules; per-platform skip after 3 blocked.
 - List capture: the three rules in 8.2, with the saved Achieve list export.
 - Registry: new platforms, `neverOpen`, manifest host list generated from the registry.
 - Settings migration: `manual` → `auto` once; `off` kept.
@@ -262,8 +267,9 @@ with the platforms the visit log shows as slowest.
   plan; the existing window-mode checks keep running.
 - New checks:
   - a platform page that refuses framing is read with no window or tab opened;
-  - an automatic sync reads dates and opens nothing;
-  - a page that cannot load in a frame is read in a window on Refresh, and not on an automatic sync;
+  - an automatic sync of pages that load in a frame reads dates and opens nothing;
+  - a page that cannot load in a frame is read in a minimized window in the same run, automatic or not, and the
+    window closes afterwards; with the checkbox off, no window opens;
   - a list page dates three items from one visit;
   - the first-run flow ends on the dashboard with a sync running;
   - no "Allow" banner for a registry platform.
@@ -279,7 +285,8 @@ with the platforms the visit log shows as slowest.
 ## 12. Risks
 
 - **A real platform does not work inside a frame** (its sign-in cookies, or a script that insists on a top-level
-  page). Handled by 3.6; found by 11.3. This is the main unknown.
+  page). Handled by 3.6; found by 11.3. This is the main unknown. For such a platform the student sees the minimized
+  window about as often as a Refresh showed it in 1.2.4, now also during automatic syncs.
 - **Store review.** Removing embedding headers and a long site list will be looked at closely. The justifications say
   exactly what the rule does and that it never applies to the student's tabs. A rejection would delay the store
   release, not the trial.
