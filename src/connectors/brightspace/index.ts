@@ -7,13 +7,14 @@ import {
   type CalendarEvent,
   type DropboxFolder,
   type EnrollmentPage,
+  type GradeValue,
   type MySubmission,
   type ObjectListPage,
   type Quiz,
   type Toc,
   type VersionInfo,
 } from './api';
-import { folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocItems, tocLinks } from './map';
+import { attachGrades, folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocItems, tocLinks } from './map';
 
 const DAY = 86_400_000;
 
@@ -63,6 +64,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       const links: RawLink[] = [];
       const partial: string[] = [];
       const syllabusSources: SyllabusSource[] = [];
+      const gradebooks = new Map<string, { grades: GradeValue[]; gradeIdOf: Map<string, string> }>();
 
       // Each endpoint fails on its own: a broken content page or one 403 must not hide the course's deadlines.
       const perCourse = ous.map(async (ou) => {
@@ -75,10 +77,16 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
             return fallback;
           }
         };
-        const [folders, quizzes, toc] = await Promise.all([
+        // Scores are a bonus: a failed gradebook request never marks the course partial.
+        const gradesPromise = get<GradeValue[]>(u.grades(ou)).then(
+          (g) => (Array.isArray(g) ? g : []),
+          () => [] as GradeValue[],
+        );
+        const [folders, quizzes, toc, grades] = await Promise.all([
           attempt(() => get<DropboxFolder[]>(u.dropbox(ou)), [] as DropboxFolder[]),
           attempt(() => allPages<Quiz>(u.quizzes(ou)), [] as Quiz[]),
           attempt(() => get<Toc>(u.toc(ou)), { Modules: [] } as Toc),
+          gradesPromise,
         ]);
         const visible = folders.filter((f) => !f.IsHidden);
         // Only ask "did I submit?" for folders due between 7 days ago and 30 days ahead.
@@ -99,6 +107,11 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
             }
           }),
         );
+        const gradeIdOf = new Map<string, string>();
+        visible.forEach((f) => {
+          if (f.GradeItemId != null) gradeIdOf.set(`dropbox:${f.Id}`, String(f.GradeItemId));
+        });
+        gradebooks.set(ou, { grades, gradeIdOf });
         visible.forEach((f, i) => items.push(toDropboxItem(f, ou, base, submitted[i]!)));
         quizzes.filter((q) => q.IsActive).forEach((q) => items.push(toQuizItem(q, ou, base)));
         links.push(...tocLinks(toc, ou, base));
@@ -124,6 +137,10 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       })();
 
       await Promise.all([...perCourse, calendar]);
+      // After calendar events are in, so they can be matched by name too; one course at a time.
+      for (const [ou, book] of gradebooks) {
+        attachGrades(items.filter((it) => it.sourceCourseId === ou), book.grades, book.gradeIdOf);
+      }
       partial.sort();
       syllabusSources.sort((a, b) => a.ou.localeCompare(b.ou));
       return { ok: true, courses, items, links, partial, syllabusSources };

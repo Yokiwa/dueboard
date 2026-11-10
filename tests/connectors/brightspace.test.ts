@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBrightspaceConnector } from '../../src/connectors/brightspace';
+import { attachGrades } from '../../src/connectors/brightspace/map';
+import type { RawItem } from '../../src/core/types';
 import { createLimiter } from '../../src/connectors/limit';
 import { fakeFetch, type FakeRoute } from '../helpers/fakeFetch';
 import versions from '../fixtures/brightspace/versions.json';
@@ -358,5 +360,50 @@ describe('syllabus sources in course content', () => {
       { ou: '101', kind: 'pdf', url: `${B}/content/enforced/101-CS18000/syllabus.pdf`, title: 'Syllabus', modified: null },
       { ou: '102', kind: 'pdf', url: `${B}/content/enforced/102-MA/syllabus.pdf`, title: 'Course Syllabus', modified: '2026-08-20T00:00:00.000Z' },
     ]);
+  });
+});
+
+describe('brightspace gradebook scores', () => {
+  const item = (id: string, title: string): RawItem => ({ source: 'brightspace', sourceItemId: id, sourceCourseId: '101', title, type: 'assignment', dueAt: null, url: 'u', submitted: true });
+  const grade = (id: string, name: string, n: number | null, d: number | null, shown: string | null = null) =>
+    ({ GradeObjectIdentifier: id, GradeObjectName: name, PointsNumerator: n, PointsDenominator: d, DisplayedGrade: shown });
+  const pts = { text: '18/20', earned: 18, possible: 20, from: 'Brightspace' };
+
+  it('matches by grade item id even when names differ', () => {
+    const items = [item('dropbox:7', 'Project 3')];
+    attachGrades(items, [grade('55', 'Unit project', 18, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toEqual(pts);
+  });
+  it('matches a unique normalized name', () => {
+    const items = [item('quiz:1', 'hw3')];
+    attachGrades(items, [grade('9', 'HW 3', 18, 20)], new Map());
+    expect(items[0]!.score).toEqual(pts);
+  });
+  it('gives no score for ambiguous names', () => {
+    const items = [item('a', 'Homework 1'), item('b', 'Homework 1')];
+    attachGrades(items, [grade('9', 'Homework 1', 18, 20)], new Map());
+    expect(items.every((i) => !i.score)).toBe(true);
+    const one = [item('a', 'Homework 1')];
+    attachGrades(one, [grade('9', 'Homework 1', 18, 20), grade('10', 'Homework 1', 5, 20)], new Map());
+    expect(one[0]!.score).toBeUndefined();
+  });
+  it('uses the displayed grade when there are no points, and ignores empty grades', () => {
+    const items = [item('a', 'Essay'), item('b', 'Lab')];
+    attachGrades(items, [grade('1', 'Essay', null, null, 'A-'), grade('2', 'Lab', null, null, null)], new Map());
+    expect(items[0]!.score).toEqual({ text: 'A-', from: 'Brightspace' });
+    expect(items[1]!.score).toBeUndefined();
+  });
+
+  it('a failing grades request leaves items alone and the course not partial', async () => {
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { status: 403, body: {} } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.partial).toEqual([]);
+    expect(result.items.some((i) => i.score)).toBe(false);
+  });
+  it('attaches fetched grades to the connector items', async () => {
+    const g = [grade('55', 'Anything', 18, 20)];
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { body: g } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:7')?.score?.text).toBe('18/20');
   });
 });

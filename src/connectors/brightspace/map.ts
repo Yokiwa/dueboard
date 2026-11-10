@@ -1,6 +1,7 @@
-import { extractCourseCode } from '../../core/courseCode';
-import type { RawCourse, RawItem, RawLink } from '../../core/types';
-import type { CalendarEvent, DropboxFolder, Enrollment, Quiz, Toc, TocModule } from './api';
+import { extractCourseCode, normalizeTitle } from '../../core/courseCode';
+import { formatPoints } from '../../core/scoreText';
+import type { RawCourse, RawItem, RawLink, Score } from '../../core/types';
+import type { CalendarEvent, DropboxFolder, Enrollment, GradeValue, Quiz, Toc, TocModule } from './api';
 
 const DAY = 86_400_000;
 
@@ -156,4 +157,44 @@ export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
   };
   for (const m of toc.Modules ?? []) walk(m, false);
   return out;
+}
+
+function gradeScore(g: GradeValue): Score | null {
+  const { PointsNumerator: n, PointsDenominator: d } = g;
+  if (typeof n === 'number' && typeof d === 'number' && Number.isFinite(n) && Number.isFinite(d) && d > 0) {
+    return { text: formatPoints(n, d), earned: n, possible: d, from: 'Brightspace' };
+  }
+  const shown = g.DisplayedGrade?.trim();
+  return shown ? { text: shown, from: 'Brightspace' } : null;
+}
+
+/**
+ * Sets `score` on items of ONE course from its gradebook. A grade matches by grade item id first
+ * (gradeIdOf: sourceItemId -> grade item id), else by normalized name when exactly one item and one
+ * grade carry that name. Anything ambiguous gets no score.
+ */
+export function attachGrades(items: RawItem[], grades: GradeValue[], gradeIdOf: Map<string, string>): void {
+  const idCount = new Map<string, number>();
+  const nameCount = new Map<string, number>();
+  for (const g of grades) {
+    idCount.set(g.GradeObjectIdentifier, (idCount.get(g.GradeObjectIdentifier) ?? 0) + 1);
+    const k = normalizeTitle(g.GradeObjectName);
+    if (k) nameCount.set(k, (nameCount.get(k) ?? 0) + 1);
+  }
+  const itemCount = new Map<string, number>();
+  for (const it of items) {
+    const k = normalizeTitle(it.title);
+    if (k) itemCount.set(k, (itemCount.get(k) ?? 0) + 1);
+  }
+  for (const it of items) {
+    const gid = gradeIdOf.get(it.sourceItemId);
+    let match: GradeValue | undefined;
+    if (gid !== undefined && idCount.get(gid) === 1) match = grades.find((g) => g.GradeObjectIdentifier === gid);
+    if (!match) {
+      const k = normalizeTitle(it.title);
+      if (k && itemCount.get(k) === 1 && nameCount.get(k) === 1) match = grades.find((g) => normalizeTitle(g.GradeObjectName) === k);
+    }
+    const score = match ? gradeScore(match) : null;
+    if (score) it.score = score;
+  }
 }
