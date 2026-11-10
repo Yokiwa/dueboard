@@ -329,6 +329,7 @@ describe('runVisits: visit log', () => {
         landed: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html',
         frames: ['https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html'],
         result: 'none',
+        mode: 'window',
       },
     ]);
   });

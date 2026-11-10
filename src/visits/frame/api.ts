@@ -32,16 +32,40 @@ async function askOffscreen<T>(msg: Record<string, unknown>): Promise<T | undefi
   return (await browser.runtime.sendMessage({ target: 'offscreen', ...msg })) as T | undefined;
 }
 
+/** How many callers have begun without ending: the header rule is on while this is above 0. */
+let users = 0;
+let enabling: Promise<void> = Promise.resolve();
+
 export function createFrameApi(): FrameApi {
   return {
-    begin: enableFrameHeaders,
-    end: disableFrameHeaders,
+    async begin() {
+      users++;
+      if (users === 1) enabling = enableFrameHeaders();
+      try {
+        await enabling;
+      } catch (e) {
+        users = Math.max(0, users - 1);
+        throw e;
+      }
+    },
+    async end() {
+      if (users === 0) return;
+      users--;
+      if (users === 0) await disableFrameHeaders();
+    },
     async visit(req) {
-      if (IS_FIREFOX) return getBackgroundFrameHost().visit(req);
-      await ensureOffscreenDocument();
-      return (await askOffscreen<FrameResult>({ kind: 'frameVisit', req })) ?? blocked();
+      try {
+        if (IS_FIREFOX) return await getBackgroundFrameHost().visit(req);
+        await ensureOffscreenDocument();
+        return (await askOffscreen<FrameResult>({ kind: 'frameVisit', req })) ?? blocked();
+      } catch {
+        // The frame host is gone (for example the offscreen document closed): this page could not be read.
+        return blocked();
+      }
     },
     async reset() {
+      users = 0;
+      await disableFrameHeaders();
       if (IS_FIREFOX) {
         backgroundHost?.reset();
         return;

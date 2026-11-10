@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dueVisits, originAllowed } from '../../src/visits/schedule';
+import { dueVisits, originAllowed, MAX_VISITS, WINDOW_MAX } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
 import type { CapturedDue, RawItem, StoreShape } from '../../src/core/types';
 
@@ -105,12 +105,12 @@ describe('dueVisits', () => {
     expect(keys(store([topic(1)], {}, { settings: { visits: 'manual', syllabus: true } }), 'manual')).toEqual(['brightspace:topic:1']);
   });
 
-  it('puts never-visited first, then oldest, and caps at 25', () => {
-    const items = Array.from({ length: 30 }, (_, i) => topic(i + 1));
-    const captured = Object.assign({}, ...items.slice(0, 28).map((_, i) => cap(i + 1, { misses: 1, checkedAt: ago(30 + i) })));
+  it('puts never-visited first, then oldest, and caps at MAX_VISITS', () => {
+    const items = Array.from({ length: MAX_VISITS + 5 }, (_, i) => topic(i + 1));
+    const captured = Object.assign({}, ...items.slice(0, MAX_VISITS + 3).map((_, i) => cap(i + 1, { misses: 1, checkedAt: ago(30 + i) })));
     const got = keys(store(items, captured));
-    expect(got).toHaveLength(25);
-    expect(got.slice(0, 3)).toEqual(['brightspace:topic:29', 'brightspace:topic:30', 'brightspace:topic:28']);
+    expect(got).toHaveLength(MAX_VISITS);
+    expect(got.slice(0, 3)).toEqual([`brightspace:topic:${MAX_VISITS + 4}`, `brightspace:topic:${MAX_VISITS + 5}`, `brightspace:topic:${MAX_VISITS + 3}`]);
   });
 
   it('adds a Pearson session visit when Pearson is signed out and a course launches it', () => {
@@ -120,6 +120,13 @@ describe('dueVisits', () => {
     expect(dueVisits(base, now, 'auto', [])[0]).toMatchObject({ key: 'pearson:session', mode: 'session', launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` });
     base.syncMeta.pearson = { lastSuccess: ago(0.5), lastError: { at: ago(1), reason: 'not_logged_in' } };
     expect(keys(base)).toEqual([]);
+  });
+});
+
+describe('limits', () => {
+  it('allows 60 frame visits and 25 window visits', () => {
+    expect(MAX_VISITS).toBe(60);
+    expect(WINDOW_MAX).toBe(25);
   });
 });
 

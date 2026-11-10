@@ -7,6 +7,7 @@ import { originAllowed } from '../core/permissions';
 export { originAllowed };
 import type { CapturedDue, RawItem, StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
+import type { ListedTitle } from './frame/protocol';
 
 export { applyOutcomes } from './apply';
 
@@ -23,20 +24,25 @@ export interface VisitTarget {
   /** Registry id guessed from the title or link. */
   platform?: string;
   mode: 'due' | 'session' | 'syllabus';
+  /** Titles to look for on the page, with their keys, for frame visits that list several assignments at once. */
+  titles?: ListedTitle[];
 }
 export type VisitOutcome =
   | { key: string; status: 'found'; found: FoundDue; host: string }
   | { key: string; status: 'none'; host: string }
-  | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' }
+  | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' | 'frame' }
   | { key: string; status: 'needs_permission'; host: string }
   | { key: string; status: 'text'; lines: string[]; host: string }
-  | { key: string; status: 'landed'; host: string }
+  | { key: string; status: 'landed'; host: string; via?: 'frame' }
   | { key: string; status: 'signed_out' };
 
 const H = 3_600_000;
 /** Opening these could start a timed or proctored attempt; they are never opened automatically. */
 const NEVER_OPEN = /\b(quiz(?:zes)?|exams?|midterms?|tests?)\b/i;
-export const MAX_VISITS = 25;
+/** The most visits one run plans (frame visits are cheap; the visit window takes WINDOW_MAX of them). */
+export const MAX_VISITS = 60;
+/** The most visits the visit window opens in one run. */
+export const WINDOW_MAX = 25;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {

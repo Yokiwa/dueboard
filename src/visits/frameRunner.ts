@@ -1,0 +1,168 @@
+import type { FoundDue } from './finders/types';
+import type { FrameApi } from './frame/api';
+import type { FrameResult, FrameVisitRequest } from './frame/protocol';
+import { stripUrl } from './messages';
+import type { VisitLogEntry } from './runner';
+import type { VisitOutcome, VisitTarget } from './schedule';
+
+export interface FrameVisitDone {
+  target: VisitTarget;
+  outcome: VisitOutcome;
+  /** True when the visit window should still try this target (nothing was read, or nothing was found). */
+  fallback: boolean;
+  /** Outcomes this visit gave to other waiting targets, from titles it listed on its page. */
+  listed: VisitOutcome[];
+  log: VisitLogEntry;
+}
+
+export interface FrameRunOptions {
+  /** Targets with the same key never run at the same time (one platform = one key). */
+  keyOf(t: VisitTarget): string;
+  signedIn(): Promise<boolean>;
+  onDone(d: FrameVisitDone): Promise<void> | void;
+  concurrency?: number;
+  maxPages?: number;
+  budgetMs?: number;
+  now?: () => number;
+}
+
+let counter = 0;
+const newToken = () => `${Date.now().toString(36)}-${(counter++).toString(36)}`;
+
+const blockedResult = (): FrameResult => ({ status: 'blocked', listed: [], frames: [], clicked: [], pages: [] });
+
+/**
+ * Reads many targets in hidden frames: at most `concurrency` at once and never two with the same keyOf. Each frame
+ * result becomes the outcome the rest of the app knows. Titles a page lists date other waiting targets, which are then
+ * not visited. After "signed out" no new visit starts; visits in flight finish. Targets never started (page limit,
+ * time budget, signed out) are not in the result.
+ */
+export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts: FrameRunOptions): Promise<FrameVisitDone[]> {
+  if (targets.length === 0) return [];
+  const concurrency = Math.max(1, opts.concurrency ?? 3);
+  const maxPages = opts.maxPages ?? 60;
+  const now = opts.now ?? (() => Date.now());
+  const deadline = now() + (opts.budgetMs ?? 480_000);
+
+  const waiting = [...targets];
+  const active = new Set<string>();
+  const results: FrameVisitDone[] = [];
+  let inflight = 0;
+  let started = 0;
+  let signedOut = false;
+
+  const finish = async (d: FrameVisitDone) => {
+    results.push(d);
+    try {
+      await opts.onDone(d);
+    } catch {
+      // A failing consumer must not stall the run.
+    }
+  };
+
+  await api.begin();
+  try {
+    await new Promise<void>((resolve) => {
+      const pump = () => {
+        while (!signedOut && inflight < concurrency && started < maxPages && now() < deadline) {
+          const i = waiting.findIndex((t) => !active.has(opts.keyOf(t)));
+          if (i < 0) break;
+          const t = waiting.splice(i, 1)[0]!;
+          const group = opts.keyOf(t);
+          active.add(group);
+          inflight++;
+          started++;
+          void run(t).finally(() => {
+            active.delete(group);
+            inflight--;
+            pump();
+          });
+        }
+        if (inflight === 0) resolve();
+      };
+      pump();
+    });
+  } finally {
+    await api.end();
+  }
+  return results;
+
+  async function run(t: VisitTarget): Promise<void> {
+    const req: FrameVisitRequest = { token: newToken(), url: t.launchUrl, mode: t.mode };
+    if (t.platform) req.platform = t.platform;
+    if (t.titles) req.titles = t.titles;
+    const res = await (async () => api.visit(req))().catch(blockedResult);
+    let { outcome, fallback } = await map(t, res);
+    if (outcome.status === 'signed_out') signedOut = true;
+
+    // Titles listed on this page: this target's own date turns a "nothing here" into a date; the other waiting targets
+    // are dated without a visit of their own.
+    const listed: { target: VisitTarget; outcome: VisitOutcome & { status: 'found' }; found: FoundDue }[] = [];
+    if (res.host !== undefined) {
+      for (const l of res.listed) {
+        if (l.key === t.key) {
+          if (outcome.status === 'none') {
+            outcome = { key: t.key, status: 'found', found: l.found, host: res.host };
+            fallback = false;
+          }
+          continue;
+        }
+        const j = waiting.findIndex((w) => w.key === l.key);
+        if (j < 0) continue;
+        const other = waiting.splice(j, 1)[0]!;
+        listed.push({ target: other, outcome: { key: other.key, status: 'found', found: l.found, host: res.host }, found: l.found });
+      }
+    }
+
+    const done: FrameVisitDone = { target: t, outcome, fallback, listed: listed.map((l) => l.outcome), log: logEntry(t, res, outcome) };
+    await finish(done);
+    for (const l of listed) {
+      const log = logEntry(l.target, blockedResult(), l.outcome);
+      log.site = res.host;
+      log.detail = 'listed';
+      await finish({ target: l.target, outcome: l.outcome, fallback: false, listed: [], log });
+    }
+  }
+
+  async function map(t: VisitTarget, r: FrameResult): Promise<{ outcome: VisitOutcome; fallback: boolean }> {
+    const key = t.key;
+    const failed = async (): Promise<{ outcome: VisitOutcome; fallback: boolean }> =>
+      (await opts.signedIn().catch(() => true))
+        ? { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true }
+        : { outcome: { key, status: 'signed_out' }, fallback: false };
+    switch (r.status) {
+      case 'signed_out':
+        return { outcome: { key, status: 'signed_out' }, fallback: false };
+      case 'blocked':
+        return failed();
+      default:
+        // A result that read a page names its host; without one it cannot be trusted.
+        if (r.host === undefined) return { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true };
+    }
+    const host = r.host;
+    switch (r.status) {
+      case 'found':
+        return r.found ? { outcome: { key, status: 'found', found: r.found, host }, fallback: false } : { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true };
+      case 'none':
+        return { outcome: { key, status: 'none', host }, fallback: true };
+      case 'text':
+        return { outcome: { key, status: 'text', lines: r.lines ?? [], host }, fallback: false };
+      default:
+        return { outcome: { key, status: 'landed', host, via: 'frame' }, fallback: false };
+    }
+  }
+
+  function logEntry(t: VisitTarget, r: FrameResult, outcome: VisitOutcome): VisitLogEntry {
+    const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, opened: stripUrl(t.launchUrl), frames: r.frames.map((f) => stripUrl(f.url)), result: outcome.status, mode: 'frame' };
+    if ('host' in outcome) entry.site = outcome.host;
+    else if (r.host) entry.site = r.host;
+    if (r.landed) entry.landed = stripUrl(r.landed);
+    if (r.clicked.length) entry.clicked = r.clicked;
+    if (outcome.status === 'failed') entry.detail = outcome.reason;
+    if (outcome.status === 'found') {
+      entry.due = outcome.found.dueAt;
+      entry.evidence = outcome.found.evidence;
+    } else if (r.pages.length) entry.pages = r.pages;
+    return entry;
+  }
+}

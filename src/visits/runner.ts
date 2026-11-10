@@ -69,6 +69,8 @@ export interface VisitLogEntry {
   evidence?: string;
   result: VisitOutcome['status'];
   detail?: string;
+  /** How the page was read: in a hidden frame or in the visit window. */
+  mode: 'frame' | 'window';
 }
 
 export interface RunOptions {
@@ -116,7 +118,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       if (outcome === 'stop') break;
       out.push(outcome);
       if (opts.onLog) {
-        const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
+        const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, mode: 'window', ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
         if (outcome.status === 'failed') entry.detail = outcome.reason;
         if (outcome.status === 'found') {
           entry.due = outcome.found.dueAt;

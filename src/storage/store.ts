@@ -261,6 +261,7 @@ export interface StoredVisitLogEntry {
   evidence?: string;
   result: string;
   detail?: string;
+  mode?: 'frame' | 'window';
 }
 export async function appendVisitLog(entries: StoredVisitLogEntry[]): Promise<void> {
   if (entries.length === 0) return;

@@ -204,13 +204,21 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
     },
 
     onPost(e) {
-      if (!isHelloPost(e.data) || byNonce.has(e.data.nonce)) return;
+      // A sandboxed frame has the opaque origin 'null': no ack can be addressed to it, so it is never bound.
+      if (e.origin === 'null' || !isHelloPost(e.data) || byNonce.has(e.data.nonce)) return;
       const hit = owner(e.source);
       if (!hit) return;
-      hit.visit.nonces.set(e.data.nonce, { direct: hit.direct });
-      byNonce.set(e.data.nonce, hit.visit);
+      const nonce = e.data.nonce;
+      hit.visit.nonces.set(nonce, { direct: hit.direct });
+      byNonce.set(nonce, hit.visit);
+      try {
+        (e.source as { postMessage(m: unknown, origin: string): void }).postMessage({ dueboard: 'ack', nonce }, e.origin);
+      } catch {
+        // No ack went out, so the reader will not use this nonce: do not leave it bound.
+        hit.visit.nonces.delete(nonce);
+        byNonce.delete(nonce);
+      }
       arm(hit.visit);
-      (e.source as { postMessage(m: unknown, origin: string): void }).postMessage({ dueboard: 'ack', nonce: e.data.nonce }, e.origin);
     },
 
     onMessage(m) {

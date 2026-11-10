@@ -285,4 +285,29 @@ describe('frame host', () => {
     await expect(b).resolves.toMatchObject({ status: 'blocked' });
     expect(iframes().length).toBe(0);
   });
+
+  it('ignores a hello from a sandboxed frame (origin null) without binding the nonce', () => {
+    const { host, child, hello } = setup();
+    void host.visit(req());
+    const direct = child();
+    hello(direct, n(1), 'null');
+    expect(direct.postMessage).not.toHaveBeenCalled();
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toBeNull();
+    hello(direct, n(1), ORIGIN);
+    expect(direct.postMessage).toHaveBeenCalledTimes(1);
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).not.toBeNull();
+  });
+
+  it('leaves no nonce bound when the ack cannot be posted', () => {
+    const { host, child, hello } = setup();
+    void host.visit(req());
+    const direct = child();
+    direct.postMessage.mockImplementationOnce(() => {
+      throw new Error('detached');
+    });
+    expect(() => hello(direct, n(1))).not.toThrow();
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toBeNull();
+    hello(direct, n(1));
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).not.toBeNull();
+  });
 });
