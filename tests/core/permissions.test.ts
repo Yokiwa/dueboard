@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { accessToAsk, grantedPlatforms, missingRequired, REQUIRED_ORIGINS, snoozeUntil } from '../../src/core/permissions';
+import { manifestOrigins } from '../../src/core/platformRegistry';
 import { migrate } from '../../src/storage/store';
 import type { StoreShape } from '../../src/core/types';
 
@@ -43,17 +44,30 @@ describe('accessToAsk', () => {
   });
 });
 
+describe('install-time access', () => {
+  it('asks for nothing when manifest origins are granted and courses link to registry platforms', () => {
+    const s = linking([['ALEKS', LTI('A')], ['LabFlow', LTI('L')], ['Honorlock practice', LTI('H')], ['Campuswire', LTI('C')], ['Circuit peer review', LTI('X')]]);
+    expect(accessToAsk(s, manifestOrigins(), now)).toEqual([]);
+  });
+
+  it('never asks by itself for a platform with no hosts', () => {
+    expect(accessToAsk(linking([['Circuit peer review', LTI('X')], ['Variate', LTI('V')]]), [], now)).toEqual([]);
+  });
+});
+
 describe('missingRequired', () => {
   it('lists required sites the browser has not granted', () => {
-    expect(missingRequired(['https://purdue.brightspace.com/*'])).toEqual(['https://www.gradescope.com/*', 'https://mylab.pearson.com/*']);
+    const all = manifestOrigins();
+    expect(REQUIRED_ORIGINS).toEqual(all);
+    expect(missingRequired(['https://purdue.brightspace.com/*'])).toEqual(all.slice(1));
     expect(missingRequired(REQUIRED_ORIGINS)).toEqual([]);
   });
 });
 
 describe('grantedPlatforms', () => {
   it('names the optional platform access the student gave', () => {
-    expect(grantedPlatforms([...REQUIRED_ORIGINS, 'https://*.aleks.com/*', 'https://learn.example.com/*'])).toEqual([
-      { key: 'aleks', label: 'ALEKS', origins: ['https://*.aleks.com/*'] },
+    expect(grantedPlatforms([...REQUIRED_ORIGINS, 'https://*.turnitin.com/*', 'https://learn.example.com/*'])).toEqual([
+      { key: 'turnitin', label: 'Turnitin', origins: ['https://*.turnitin.com/*'] },
       { key: 'learn.example.com', label: 'learn.example.com', origins: ['https://learn.example.com/*'] },
     ]);
   });

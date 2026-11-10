@@ -1,9 +1,9 @@
 import { platformOfLink } from './platforms';
-import { hostMatches, originPatterns, PLATFORMS, platformByHost, type PlatformDef } from './platformRegistry';
+import { hostMatches, manifestOrigins, originPatterns, PLATFORMS, platformByHost, type PlatformDef } from './platformRegistry';
 import type { StoreShape } from './types';
 
 /** Sites DueBoard needs to sync at all (the manifest's host_permissions). */
-export const REQUIRED_ORIGINS = ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*', 'https://mylab.pearson.com/*'];
+export const REQUIRED_ORIGINS = manifestOrigins();
 const SNOOZE_MS = 7 * 86_400_000;
 
 /** A site-access request to show the student: a known platform, or a bare host DueBoard landed on. */
@@ -23,7 +23,8 @@ export function originAllowed(granted: string[], hostname: string): boolean {
   });
 }
 
-const platformAllowed = (def: PlatformDef, granted: string[]) => def.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')));
+// A platform without hosts has nothing to grant, so it never asks (and "every host allowed" is not a reason to visit).
+const platformAllowed = (def: PlatformDef, granted: string[]) => def.hosts.length === 0 || def.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')));
 const asksFor = (def: PlatformDef): AccessAsk => ({ key: def.id, label: def.label, origins: originPatterns(def) });
 
 /**

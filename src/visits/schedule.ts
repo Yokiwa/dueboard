@@ -106,9 +106,10 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
     const r = raw.get(key)!;
     if (NEVER_OPEN.test(r.title)) continue;
     const platform = platformByTitle(r.title);
-    if (platform && (platform.reader === 'fetch' || platform.reader === 'none')) continue;
-    // A known platform is visited only with access to its sites; an unknown one is visited to learn its site.
-    if (platform && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
+    if (platform && (platform.reader === 'fetch' || platform.reader === 'none' || platform.neverOpen)) continue;
+    // A known platform is visited only with access to its sites; an unknown one (or one with no known host) is
+    // visited to learn its site.
+    if (platform && platform.hosts.length > 0 && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
     const n = rank(store.captured[key], now.getTime(), trigger, granted);
     if (n === null) continue;
     // Opened as a full page (like "Open in new window"): platforms refuse to show inside Brightspace's own frame.

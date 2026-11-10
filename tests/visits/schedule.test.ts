@@ -32,6 +32,10 @@ const cap = (n: number, p: Partial<CapturedDue>): Record<string, CapturedDue> =>
 const keys = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => dueVisits(s, now, trigger, granted).map((t) => t.key);
 
 describe('dueVisits', () => {
+  it('never opens proctoring launches', () => {
+    expect(keys(store([topic(1, 'Honorlock practice'), topic(2, 'ExamSoft setup')]))).toEqual([]);
+  });
+
   it('visits an undated launch that was never visited', () => {
     expect(dueVisits(store([topic(1)]), now, 'auto', [])).toEqual([
       // Opened as a full page, like "Open in new window": platforms refuse to show inside Brightspace's frame.

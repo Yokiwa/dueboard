@@ -89,6 +89,6 @@ describe('dashboard App: site access', () => {
     await patchStore({ snapshots: s.snapshots });
     render(<App />);
     await waitFor(() => expect(screen.getByText('DueBoard found ALEKS in your courses. Allow it to read their due dates?')).toBeTruthy());
-    expect(screen.getByText("DueBoard can't reach Gradescope and Pearson. Allow access to keep syncing.")).toBeTruthy();
+    expect(screen.getByText(/^DueBoard can't reach .*Gradescope.*Pearson.*\. Allow access to keep syncing\.$/)).toBeTruthy();
   });
 });
