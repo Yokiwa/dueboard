@@ -6,6 +6,18 @@ export const ALL_SOURCES: SourceId[] = ['brightspace', 'gradescope', 'pearson'];
 export type ItemType = 'assignment' | 'quiz' | 'exam' | 'event' | 'manual';
 export type LinkCategory = 'textbook' | 'homework' | 'discussion' | 'website' | 'lms' | 'other';
 
+/** A score read from a platform: "18/20" or "92%". */
+export interface Score {
+  /** As shown: "18/20", "1.5/25" or "92%". */
+  text: string;
+  earned?: number;
+  possible?: number;
+  /** The platform's name, for "Read from WileyPLUS". */
+  from: string;
+  /** The source line, at most 120 characters. */
+  evidence?: string;
+}
+
 export interface RawCourse {
   source: SourceId;
   sourceCourseId: string;
@@ -27,6 +39,8 @@ export interface RawItem {
   submitted: boolean;
   /** Absolute Brightspace launch URL (a content topic's Url), used to visit the platform. */
   launchUrl?: string;
+  /** The score of finished work, when the platform shows one. */
+  score?: Score;
 }
 export interface RawLink {
   source: 'brightspace';
@@ -111,6 +125,7 @@ export interface Item {
   duePlatform?: string;
   /** "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'" */
   dueEvidence?: string;
+  score?: Score;
 }
 export interface CourseLink {
   courseId: string;
@@ -185,6 +200,10 @@ export interface CapturedDue {
   failures?: number;
   /** The visit landed on this host without site access; wait until access is granted. */
   blocked?: string;
+  /** The score of finished work read on the page, if any. */
+  score?: Score;
+  /** When the page was last read for a score. */
+  scoreCheckedAt?: string;
 }
 
 export interface StoreShape {
