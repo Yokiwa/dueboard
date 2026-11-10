@@ -6,7 +6,7 @@ Copy each section into the matching field when uploading.
 DueBoard
 
 ## Summary (max 132 characters)
-Every deadline from Brightspace and the homework platforms your courses use (Gradescope, Pearson, WileyPLUS, ALEKS…) on one page.
+Every deadline from Brightspace and the homework platforms your courses use, on one page.
 
 ## Category
 Productivity › Education
@@ -19,11 +19,11 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 
 • One sign-in: Brightspace is the only account you connect
 • Next deadline: the nearest deadline on top with a live countdown, Open and Done buttons
-• Course cards: upcoming work per course plus shortcuts to Gradescope, Pearson, WileyPLUS, Achieve, Piazza, Ed and more
+• Course cards: upcoming work per course, plus one-click shortcuts to the homework platforms each course uses
 • Calendar: week and month views show which days pile up
 • To-do list: tick work off; submitted work is ticked automatically where the platform reports it
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
-• Due dates from other platforms (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and more): when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the "Due" line and closes it. It also opens the pages of finished work to read their score. You allow each platform once.
+• Due dates from other homework platforms: when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the "Due" line and closes it. It also opens the pages of finished work to read their score. You allow each platform once.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own: anything DueBoard can't read can be added by hand
 • Syncs every 30 minutes using the sessions already in your browser
@@ -31,7 +31,7 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 Privacy: everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password.
 
 Currently works with Purdue University's Brightspace (purdue.brightspace.com).
-DueBoard is an open-source student project and is not affiliated with Purdue University, D2L, Gradescope, Pearson, Wiley or any other platform it reads.
+DueBoard is an open-source student project and is not affiliated with Purdue University, D2L or any homework platform it reads.
 
 ## Screenshots (1280×800)
 store/screenshots/1-courses.png, 2-calendar.png, 3-todo.png
