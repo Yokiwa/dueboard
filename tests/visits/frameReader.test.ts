@@ -5,17 +5,33 @@ import { isHelloPost, isReaderMessage, type FrameConfig, type HelloPost, type Re
 const ORIGIN = 'chrome-extension://abc123';
 const OPEN_HERE = 'chrome-extension://abc123/open-here.js';
 
-function setup(opts: { top: boolean; config: FrameConfig | null }) {
+function setup(opts: { top: boolean; config: FrameConfig | null; ancestorOrigins?: string[]; ack?: boolean }) {
   const post = vi.fn<(m: HelloPost, origin: string) => void>();
   const sent: ReaderMessage[] = [];
-  const win = { document, location: { href: 'https://www.aleks.com/hw7' } } as unknown as Window & { top: unknown };
-  (win as { top: unknown }).top = opts.top ? win : { postMessage: post };
+  const listeners = new Set<(e: MessageEvent) => void>();
+  const location: { href: string; ancestorOrigins?: string[] } = { href: 'https://www.aleks.com/hw7' };
+  if (opts.ancestorOrigins) location.ancestorOrigins = opts.ancestorOrigins;
+  const topObj = { postMessage: post };
+  const win = {
+    document,
+    location,
+    addEventListener: (_t: string, l: (e: MessageEvent) => void) => void listeners.add(l),
+    removeEventListener: (_t: string, l: (e: MessageEvent) => void) => void listeners.delete(l),
+  } as unknown as Window & { top: unknown };
+  (win as { top: unknown }).top = opts.top ? win : topObj;
   const send = vi.fn(async (m: ReaderMessage) => {
     sent.push(m);
     return m.type === 'frameConfig' ? opts.config : undefined;
   });
   startFrameReader(win, { extensionOrigin: ORIGIN, send, openHereUrl: OPEN_HERE });
-  return { win, post, sent, send };
+  /** Delivers a message event to the window, by default a valid ack for the hello that was posted. */
+  const deliver = (o: { source?: unknown; origin?: string; data?: unknown } = {}) => {
+    const nonce = post.mock.calls[0]?.[0].nonce;
+    const e = { source: 'source' in o ? o.source : topObj, origin: o.origin ?? ORIGIN, data: 'data' in o ? o.data : { dueboard: 'ack', nonce } } as MessageEvent;
+    for (const l of [...listeners]) l(e);
+  };
+  if (opts.ack !== false && !opts.top) deliver();
+  return { win, post, sent, send, deliver, listeners, topObj };
 }
 
 describe('frame reader', () => {
@@ -34,6 +50,37 @@ describe('frame reader', () => {
     expect(post).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
     expect(document.documentElement.outerHTML).toBe(before);
+  });
+
+  it('stays silent in a nested frame of a website that never acks', async () => {
+    const before = document.documentElement.outerHTML;
+    const { send, listeners } = setup({ top: false, config: { mode: 'due', allowOpen: true, titles: [] }, ack: false });
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(send).not.toHaveBeenCalled();
+    expect(listeners.size).toBe(0);
+    expect(document.documentElement.outerHTML).toBe(before);
+  });
+
+  it('posts no hello when the top page is a website (ancestorOrigins)', async () => {
+    const { post, send } = setup({ top: false, config: null, ancestorOrigins: ['https://purdue.brightspace.com'], ack: false });
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(post).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('posts the hello when the last ancestor origin is the extension', async () => {
+    const { post } = setup({ top: false, config: null, ancestorOrigins: [ORIGIN], ack: false });
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an ack with the wrong nonce, source or origin', async () => {
+    const { send, deliver } = setup({ top: false, config: null, ack: false });
+    deliver({ data: { dueboard: 'ack', nonce: '0'.repeat(32) } });
+    deliver({ source: {} });
+    deliver({ origin: 'https://evil.example' });
+    deliver({ data: { dueboard: 'hello', nonce: '0'.repeat(32) } });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('posts one hello with a 32 hex nonce to exactly the extension origin', async () => {

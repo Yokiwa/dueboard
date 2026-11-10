@@ -47,6 +47,9 @@ export interface FrameResult {
 /** The only thing that travels by postMessage: the nonce. Everything else goes by runtime messaging. */
 export type HelloPost = { dueboard: 'hello'; nonce: string };
 
+/** The frame host's answer to a valid hello, so the reader knows it is inside the frame host and not a website. */
+export type AckPost = { dueboard: 'ack'; nonce: string };
+
 export type ReaderMessage =
   /** Answered with FrameConfig | null. */
   | { type: 'frameConfig'; nonce: string }
@@ -64,4 +67,9 @@ export const isReaderMessage = (v: unknown): v is ReaderMessage => {
   if (!o || typeof o !== 'object' || typeof o.nonce !== 'string' || !NONCE.test(o.nonce)) return false;
   if (o.type === 'frameConfig') return true;
   return o.type === 'frameMessage' && !!o.message && typeof o.message === 'object' && typeof (o.message as { type?: unknown }).type === 'string';
+};
+
+export const isAckPost = (v: unknown): v is AckPost => {
+  const o = v as { dueboard?: unknown; nonce?: unknown } | null;
+  return !!o && typeof o === 'object' && o.dueboard === 'ack' && typeof o.nonce === 'string' && NONCE.test(o.nonce);
 };

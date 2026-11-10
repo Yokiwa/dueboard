@@ -1,8 +1,9 @@
 import { runFinder, type FinderWindow } from '../finders/run';
-import type { FrameConfig, HelloPost, ListedTitle, ReaderMessage } from './protocol';
+import { isAckPost, type FrameConfig, type HelloPost, type ListedTitle, type ReaderMessage } from './protocol';
 
 const CONFIG_POLL_MS = 250;
 const CONFIG_GIVE_UP_MS = 5_000;
+const ACK_GIVE_UP_MS = 20_000;
 
 type ReaderWindow = FinderWindow & { __dueboardTitles?: ListedTitle[] };
 
@@ -19,21 +20,38 @@ function makeNonce(): string {
 }
 
 /**
- * Runs in every frame of a page the extension's frame host embeds. In a normal tab (the window is its own top) it does
- * nothing at all. In a frame it says hello to the top window, addressed to the extension origin only (so no website can
- * receive it), then asks the background for its configuration with the same nonce and runs the finder. The nonce is the
- * only thing sent by postMessage; titles, dates and page text travel only by runtime messaging.
+ * Runs in every frame of a page on a platform site. In a normal tab (the window is its own top) it does nothing. In a
+ * nested frame it says hello to the top window, addressed to the extension origin only (so no website can receive it).
+ * It sends nothing by runtime messaging and changes nothing until the top window answers with an ack carrying the same
+ * nonce from the extension origin: only DueBoard's frame host does. Then it asks the background for its configuration and
+ * runs the finder. The nonce is the only thing sent by postMessage; titles, dates and page text travel only by runtime
+ * messaging.
  */
 export function startFrameReader(win: Window, deps: FrameReaderDeps): void {
   if (win.top === win || !win.top) return;
+  // Chrome lists the origins of all ancestors; the last one is the top page. A website there can't be the frame host.
+  const ancestors = (win.location as { ancestorOrigins?: ArrayLike<string> }).ancestorOrigins;
+  if (ancestors && ancestors.length > 0 && ancestors[ancestors.length - 1] !== deps.extensionOrigin) return;
+  const top = win.top;
   const nonce = makeNonce();
   const hello: HelloPost = { dueboard: 'hello', nonce };
-  win.top.postMessage(hello, deps.extensionOrigin);
+
+  let giveUp: ReturnType<typeof setTimeout> | undefined;
+  const onMessage = (e: MessageEvent) => {
+    if (e.source !== top || e.origin !== deps.extensionOrigin || !isAckPost(e.data) || e.data.nonce !== nonce) return;
+    win.removeEventListener('message', onMessage);
+    clearTimeout(giveUp);
+    ask();
+  };
+  win.addEventListener('message', onMessage);
+  giveUp = setTimeout(() => win.removeEventListener('message', onMessage), ACK_GIVE_UP_MS);
+  top.postMessage(hello, deps.extensionOrigin);
 
   const w = win as unknown as ReaderWindow;
-  const started = Date.now();
+  let started = 0;
   let taken = false;
   const ask = () => {
+    if (!started) started = Date.now();
     void deps
       .send({ type: 'frameConfig', nonce })
       .then((answer) => {
@@ -58,7 +76,6 @@ export function startFrameReader(win: Window, deps: FrameReaderDeps): void {
     runFinder(w, (message) => void deps.send({ type: 'frameMessage', nonce, message }).catch(() => undefined));
   };
 
-  ask();
 }
 
 /** A page that would open the assignment in a new tab opens it in this frame instead (see open-here.ts). */
