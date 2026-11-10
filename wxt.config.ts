@@ -15,6 +15,8 @@ export default defineConfig({
     host_permissions: manifestOrigins(),
     // Sites of every known platform are granted at install; anything else is asked for one at a time, with a click.
     optional_host_permissions: ['https://*/*'],
+    // The frame reader adds this to a frame of the hidden frame host, to run in the page's own world.
+    web_accessible_resources: [{ resources: ['open-here.js'], matches: manifestOrigins() }],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

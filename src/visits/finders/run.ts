@@ -7,7 +7,7 @@ export interface FinderWindow {
   location: { href: string };
   top: unknown;
   /** Set by the visit runner before the finder script is injected. */
-  __dueboardMode?: 'due' | 'syllabus';
+  __dueboardMode?: 'due' | 'syllabus' | 'session';
   __dueboardPlatform?: string;
   /** Set while this frame is reading, so repeated injections (for late frames) don't start a second reader. */
   __dueboardReading?: boolean;
@@ -35,6 +35,8 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   const frameUrl = win.location.href;
   const started = Date.now();
   send({ type: 'visitFrame', frameUrl: stripUrl(frameUrl), top });
+  // A session visit only needs to know the page loaded and this frame is there.
+  if (win.__dueboardMode === 'session') return;
   let lastText = '';
   let pressed = false;
   let stableSince = started;
