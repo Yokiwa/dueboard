@@ -9,7 +9,7 @@ DueBoard
 dueboard
 
 ## Summary (max 250 characters)
-Every assignment and deadline from Brightspace and the homework platforms your courses use (Gradescope, Pearson, WileyPLUS, ALEKS, InQuizitive and more) on one page. Sign in to Brightspace once; DueBoard finds the rest.
+Every assignment and deadline from Brightspace and the homework platforms your courses use, on one page. Sign in to Brightspace once; DueBoard finds the rest.
 
 ## Description
 Stop clicking through every course in Brightspace and opening platform after platform to find due dates. Sign in to Brightspace once. DueBoard reads your courses, finds the homework platforms they use, and puts every deadline on one page, one click from your toolbar.
@@ -20,7 +20,7 @@ Stop clicking through every course in Brightspace and opening platform after pla
 • Course cards with upcoming work and shortcuts to each course's platforms
 • Calendar (week and month) and a to-do list
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
-• Due dates from other platforms (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and others): when you click Refresh, DueBoard opens the homework link from Brightspace in a minimized window, reads the "Due" line, and closes it. You allow each platform once.
+• Due dates from other homework platforms: when you click Refresh, DueBoard opens the homework link from Brightspace in a minimized window, reads the "Due" line, and closes it. You allow each platform once.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own entries for anything else
 
@@ -28,7 +28,7 @@ Stop clicking through every course in Brightspace and opening platform after pla
 Everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password. It only reads pages. The one thing it may press is a platform's "open the assignment" button (Open, Launch, View assignment); it never types, and never starts, continues or submits work.
 
 Currently works with Purdue University's Brightspace (purdue.brightspace.com).
-DueBoard is an open-source student project and is not affiliated with Purdue University, D2L, Gradescope, Pearson, Wiley, McGraw Hill, W. W. Norton or Mozilla.
+DueBoard is an open-source student project and is not affiliated with Purdue University, D2L, Mozilla or any homework platform it reads.
 
 ## Categories
 Productivity (also: Other)
