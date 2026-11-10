@@ -48,6 +48,7 @@ const messages = {
   'badge.done': 'Done',
   'badge.submitted': 'Submitted',
   'badge.noDue': 'No due date',
+  'badge.scoreFrom': (v: Vars) => `Score from ${v.from}`,
   'cal.week': 'Week',
   'cal.month': 'Month',
   'cal.today': 'Today',

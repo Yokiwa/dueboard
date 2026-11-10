@@ -28,7 +28,7 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
           <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
         )}
       </div>
-      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
+      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} score={item.score} now={now} />
     </div>
   );
 }

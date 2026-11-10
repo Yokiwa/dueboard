@@ -191,3 +191,32 @@ describe('CoursesView', () => {
     expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Lecture 2 JOVE Playlist' })).toBeTruthy();
   });
 });
+
+describe('CoursesView: scores on badges', () => {
+  const sd = dash({
+    courses: [cs],
+    items: [
+      item('s1', 'b:1', 'Scored lab', '2026-11-02T23:59:00-05:00', { doneByUser: true, score: { text: '18/25', from: 'WileyPLUS' } }),
+      item('s2', 'b:1', 'Scored quiz', '2026-11-05T23:59:00-05:00', { submitted: true, score: { text: '92%', from: 'Gradescope' } }),
+      item('s3', 'b:1', 'Plain lab', '2026-11-03T23:59:00-05:00', { doneByUser: true }),
+    ],
+    links: [],
+  });
+
+  it('shows the score after Done with its source as the title', () => {
+    renderIn('en', <CoursesView dashboard={sd} now={NOW} />);
+    const b = screen.getByText('Done · 18/25');
+    expect(b.getAttribute('title')).toBe('Score from WileyPLUS');
+  });
+
+  it('shows the score after Submitted', () => {
+    renderIn('en', <CoursesView dashboard={sd} now={NOW} />);
+    expect(screen.getByText('Submitted · 92%')).toBeTruthy();
+  });
+
+  it('a done item without a score shows plain Done and no title', () => {
+    renderIn('en', <CoursesView dashboard={sd} now={NOW} />);
+    const b = screen.getByText('Done');
+    expect(b.hasAttribute('title')).toBe(false);
+  });
+});

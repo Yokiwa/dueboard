@@ -258,6 +258,8 @@ export interface StoredVisitLogEntry {
   clicked?: string[];
   pages?: { url: string; text: string; buttons: string[] }[];
   due?: string;
+  /** The score read, as shown (score visits). */
+  score?: string;
   evidence?: string;
   result: string;
   detail?: string;

@@ -23,6 +23,15 @@ describe('Diagnostics: visit log', () => {
     expect(screen.getByRole('button', { name: 'Download visit log' })).toBeTruthy();
   });
 
+  it('shows the score a visit read', async () => {
+    await appendVisitLog([
+      { at: '2026-11-08T10:00:00.000Z', key: 'brightspace:topic:5', title: 'HW11', site: 'education.wiley.com', opened: 'o', landed: 'o', frames: [], result: 'score', score: '18/25' },
+    ]);
+    render(<VisitLog />);
+    const rows = await screen.findAllByRole('row');
+    expect(rows[1]!.textContent).toContain('18/25');
+  });
+
   it('says when there is nothing yet', async () => {
     render(<VisitLog />);
     await waitFor(() => expect(screen.getByText(/No platform visits yet/)).toBeTruthy());
