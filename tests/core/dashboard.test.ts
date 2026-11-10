@@ -631,3 +631,58 @@ describe('due dates written in the homework title', () => {
     expect(it11.dueFrom).toBeUndefined();
   });
 });
+
+describe('scores', () => {
+  const sc = (text: string, from: string) => ({ text, from });
+  const bsItem = (p: Partial<RawItem> = {}) =>
+    item({ source: 'brightspace', sourceItemId: 'a:1', sourceCourseId: '1', title: 'HW 1', ...p });
+  const gsItem = (p: Partial<RawItem> = {}) =>
+    item({ source: 'gradescope', sourceItemId: 'g1', sourceCourseId: 'g', title: 'HW 1', ...p });
+  const twins = (bs: Partial<RawItem>, gs: Partial<RawItem>, user: Partial<UserState> = {}) =>
+    input({
+      snapshots: {
+        brightspace: snap([bsCourse('1', 'MA 16100', 'MA 16100')], [bsItem(bs)]),
+        gradescope: snap([gsCourse('g', 'MA 16100', 'MA 16100')], [gsItem(gs)]),
+      },
+      userState: { ...emptyUser(), ...user },
+    });
+  const only = (i: DashboardInput) => {
+    const d = buildDashboard(i, now);
+    expect(d.items).toHaveLength(1);
+    return d.items[0]!;
+  };
+
+  it('a submitted Brightspace item shows its raw score', () => {
+    const i = input({ snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [bsItem({ submitted: true, score: sc('18/25', 'Brightspace') })]) } });
+    expect(only(i).score?.text).toBe('18/25');
+  });
+  it('Brightspace wins over a Gradescope twin', () => {
+    const i = twins({ submitted: true, score: sc('18/25', 'Brightspace') }, { score: sc('20/25', 'Gradescope') });
+    expect(only(i).score).toMatchObject({ text: '18/25', from: 'Brightspace' });
+  });
+  it('a Gradescope score is used when the Brightspace twin has none', () => {
+    const i = twins({ submitted: true }, { score: sc('20/25', 'Gradescope') });
+    expect(only(i).score).toMatchObject({ text: '20/25', from: 'Gradescope' });
+  });
+  it('a captured score is used when no raw item has one', () => {
+    const i = twins({ submitted: true }, {});
+    i.captured = { 'brightspace:a:1': { itemKey: 'brightspace:a:1', title: 'HW 1', dueAt: null, platform: 'aleks', via: 'visit', checkedAt: 'x', score: sc('92%', 'ALEKS') } };
+    expect(only(i).score?.text).toBe('92%');
+  });
+  it('a marked-done item with a captured score has it; an unfinished one does not', () => {
+    const mk = (done: boolean) => {
+      const i = input({
+        snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [bsItem()]) },
+        userState: { ...emptyUser(), done: done ? { 'brightspace:a:1': true } : {} },
+      });
+      i.captured = { 'brightspace:a:1': { itemKey: 'brightspace:a:1', title: 'HW 1', dueAt: null, platform: 'aleks', via: 'visit', checkedAt: 'x', score: sc('92%', 'ALEKS') } };
+      return only(i);
+    };
+    expect(mk(true).score?.text).toBe('92%');
+    expect(mk(false).score).toBeUndefined();
+  });
+  it('an unfinished item with a raw score has none', () => {
+    const i = input({ snapshots: { brightspace: snap([bsCourse('1', 'MA 16100')], [bsItem({ score: sc('18/25', 'Brightspace') })]) } });
+    expect(only(i).score).toBeUndefined();
+  });
+});

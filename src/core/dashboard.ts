@@ -10,6 +10,7 @@ import type {
   ManualItem,
   RawCourse,
   RawItem,
+  Score,
   SourceId,
   StoreShape,
   UserState,
@@ -238,10 +239,16 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   const inWindow = (i: { dueAt: string | null }) => !i.dueAt || Date.parse(i.dueAt) >= minDue;
 
   const raw: Item[] = [];
+  /** Raw scores per source for each item, kept off Item until one is chosen. */
+  const rawScores = new Map<Item, Partial<Record<SourceId, Score>>>();
   for (const source of ['brightspace', 'gradescope', 'pearson'] as const) {
     for (const r of input.snapshots[source]?.items ?? []) {
       const cid = alias.get(courseId(source, r.sourceCourseId));
-      if (cid && visible.has(cid) && inWindow(r)) raw.push(fromRaw(r, cid));
+      if (cid && visible.has(cid) && inWindow(r)) {
+        const it = fromRaw(r, cid);
+        raw.push(it);
+        if (r.score) rawScores.set(it, { [source]: r.score });
+      }
     }
   }
   raw.sort((a, b) => dueMs(a) - dueMs(b));
@@ -249,7 +256,11 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   const merged: Item[] = [];
   for (const it of raw) {
     const twin = merged.find((m) => isSameWork(m, it));
-    if (twin) mergeInto(twin, it);
+    if (twin) {
+      mergeInto(twin, it);
+      const extra = rawScores.get(it);
+      if (extra) rawScores.set(twin, { ...rawScores.get(twin), ...extra });
+    }
     else merged.push(it);
   }
   for (const m of merged) {
@@ -269,6 +280,14 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
     merged.push({ id: m.id, courseId: cid, title: m.title, type: 'manual', dueAt: m.dueAt, url: m.url, sources: ['manual'], sourceKeys: [m.id], submitted: false, doneByUser: false });
   }
   for (const m of merged) m.doneByUser = m.sourceKeys.some((k) => input.userState.done[k]);
+  // One score per finished item: Brightspace, Gradescope, Pearson, then a page visit (own keys only).
+  for (const m of merged) {
+    if (!m.doneByUser && !m.submitted) continue;
+    const per = rawScores.get(m);
+    const score =
+      per?.brightspace ?? per?.gradescope ?? per?.pearson ?? m.sourceKeys.map((k) => input.captured?.[k]?.score).find((x) => x !== undefined);
+    if (score) m.score = score;
+  }
 
   const items = merged.sort((a, b) => dueMs(a) - dueMs(b) || a.title.localeCompare(b.title));
   const pending = (i: Item) => !i.doneByUser && !i.submitted;
