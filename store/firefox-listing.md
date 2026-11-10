@@ -21,6 +21,7 @@ Stop clicking through every course in Brightspace and opening platform after pla
 • Calendar (week and month) and a to-do list
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
 • Due dates from other platforms (WileyPLUS, ALEKS, InQuizitive, WebAssign, Connect, Achieve and others): when you click Refresh, DueBoard opens the homework link from Brightspace in a minimized window, reads the "Due" line, and closes it. You allow each platform once.
+• Scores of finished work next to Done and Submitted ("Done · 18/25"), read from Brightspace's gradebook, Gradescope, Pearson and the platform pages DueBoard already opens
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own entries for anything else
 
@@ -49,4 +50,5 @@ https://yokiwa.github.io/dueboard/privacy.html
 ## Notes for reviewers
 Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`.
 The UNSAFE_VAR_ASSIGNMENT warnings are in bundled React DOM and pdf.js (pdf.worker.min.mjs ships unmodified from pdfjs-dist); DueBoard never writes innerHTML.
+On Pearson MyLab, DueBoard sends the same "see score" POST the page sends when a student opens a score, only for the student's own finished assignments, and only reads the answer.
 Optional host permission `https://*/*` is requested one site at a time, only after a click on an "Allow" button that names the homework platform found in the student's courses. It lets DueBoard read the due date on that platform's assignment pages, in a minimized window DueBoard opens and closes itself. In that window only, DueBoard may press the page's one "open the assignment" button, and `window.open` is redirected to the same tab so an assignment meant for a new tab opens there.

@@ -73,6 +73,7 @@ const launchPage = (target) =>
     args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
   });
   const hits = { aleks: 0, norton: 0, unknown: 0 };
+  let l1Opened = false;
   let signedOut = false; // the session expires when the Worksheet 9 link is opened
   const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   const html = (body) => ({ status: 200, contentType: 'text/html', body });
@@ -84,7 +85,13 @@ const launchPage = (target) =>
     if (u.includes('myenrollments'))
       return r.fulfill(json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 102, Name: 'MA 26100 Multivariate Calculus', Code: 'MA-26100' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] }));
     if (u.startsWith(`${LE}/102/content/toc`)) return r.fulfill(json(toc));
+    // One graded, submitted lab due in 2 days: its grade item (77) is in the gradebook as 18/20.
+    if (u.includes('/dropbox/folders/501/submissions/')) return r.fulfill(json([{ Submissions: [{ Id: 1 }], CompletionDate: null }]));
+    if (u.endsWith('/dropbox/folders/'))
+      return r.fulfill(json([{ Id: 501, Name: 'Lab Report 2', IsHidden: false, GradeItemId: 77, DueDate: new Date(Date.now() + 2 * 86400000).toISOString(), Availability: null }]));
     if (u.includes('/dropbox/folders/')) return r.fulfill(json([]));
+    if (u.includes('/grades/values/myGradeValues/'))
+      return r.fulfill(json([{ GradeObjectIdentifier: '77', GradeObjectName: 'Lab Report 2', PointsNumerator: 18, PointsDenominator: 20, DisplayedGrade: '90 %' }]));
     if (u.includes('/quizzes/')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('myEvents')) return r.fulfill(json({ Objects: [], Next: null }));
     if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: fs.readFileSync(path.join(ROOT, 'tests/fixtures/syllabus/schedule.pdf')) });
@@ -105,6 +112,9 @@ const launchPage = (target) =>
     if (u.includes('rcode=N1')) return r.fulfill(html(launchPage('https://digital.wwnorton.com/inq5')));
     if (u.includes('rcode=U1')) return r.fulfill(html(launchPage('https://example-unknown.com/a3')));
     if (u.includes('rcode=L1')) {
+      // Only the first opening signs the student out; later runs (the score phase) must get past this link.
+      if (l1Opened) return r.fulfill(html('<h1>Worksheet 9</h1>'));
+      l1Opened = true;
       signedOut = true;
       return r.fulfill({ status: 302, headers: { location: `${B}/d2l/login?target=x` } });
     }
@@ -125,12 +135,13 @@ const launchPage = (target) =>
         : `<h1>Launching your assignment</h1><a href="/was/hw10" target="_blank">Launch</a>`));
     }
     if (u.endsWith('/was/hw11')) return r.fulfill(html('<main><h1>PHYS 172H - HW11 - FA26</h1><span>Due Monday, Nov 16 at 11:59 PM (EST)</span></main>'));
-    if (u.endsWith('/was/hw10')) return r.fulfill(html('<main><h1>PHYS 172H - HW10 - FA26</h1><span>Due Monday, Nov 9 at 11:59 PM (EST)</span></main>'));
+    if (u.endsWith('/was/hw10')) return r.fulfill(html('<main><h1>PHYS 172H - HW10 - FA26</h1><span>Due Monday, Nov 9 at 11:59 PM (EST)</span><p>Score: 18 / 25 points</p></main>'));
     return r.fulfill({ status: 404, body: '' });
   });
   await ctx.route('https://www.aleks.com/**', (r) => {
     hits.aleks++;
-    return r.fulfill(html('<h1>Homework 7</h1><div class="meta"><span>Due Date:</span> <span>11/20/2026 11:59 PM</span></div>'));
+    // "Question 3/10" is progress, not a score: a finished item with this page must keep a plain "Done" badge.
+    return r.fulfill(html('<h1>Homework 7</h1><div class="meta"><span>Due Date:</span> <span>11/20/2026 11:59 PM</span></div><p>Question 3/10</p>'));
   });
   await ctx.route('https://digital.wwnorton.com/**', (r) => {
     hits.norton++;
@@ -225,6 +236,38 @@ const launchPage = (target) =>
   const before = { ...hits };
   await syncAndWait();
   check(hits.aleks === before.aleks && hits.norton === before.norton, 'no platform page opened again');
+
+  // Scores. Run after the check above: score visits re-open finished work on every Refresh.
+  console.log('e2e visits: scores (Brightspace gradebook, then a score visit after marking work done)');
+  // The Courses view (cards use the shared item row). Finished work due within 7 days stays on its card.
+  const badges = async () => {
+    await page.reload();
+    await page.getByRole('tab', { name: 'Courses' }).click();
+    await page.getByText('Lab Report 2').first().waitFor({ timeout: 10000 });
+    return page.evaluate(() => document.body.innerText);
+  };
+  let text = await badges();
+  check(/Submitted · 18\/20/.test(text), 'Brightspace gradebook score shows on the submitted lab ("Submitted · 18/20")');
+  const raw = await page.evaluate(async () => (await chrome.storage.local.get('snapshots')).snapshots?.brightspace?.items?.find((i) => i.sourceItemId === 'dropbox:501')?.score);
+  check(raw?.text === '18/20' && raw?.from === 'Brightspace', `score stored locally with its source (${JSON.stringify(raw)})`);
+
+  await page.evaluate(async () => {
+    const { userState = {} } = await chrome.storage.local.get('userState');
+    const done = { ...(userState.done ?? {}), 'brightspace:topic:6': true, 'brightspace:topic:1': true };
+    await chrome.storage.local.set({ userState: { ...userState, done } });
+  });
+  const beforeScores = { ...hits };
+  await syncAndWait();
+  check(hits.wiley > beforeScores.wiley && hits.aleks > beforeScores.aleks, 'Refresh re-opened the finished WileyPLUS and ALEKS pages');
+  check(hits.norton === beforeScores.norton, 'unfinished InQuizitive page not opened by a score visit');
+  const cap = await page.evaluate(async () => (await chrome.storage.local.get('captured')).captured);
+  check(cap?.['brightspace:topic:6']?.score?.text === '18/25', `WileyPLUS page score read (${JSON.stringify(cap?.['brightspace:topic:6']?.score)})`);
+  check(!cap?.['brightspace:topic:1']?.score, '"Question 3/10" is not a score');
+  text = await badges();
+  check(/Done · 18\/25/.test(text), 'dashboard shows "Done · 18/25" after the score visit');
+  await page.getByText('Show next week').first().click(); // Homework 7 is due in 10 days
+  text = await page.evaluate(() => document.body.innerText);
+  check(/Homework 7[\s\S]{0,80}\nDone\n/.test(text) && !/3\/10/.test(text.replace('Question 3/10', '')), 'ALEKS item with only "Question 3/10" keeps a plain "Done"');
 
   await ctx.close();
   fs.rmSync(ext, { recursive: true, force: true });

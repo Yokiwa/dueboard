@@ -1,6 +1,6 @@
 # DueBoard: assignment scores — design
 
-Date: 2026-11-10 · Status: draft for review · Target version: 1.3.0
+Date: 2026-11-10 · Status: implemented in 1.3.0 · Target version: 1.3.0
 
 ## 1. Goal
 

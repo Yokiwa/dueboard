@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 — 2026-11
+
+- **Scores next to Done and Submitted**: finished work shows its score in the badge, for example "Done · 18/25" or "Submitted · 92%". Hover for where it came from
+- Scores come from Brightspace's gradebook, from Gradescope's course page and from Pearson MyLab (through the same "see score" request the page makes), and from the platform pages DueBoard already opens: on Refresh it re-reads the page of finished work for a line like "18 / 25 points". Progress such as "Question 3/10" is never taken as a score
+- Scores stay in your browser; no new permissions
+
 ## 1.2.4 — 2026-11
 
 - **Course cards keep their place**: courses are sorted by code instead of by their next deadline, so ticking off work no longer reshuffles the page
