@@ -84,12 +84,12 @@ function course(html: string, courseId: string): RawItem[] {
     const status = row.querySelector('.submissionStatus');
     const submitted = Boolean(status?.querySelector('.submissionStatus--score')) || /submitted/i.test(text(status));
     const scoreText = text(status?.querySelector('.submissionStatus--score'));
-    const sm = scoreText.match(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    const sm = scoreText.match(/^\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
     const earned = sm ? Number(sm[1]) : NaN;
     const possible = sm ? Number(sm[2]) : NaN;
     const score: Score | undefined =
       Number.isFinite(earned) && Number.isFinite(possible) && possible > 0
-        ? { text: formatPoints(earned, possible), earned, possible, from: 'Gradescope', evidence: scoreText }
+        ? { text: formatPoints(earned, possible), earned, possible, from: 'Gradescope', evidence: scoreText.slice(0, 120) }
         : undefined;
     items.push({
       source: 'gradescope',

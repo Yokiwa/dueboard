@@ -63,6 +63,11 @@ describe('gradescope parser', () => {
     expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();
   });
 
+  it.each(['- / 20.0', '1,000 / 2,000', 'Graded 11/5'])('no score for non-plain cell "%s"', (cell) => {
+    const html = course.replace('18.0 / 20.0', cell);
+    expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();
+  });
+
   it('course page without the table throws', () => {
     expect(() => domGradescopeParser.course('<html></html>', '1')).toThrow(GradescopeParseError);
   });
