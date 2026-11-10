@@ -34,6 +34,16 @@ export function applyOutcomes(
       if (o.status === 'needs_permission' && !needsPermission.includes(o.host)) needsPermission.push(o.host);
       continue;
     }
+    if (target?.mode === 'score') {
+      if (o.status === 'score' && o.score) {
+        const score = { ...o.score, from: platformByHost(o.host)?.label ?? o.host };
+        const prevC = captured[o.key];
+        captured[o.key] = prevC
+          ? { ...prevC, score, scoreCheckedAt: at }
+          : { itemKey: o.key, title: target.title, dueAt: null, platform: platformByHost(o.host)?.id ?? o.host, via: 'visit', checkedAt: at, score, scoreCheckedAt: at };
+      } else if (o.status === 'needs_permission' && !needsPermission.includes(o.host)) needsPermission.push(o.host);
+      continue;
+    }
     if (!target || target.mode !== 'due') continue;
     const prev = captured[o.key];
     const base: CapturedDue = prev

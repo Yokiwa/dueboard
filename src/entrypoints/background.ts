@@ -107,6 +107,7 @@ export default defineBackground({
     visitFrame: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitClick: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitSample: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
+    visitScore: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),
     captureDue: async (msg, sender) => {

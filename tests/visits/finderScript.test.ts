@@ -3,8 +3,8 @@ import { runFinder, type FinderWindow } from '../../src/visits/finders/run';
 import type { VisitMessage } from '../../src/visits/messages';
 
 /** The answers a frame sends (its "I'm here" report is checked separately). */
-const answers = (sent: VisitMessage[]) => sent.filter((m) => m.type === 'visitFound' || m.type === 'visitText');
-const fakeWindow = (top: boolean, mode: 'due' | 'syllabus' = 'due', platform?: string): FinderWindow => {
+const answers = (sent: VisitMessage[]) => sent.filter((m) => m.type === 'visitFound' || m.type === 'visitText' || m.type === 'visitScore');
+const fakeWindow = (top: boolean, mode: 'due' | 'syllabus' | 'score' = 'due', platform?: string): FinderWindow => {
   const w = { document, location: { href: 'https://www.aleks.com/hw7' }, __dueboardMode: mode, __dueboardPlatform: platform } as FinderWindow;
   w.top = top ? w : ({} as FinderWindow);
   return w;
@@ -160,5 +160,28 @@ describe('runFinder describes a page it found nothing on (for the visit log)', (
         buttons: ['Start', 'Help'],
       },
     ]);
+  });
+
+  it('score mode sends the score once', async () => {
+    document.body.innerHTML = '<h1>HW 7</h1><p>1.5 / 25 points</p>';
+    const sent: VisitMessage[] = [];
+    runFinder(fakeWindow(true, 'score'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(12_000);
+    const a = answers(sent);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ type: 'visitScore', top: true, score: { text: '1.5/25' } });
+  });
+
+  it('score mode: the top frame reports null at the time limit, a non-top frame stays silent', async () => {
+    document.body.innerHTML = '<h1>HW 7</h1><p>Question 3/10</p>';
+    const top: VisitMessage[] = [];
+    const sub: VisitMessage[] = [];
+    runFinder(fakeWindow(true, 'score'), (m) => top.push(m));
+    runFinder({ ...fakeWindow(false, 'score'), __dueboardReading: false }, (m) => sub.push(m));
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(answers(top)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(answers(top)).toEqual([{ type: 'visitScore', score: null, frameUrl: 'https://www.aleks.com/hw7', top: true }]);
+    expect(answers(sub)).toEqual([]);
   });
 });

@@ -24,7 +24,7 @@ export interface VisitApi {
   windowState(windowId: number): Promise<'minimized' | 'open' | 'gone'>;
   /** permissions.getAll().origins */
   granted(): Promise<string[]>;
-  inject(tabId: number, mode: 'due' | 'syllabus', platform?: string): Promise<void>;
+  inject(tabId: number, mode: 'due' | 'syllabus' | 'score', platform?: string): Promise<void>;
   nextMessage(tabId: number, timeoutMs: number): Promise<VisitMessage | 'timeout'>;
   closeWindow(windowId: number): Promise<void>;
   /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
@@ -67,6 +67,8 @@ export interface VisitLogEntry {
   pages?: PageSample[];
   /** The date read, and the text it came from. */
   due?: string;
+  /** The score read, as shown (score visits). */
+  score?: string;
   evidence?: string;
   result: VisitOutcome['status'];
   detail?: string;
@@ -123,9 +125,10 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
           entry.due = outcome.found.dueAt;
           entry.evidence = outcome.found.evidence;
         }
+        if (outcome.status === 'score' && outcome.score) entry.score = outcome.score.text;
         const clicked = await api.clicksSeen(tabId).catch(() => []);
         if (clicked.length) entry.clicked = clicked;
-        if (outcome.status !== 'found') {
+        if (outcome.status !== 'found' && !(outcome.status === 'score' && outcome.score)) {
           const pages = await api.samplesSeen(tabId).catch(() => []);
           if (pages.length) entry.pages = pages;
         }
@@ -162,7 +165,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         // Purdue's launch links never reveal their site ahead of time. A homework link is the student's own Brightspace
         // link, so it is opened anyway, and only pages on sites the student allowed are read. Other links (syllabus)
         // are opened only for a known platform the student allowed.
-        if (!t.platform && t.mode !== 'due') return { key: t.key, status: 'failed', reason: 'unknown' };
+        if (!t.platform && t.mode !== 'due' && t.mode !== 'score') return { key: t.key, status: 'failed', reason: 'unknown' };
       }
     }
     await api.navigate(tabId, t.launchUrl);
@@ -192,10 +195,15 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       const msg = await api.nextMessage(tabId, ROUND_MS);
       if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
+      if (msg.type === 'visitScore') {
+        if (msg.score) return { key: t.key, status: 'score', score: msg.score, host: frameHost(msg.frameUrl) ?? host };
+        sawNothing = true;
+        continue;
+      }
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;
     }
-    return sawNothing ? { key: t.key, status: 'none', host } : { key: t.key, status: 'failed', reason: 'timeout' };
+    return sawNothing ? (t.mode === 'score' ? { key: t.key, status: 'score', score: null, host } : { key: t.key, status: 'none', host }) : { key: t.key, status: 'failed', reason: 'timeout' };
   }
 }
 

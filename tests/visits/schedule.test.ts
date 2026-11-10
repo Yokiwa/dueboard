@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dueVisits, originAllowed } from '../../src/visits/schedule';
+import { dueVisits, scoreVisits, MAX_VISITS, originAllowed } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
 import type { CapturedDue, RawItem, StoreShape } from '../../src/core/types';
 
@@ -206,5 +206,64 @@ describe('dueVisits: signing back in to Gradescope through any course', () => {
     const s = store([]);
     s.syncMeta.gradescope = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
     expect(keys(s)).toEqual([]);
+  });
+});
+
+describe('scoreVisits', () => {
+  const dueAgo = (d: number) => new Date(now.getTime() - d * 24 * H).toISOString();
+  const wiley = (n: number, p: Partial<RawItem> = {}) => topic(n, `WileyPLUS HW ${n}`, { submitted: true, dueAt: dueAgo(2), ...p });
+  const sk = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => scoreVisits(s, now, trigger, granted, ).map((t) => t.key);
+  const K = 'brightspace:topic:1';
+
+  it('targets a submitted platform homework with a launch', () => {
+    const t = scoreVisits(store([wiley(1)]), now, 'auto', ['https://*/*']);
+    expect(t).toHaveLength(1);
+    expect(t[0]).toMatchObject({ key: K, mode: 'score', launchUrl: launch(1), title: 'WileyPLUS HW 1' });
+    expect(t[0]!.platform).toBeTruthy();
+  });
+
+  it('targets a done item and an unknown platform', () => {
+    const s = store([topic(1, 'HW 1', { dueAt: dueAgo(1) })]);
+    s.userState.done[K] = true;
+    expect(sk(s)).toEqual([K]);
+  });
+
+  it('skips unfinished, undated and old items, and quizzes', () => {
+    expect(sk(store([wiley(1, { submitted: false })]))).toEqual([]);
+    expect(sk(store([wiley(1, { dueAt: null })]))).toEqual([]);
+    expect(sk(store([wiley(1, { dueAt: dueAgo(8) })]))).toEqual([]);
+    expect(sk(store([topic(1, 'Quiz 1 WileyPLUS', { submitted: true, dueAt: dueAgo(2) })]))).toEqual([]);
+  });
+
+  it('skips fetched scores, but re-reads a score from an earlier visit', () => {
+    for (const from of ['Brightspace', 'Gradescope', 'Pearson']) {
+      expect(sk(store([wiley(1, { score: { text: '1/2', from } })]))).toEqual([]);
+    }
+    const c = cap(1, { score: { text: '1/2', from: 'WileyPLUS' }, scoreCheckedAt: ago(1) });
+    expect(sk(store([wiley(1)], c))).toEqual([K]);
+  });
+
+  it('skips fetch/none-reader platforms', () => {
+    expect(sk(store([topic(1, 'Gradescope HW 1', { submitted: true, dueAt: dueAgo(2) })]))).toEqual([]);
+    expect(sk(store([topic(1, 'Pearson MyLab HW 1', { submitted: true, dueAt: dueAgo(2) })]))).toEqual([]);
+  });
+
+  it('a known platform needs its hosts granted', () => {
+    expect(sk(store([wiley(1)]), 'auto', [])).toEqual([]);
+  });
+
+  it('follows the visits setting', () => {
+    expect(sk(store([wiley(1)], {}, { settings: { visits: 'manual', syllabus: true } }), 'auto')).toEqual([]);
+    expect(sk(store([wiley(1)], {}, { settings: { visits: 'manual', syllabus: true } }), 'manual')).toEqual([K]);
+    expect(sk(store([wiley(1)], {}, { settings: { visits: 'off', syllabus: true } }), 'manual')).toEqual([]);
+  });
+
+  it('dueVisits lists due targets before score targets and caps the total', () => {
+    const items = [wiley(1), topic(2), ...Array.from({ length: 30 }, (_, i) => wiley(10 + i))];
+    const t = dueVisits(store(items), now, 'manual', ['https://*/*']);
+    expect(t.map((x) => x.mode).slice(0, 2)).toEqual(['due', 'score']);
+    expect(t.filter((x) => x.mode === 'due')[0]!.key).toBe('brightspace:topic:2');
+    expect(t.length).toBeLessThanOrEqual(MAX_VISITS);
+    expect(t.length).toBe(MAX_VISITS);
   });
 });

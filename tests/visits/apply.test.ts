@@ -94,3 +94,45 @@ describe('forgetUnfoundVisits (after an update)', () => {
     expect(Object.keys(forgetUnfoundVisits(captured)).sort()).toEqual(['brightspace:topic:3', 'title:hw4']);
   });
 });
+
+describe('applyOutcomes: score visits', () => {
+  const S = { text: '18/25', earned: 18, possible: 25, from: 'WileyPLUS' };
+  const st = (): VisitTarget => ({ ...t(1), mode: 'score' });
+  const go = (o: Parameters<typeof applyOutcomes>[2], captured: Record<string, CapturedDue> = {}) => applyOutcomes(migrate({ captured }), [st()], o, now);
+  const K = 'brightspace:topic:1';
+
+  it('sets only score and scoreCheckedAt on an existing entry', () => {
+    const p = prev({ dueAt: '2026-11-10T04:59:00.000Z', misses: 2, failures: 1, checkedAt: 'old' });
+    const r = go([{ key: K, status: 'score', score: S, host: 'education.wiley.com' }], { [K]: p });
+    expect(r.captured[K]).toEqual({ ...p, score: { ...S, from: 'WileyPLUS' }, scoreCheckedAt: now.toISOString() });
+  });
+
+  it('names the source from the frame host', () => {
+    const r = go([{ key: K, status: 'score', score: S, host: 'learn.example.com' }]);
+    expect(r.captured[K]!.score!.from).toBe('learn.example.com');
+  });
+
+  it('creates an entry when there is none', () => {
+    const r = go([{ key: K, status: 'score', score: S, host: 'education.wiley.com' }]);
+    expect(r.captured[K]).toEqual({ itemKey: K, title: 'HW 1', dueAt: null, platform: 'wileyplus', via: 'visit', checkedAt: now.toISOString(), score: S, scoreCheckedAt: now.toISOString() });
+  });
+
+  it('null, failed and signed_out keep the previous score and change nothing else', () => {
+    const p = prev({ score: S, scoreCheckedAt: 'old', misses: 1, failures: 2 });
+    for (const o of [
+      { key: K, status: 'score' as const, score: null, host: 'education.wiley.com' },
+      { key: K, status: 'failed' as const, reason: 'timeout' as const },
+      { key: K, status: 'signed_out' as const },
+    ]) {
+      expect(go([o], { [K]: p }).captured[K]).toEqual(p);
+    }
+    expect(go([{ key: K, status: 'failed', reason: 'timeout' }]).captured[K]).toBeUndefined();
+  });
+
+  it('needs_permission still asks for the host, without touching the entry', () => {
+    const p = prev({ score: S });
+    const r = go([{ key: K, status: 'needs_permission', host: 'education.wiley.com' }], { [K]: p });
+    expect(r.captured[K]).toEqual(p);
+    expect(r.visitState.needsPermission).toContain('education.wiley.com');
+  });
+});

@@ -342,3 +342,21 @@ describe('runVisits: visit log of found dates', () => {
     expect(log[0]).toMatchObject({ due: '2026-11-11T04:59:00.000Z', evidence: 'Due Nov 11' });
   });
 });
+
+describe('runVisits: score visits', () => {
+  it('reads a score and logs it', async () => {
+    const score = { text: '18/25', earned: 18, possible: 25, from: 'WileyPLUS' };
+    const f = fakeApi({ landings: [at('https://education.wiley.com/x')], messages: [{ type: 'visitScore', score, frameUrl: 'https://education.wiley.com/x', top: true }] });
+    const log: { score?: string }[] = [];
+    const out = await runVisits([target(1, 'score')], f.api, { onLog: (e) => log.push(e) });
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'score', score, host: 'education.wiley.com' }]);
+    expect(log[0]!.score).toBe('18/25');
+    expect(f.calls).toContain('inject score');
+  });
+
+  it('a null score answer is a score outcome with null', async () => {
+    const f = fakeApi({ landings: [at('https://education.wiley.com/x')], messages: [{ type: 'visitScore', score: null, frameUrl: 'https://education.wiley.com/x', top: true }] });
+    const out = await runVisits([target(1, 'score')], f.api);
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'score', score: null, host: 'education.wiley.com' }]);
+  });
+});

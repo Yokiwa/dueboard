@@ -196,7 +196,7 @@ export function createBrowserVisitApi(): VisitApi {
     },
 
     async inject(tabId, mode, platform) {
-      const allowOpen = mode === 'due';
+      const allowOpen = mode === 'due' || mode === 'score';
       if (allowOpen) {
         // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
         await browser.scripting

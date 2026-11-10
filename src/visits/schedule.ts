@@ -1,11 +1,11 @@
 import { buildDashboard } from '../core/dashboard';
 import { syllabusDue } from '../syllabus/sources';
 import { launchLinks } from '../core/platforms';
-import { platformByHost, platformByTitle } from '../core/platformRegistry';
+import { platformByHost, platformById, platformByTitle } from '../core/platformRegistry';
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
-import type { CapturedDue, RawItem, StoreShape } from '../core/types';
+import type { CapturedDue, RawItem, Score, StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
 
 export { applyOutcomes } from './apply';
@@ -22,13 +22,14 @@ export interface VisitTarget {
   probeUrl?: string;
   /** Registry id guessed from the title or link. */
   platform?: string;
-  mode: 'due' | 'session' | 'syllabus';
+  mode: 'due' | 'session' | 'syllabus' | 'score';
 }
 export type VisitOutcome =
   | { key: string; status: 'found'; found: FoundDue; host: string }
   | { key: string; status: 'none'; host: string }
   | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' }
   | { key: string; status: 'needs_permission'; host: string }
+  | { key: string; status: 'score'; score: Score | null; host: string }
   | { key: string; status: 'text'; lines: string[]; host: string }
   | { key: string; status: 'landed'; host: string }
   | { key: string; status: 'signed_out' };
@@ -125,6 +126,42 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       if (def) t.platform = def.id;
       return t;
     });
-  const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
+  const out = [...ranked.map((r) => r.target), ...syllabi, ...scoreVisits(store, now, trigger, granted)].slice(0, MAX_VISITS);
   return [...sessionTargets(store, now, trigger), ...out];
+}
+
+const FETCHED_FROM = ['Brightspace', 'Gradescope', 'Pearson'];
+
+/**
+ * Finished homework whose score a platform page may show: read on every Refresh, after the due-date visits. Skips
+ * scores already fetched from Brightspace, Gradescope or Pearson, quizzes and exams, and platforms read another way.
+ * See spec 3.4.
+ */
+export function scoreVisits(store: StoreShape, now: Date, trigger: Trigger, granted: string[]): VisitTarget[] {
+  const mode = store.settings.visits;
+  if (mode === 'off' || (mode === 'manual' && trigger === 'auto')) return [];
+
+  const raw = new Map<string, RawItem>();
+  for (const r of store.snapshots.brightspace?.items ?? []) raw.set(`brightspace:${r.sourceItemId}`, r);
+  const dash = buildDashboard(
+    { snapshots: store.snapshots, manualItems: store.manualItems, manualLinks: store.manualLinks, userState: store.userState, captured: store.captured },
+    now,
+    { includeHidden: true },
+  );
+  const out: VisitTarget[] = [];
+  for (const item of dash.items) {
+    if (!(item.doneByUser || item.submitted) || !item.dueAt) continue;
+    if (item.score && FETCHED_FROM.includes(item.score.from)) continue;
+    const key = item.sourceKeys.find((k) => k.startsWith('brightspace:topic:') && raw.get(k)?.launchUrl);
+    if (!key) continue;
+    const r = raw.get(key)!;
+    if (NEVER_OPEN.test(r.title)) continue;
+    const platform = platformByTitle(r.title) ?? platformById(store.captured[key]?.platform ?? '');
+    if (platform && platform.reader !== 'page' && platform.reader !== 'universal') continue;
+    if (platform && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
+    const target: VisitTarget = { key, title: r.title, courseId: item.courseId, launchUrl: r.launchUrl!, mode: 'score' };
+    if (platform) target.platform = platform.id;
+    out.push(target);
+  }
+  return out;
 }

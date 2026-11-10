@@ -1,4 +1,6 @@
 import { stripUrl, type VisitMessage } from '../messages';
+import { platformById } from '../../core/platformRegistry';
+import { findScore } from '../../core/scoreText';
 import { findDue, pageLines } from './index';
 import { buttonLabels, openButton } from './open';
 
@@ -7,7 +9,7 @@ export interface FinderWindow {
   location: { href: string };
   top: unknown;
   /** Set by the visit runner before the finder script is injected. */
-  __dueboardMode?: 'due' | 'syllabus';
+  __dueboardMode?: 'due' | 'syllabus' | 'score';
   __dueboardPlatform?: string;
   /** Set while this frame is reading, so repeated injections (for late frames) don't start a second reader. */
   __dueboardReading?: boolean;
@@ -54,10 +56,20 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         return;
       }
     } else {
-      const found = findDue(win.document, new Date(), win.__dueboardPlatform);
-      if (found) {
-        send({ type: 'visitFound', found, frameUrl, top });
-        return;
+      const scoreMode = win.__dueboardMode === 'score';
+      if (scoreMode) {
+        const from = (win.__dueboardPlatform && platformById(win.__dueboardPlatform)?.label) || hostOf(frameUrl);
+        const score = findScore(pageLines(win.document), from);
+        if (score) {
+          send({ type: 'visitScore', score, frameUrl, top });
+          return;
+        }
+      } else {
+        const found = findDue(win.document, new Date(), win.__dueboardPlatform);
+        if (found) {
+          send({ type: 'visitFound', found, frameUrl, top });
+          return;
+        }
       }
       // A launcher page that waits for a click: press its "open the assignment" button, once, on platform pages only.
       if (win.__dueboardAllowOpen && !pressed && elapsed >= OPEN_AFTER_MS && hostOf(frameUrl) !== BRIGHTSPACE_HOST) {
@@ -72,7 +84,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         // Nothing found here: describe the page for the visit log, so a stuck step can be seen and fixed.
         const text = pageLines(win.document).join(' / ').replace(/\s+/g, ' ').slice(0, 300);
         send({ type: 'visitSample', frameUrl: stripUrl(frameUrl), text, buttons: buttonLabels(win.document) });
-        if (top) send({ type: 'visitFound', found: null, frameUrl, top });
+        if (top) send(scoreMode ? { type: 'visitScore', score: null, frameUrl, top } : { type: 'visitFound', found: null, frameUrl, top });
         return;
       }
     }
