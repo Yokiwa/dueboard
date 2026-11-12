@@ -40,9 +40,9 @@ A date from Brightspace always wins over one read on a platform page, and every 
 
 ## Install
 
-- **Chrome Web Store:** link coming soon.
+- **Chrome Web Store:** [Add to Chrome](https://chromewebstore.google.com/detail/lbmhglpjaedaijknkngdpoacagdgmoji) (also works in Microsoft Edge, Brave, Arc and Opera).
 - **Firefox Add-ons:** link coming soon.
-- **Manual install (about two minutes):** follow the [illustrated install guide](https://yokiwa.github.io/dueboard/install.html). The same steps are in [docs/guide/01-install.md](docs/guide/01-install.md).
+- **Manual install (testers, about two minutes):** follow the [illustrated install guide](https://yokiwa.github.io/dueboard/install.html). The same steps are in [docs/guide/01-install.md](docs/guide/01-install.md).
 
 DueBoard currently supports `purdue.brightspace.com`.
 
