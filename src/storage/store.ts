@@ -224,6 +224,8 @@ export async function patchVisitState(patch: Partial<VisitState>): Promise<void>
 export interface VisitProgress {
   done: number;
   total: number;
+  /** 'sources': the sync is still reading Brightspace and the other sources (done and total are 0 then). */
+  phase?: 'sources';
 }
 export async function setVisitProgress(p: VisitProgress | null): Promise<void> {
   await browser.storage.local.set({ visitProgress: p });

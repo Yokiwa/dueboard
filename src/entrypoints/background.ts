@@ -45,7 +45,15 @@ const syncNow = (trigger: Trigger = 'auto') => {
   const run = startSync(
       {
         load: loadStore,
-        sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
+        sync: async () => {
+          // The dashboard says "Fetching … from Brightspace…" while the sources are read, also for a sync it didn't start.
+          await setVisitProgress({ done: 0, total: 0, phase: 'sources' }).catch(() => undefined);
+          try {
+            return await syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs));
+          } finally {
+            await setVisitProgress(null).catch(() => undefined);
+          }
+        },
         granted: () => visitApi.granted(),
         visit: async (targets) => {
           // Each page's entry is saved as soon as it is read (one write after another), so the log shows how far a run

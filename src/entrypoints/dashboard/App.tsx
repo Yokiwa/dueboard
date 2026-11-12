@@ -60,7 +60,7 @@ export function App() {
             <StatChips within48={counts.within48} week={counts.week} />
           </Header>
           {granted && <SiteAccessBanner granted={granted} />}
-          <SourceBanners store={store} now={now} />
+          <SourceBanners store={store} now={now} busy={syncing || progress !== null} />
           {granted && <PlatformAccess store={store} granted={granted} now={now} />}
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <ViewBody

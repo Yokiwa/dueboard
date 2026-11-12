@@ -22,6 +22,7 @@ const messages = {
   'sync.synced': (v: Vars) => `Synced · ${v.ago}`,
   'sync.never': 'Not synced yet',
   'sync.syncing': 'Syncing…',
+  'sync.fetching': 'Fetching your courses and assignments from Brightspace…',
   refresh: 'Refresh',
   settings: 'Settings',
   ago: agoEn,

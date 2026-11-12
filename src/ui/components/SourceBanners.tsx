@@ -11,8 +11,11 @@ export const LOGIN_URLS: Record<SourceId, string> = {
   pearson: 'https://purdue.brightspace.com/d2l/home',
 };
 
-/** One line per platform whose most recent sync attempt failed. */
-export function SourceBanners({ store, now }: { store: StoreShape; now: Date }) {
+/**
+ * One line per platform whose most recent sync attempt failed. None while a sync runs (`busy`): it may sign the student
+ * back in by itself, so a line appears only once DueBoard has tried.
+ */
+export function SourceBanners({ store, now, busy = false }: { store: StoreShape; now: Date; busy?: boolean }) {
   const t = useT();
   const relevant = relevantSources(store);
   const launches = launchLinks(store);
@@ -54,6 +57,6 @@ export function SourceBanners({ store, now }: { store: StoreShape; now: Date }) 
       </div>,
     ];
   });
-  if (rows.length === 0) return null;
+  if (busy || rows.length === 0) return null;
   return <div className="flex flex-col gap-2">{rows}</div>;
 }
