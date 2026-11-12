@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.4 — 2026-11 (trial build)
+
+- **No more stray tabs during a sync**: a tool your instructor set to "open in a new window" (for example Achieve / Macmillan) made Brightspace's launch page open a real tab in front of you while DueBoard read it in the background. Forms and links meant for a new window now open inside DueBoard's hidden frame, where the page is read without a window
+
 ## 1.4.3 — 2026-11 (trial build)
 
 - **The dashboard always says what a sync is doing**, from start to end: "Fetching your courses and assignments from Brightspace…", then "Reading your course syllabi…", then "Reading 3 of 20 platform pages…". 1.4.2 showed "Synced" while syllabi were read, so a sync that had started on its own (after installing or updating) looked finished

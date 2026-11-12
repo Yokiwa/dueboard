@@ -72,3 +72,47 @@ describe('open here', () => {
     expect(inExtensionFrame(topWin as unknown as Window)).toBe(false);
   });
 });
+
+describe('open here: forms and links meant for another window', () => {
+  /** A window with the real document and a form class whose submit is a spy (no navigation in tests). */
+  const setup = () => {
+    const submitted: string[] = [];
+    class Form {}
+    (Form.prototype as { submit: () => void; requestSubmit: () => void }).submit = function (this: HTMLFormElement) {
+      submitted.push(`submit:${this.getAttribute('target') ?? ''}`);
+    };
+    (Form.prototype as { requestSubmit: () => void }).requestSubmit = function (this: HTMLFormElement) {
+      submitted.push(`request:${this.getAttribute('target') ?? ''}`);
+    };
+    const w = { ...fake(), document, HTMLFormElement: Form };
+    installOpenHere(w as unknown as Window);
+    const submit = (Form.prototype as { submit: () => void }).submit;
+    const request = (Form.prototype as { requestSubmit: () => void }).requestSubmit;
+    return { submitted, submit, request };
+  };
+
+  it('a form sent to a new window (or to the top page) is sent here', () => {
+    const { submitted, submit, request } = setup();
+    document.body.innerHTML = '<form id="a" target="_blank"></form><form id="b" target="_top"></form><form id="c" target="tool_window"></form>';
+    for (const id of ['a', 'b']) submit.call(document.getElementById(id));
+    request.call(document.getElementById('c'));
+    expect(submitted).toEqual(['submit:_self', 'submit:_self', 'request:_self']);
+  });
+
+  it('a form sent to a frame of the page keeps its target', () => {
+    const { submitted, submit } = setup();
+    document.body.innerHTML = '<form id="a" target="lti_frame"></form><iframe name="lti_frame"></iframe><form id="b"></form>';
+    submit.call(document.getElementById('a'));
+    submit.call(document.getElementById('b'));
+    expect(submitted).toEqual(['submit:lti_frame', 'submit:']);
+  });
+
+  it('a submit event and a link click are sent here too', () => {
+    setup();
+    document.body.innerHTML = '<form id="f" target="_blank"><button id="s">Go</button></form><a id="l" href="#x" target="_blank"><span id="in">Open</span></a>';
+    document.getElementById('f')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(document.getElementById('f')!.getAttribute('target')).toBe('_self');
+    document.getElementById('in')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(document.getElementById('l')!.getAttribute('target')).toBe('_self');
+  });
+});

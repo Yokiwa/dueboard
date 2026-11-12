@@ -58,4 +58,34 @@ export function installOpenHere(win: Window = window): void {
     if (u !== undefined) go(u);
     return standIn;
   };
+
+  // Forms and links meant for another window (a new tab, the top page, a named window) are sent here too. Brightspace's
+  // launch page for a tool set to "open in a new window" posts its form to a new window. A target naming a frame of the
+  // page itself is left alone.
+  const doc = (win as unknown as { document?: Document }).document;
+  const keepHere = (el: Element | null) => {
+    const target = el?.getAttribute('target')?.trim();
+    if (!el || !target || target === '_self') return;
+    const ownFrame = !target.startsWith('_') && Array.from(doc?.querySelectorAll('iframe, frame') ?? []).some((f) => (f as HTMLIFrameElement).name === target);
+    if (!ownFrame) el.setAttribute('target', '_self');
+  };
+  const Form = (win as unknown as { HTMLFormElement?: { prototype: { submit?: () => void; requestSubmit?: (s?: unknown) => void } } }).HTMLFormElement;
+  if (Form) {
+    const submit = Form.prototype.submit;
+    const requestSubmit = Form.prototype.requestSubmit;
+    if (submit)
+      Form.prototype.submit = function (this: Element) {
+        keepHere(this);
+        return submit.call(this);
+      };
+    if (requestSubmit)
+      Form.prototype.requestSubmit = function (this: Element, submitter?: unknown) {
+        keepHere(this);
+        return requestSubmit.call(this, submitter);
+      };
+  }
+  if (doc) {
+    doc.addEventListener('submit', (e) => keepHere(e.target as Element), true);
+    doc.addEventListener('click', (e) => keepHere((e.target as Element | null)?.closest?.('a[target], area[target]') ?? null), true);
+  }
 }

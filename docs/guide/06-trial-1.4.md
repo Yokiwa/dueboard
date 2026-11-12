@@ -21,7 +21,7 @@ You do not need to know anything about programming. If a step does not match wha
 
 ## Updating from an earlier 1.4 trial
 
-If an earlier 1.4 trial build is installed with **Load unpacked**, unzip `dueboard-1.4.3-chrome.zip` into the same folder,
+If an earlier 1.4 trial build is installed with **Load unpacked**, unzip `dueboard-1.4.4-chrome.zip` into the same folder,
 replacing the files, then click the round arrow (reload) on DueBoard's card on `chrome://extensions`. Your courses and
 settings stay, and DueBoard tries background reading again for every platform. Then continue from step 3 below
 (click **Refresh** on the dashboard to start a sync).
@@ -29,8 +29,8 @@ settings stay, and DueBoard tries background reading again for every platform. T
 ## Checklist
 
 1. **Install the trial build.**
-   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.3-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
-   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.3-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
+   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.4-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
+   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.4-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
 2. **Sign in.** DueBoard's first-run page opens. Click **Log in to Brightspace**.
    - If you were already signed in to Brightspace, the first sync starts straight away.
    - If not, this tab goes to the Brightspace sign-in page. Sign in as usual. When Brightspace's home page loads, the tab comes back to DueBoard by itself and the sync starts.

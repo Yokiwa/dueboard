@@ -75,6 +75,7 @@ const backgroundToc = (state) => {
     link(29, 'Embedded Homework', 'E1'), // the embedded page refuses framing too
     link(30, 'Embedded Launcher', 'E2'), // a launcher that kept its own window.open and opens an empty window first
     link(31, 'Embedded Course Page', 'E3'), // a page without a date: read in the background, no window
+    link(32, 'New Window Homework', 'E4'), // a tool set to "open in a new window": Brightspace posts its form to a new tab
   ];
   if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
   if (state.unknownSite2) topics.push(link(28, 'Lab Report Two', 'U2'));
@@ -117,6 +118,8 @@ function createMocks({ scenario = 'default' } = {}) {
       if (to) return html(launchPage(to));
       const embedded = { S1: 'https://interop.pearson.com/launch', E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
       if (embedded) return html(embedPage(embedded));
+      if (rc === 'E4')
+        return html(`<h1>Brightspace</h1><p>This tool opens in a new window.</p><form id="f" action="https://www.aleks.com/framed/hw11" method="get" target="_blank"></form><script>document.getElementById('f').submit()</script>`);
       // Signed in, the home page loads; signed out it goes to the sign-in page, like the real one.
       if (/\/d2l\/home\/?$/.test(new URL(u).pathname)) return state.signedOut ? { status: 302, headers: { location: `${B}/d2l/login?target=x` }, body: '' } : html('<h1>Home</h1>');
     }
@@ -198,7 +201,7 @@ function createMocks({ scenario = 'default' } = {}) {
         // A page that refuses to be framed, like the real platforms. Read by hidden frames only (the header rule lifts it).
         if (url.pathname.startsWith('/framed/')) {
           state.hits.framed++;
-          const day = url.pathname.endsWith('hw10') ? '11/24/2026' : '11/20/2026';
+          const day = url.pathname.endsWith('hw10') ? '11/24/2026' : url.pathname.endsWith('hw11') ? '11/25/2026' : '11/20/2026';
           return html(`<h1>Homework</h1><p>Due Date: ${day} 11:59 PM</p>`, {
             'x-frame-options': 'DENY',
             'content-security-policy': "frame-ancestors 'none'",
