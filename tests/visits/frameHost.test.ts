@@ -209,6 +209,71 @@ describe('frame host', () => {
     await expect(p).resolves.toMatchObject({ status: 'landed', host: 'www.aleks.com', landed: 'https://www.aleks.com/hw7' });
   });
 
+  it('reads the platform page Brightspace embeds in its launch page (a nested frame)', async () => {
+    const { host, child, hello, frame } = setup();
+    const p = host.visit(req());
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    frame(n(1), 'https://purdue.brightspace.com/d2l/lti/orgUnit/1/link/2/componentLaunch');
+    frame(n(2), 'https://www.gradescope.com/courses/1');
+    // The read window starts at the nested landing: readMs later the visit ends none, not blocked.
+    await vi.advanceTimersByTimeAsync(22_000);
+    await expect(p).resolves.toMatchObject({ status: 'none', host: 'www.gradescope.com', landed: 'https://www.gradescope.com/courses/1' });
+  });
+
+  it('a nested landing follows the embedded tool from page to page', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req());
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    hello(win(win(direct)), n(3));
+    frame(n(1), 'https://purdue.brightspace.com/d2l/lti/x/componentLaunch');
+    frame(n(2), 'https://lti.education.wiley.com/oidc/return');
+    frame(n(3), 'https://education.wiley.com/was/player');
+    send(n(3), { type: 'visitFound', found, frameUrl: 'https://education.wiley.com/was/player', top: false });
+    await expect(p).resolves.toMatchObject({ status: 'found', host: 'education.wiley.com', landed: 'https://education.wiley.com/was/player' });
+  });
+
+  it('a platform page in the iframe itself wins over frames nested in it', async () => {
+    const { host, child, hello, frame } = setup();
+    const p = host.visit(req());
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    frame(n(2), 'https://ads.example.com/banner');
+    await vi.advanceTimersByTimeAsync(22_000);
+    await expect(p).resolves.toMatchObject({ status: 'none', host: 'www.aleks.com', landed: 'https://www.aleks.com/hw7' });
+  });
+
+  it('session mode waits for the platform session host (Pearson: mylab.pearson.com), nested or not', async () => {
+    const { host, child, hello, frame } = setup();
+    const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    frame(n(1), 'https://purdue.brightspace.com/d2l/lti/x/componentLaunch');
+    frame(n(2), 'https://interop.pearson.com/security/login');
+    frame(n(2), 'https://interop.pearson.com/launch');
+    let done = false;
+    void p.then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(done).toBe(false);
+    frame(n(2), 'https://mylab.pearson.com/Student/DoAssignments.aspx');
+    await expect(p).resolves.toMatchObject({ status: 'landed', host: 'mylab.pearson.com' });
+  });
+
+  it('session mode that never reaches the session host ends blocked (the window tries next)', async () => {
+    const { host, child, hello, frame } = setup();
+    const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://interop.pearson.com/security/login');
+    await vi.advanceTimersByTimeAsync(42_000);
+    await expect(p).resolves.toMatchObject({ status: 'blocked' });
+  });
+
   it('syllabus mode ends with the text lines', async () => {
     const { host, child, hello, send } = setup();
     const p = host.visit(req({ mode: 'syllabus' }));

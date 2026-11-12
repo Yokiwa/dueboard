@@ -159,7 +159,9 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
       case 'found':
         return r.found ? { outcome: { key, status: 'found', found: r.found, host }, fallback: false } : failed();
       case 'none':
-        return { outcome: { key, status: 'none', host }, fallback: true };
+        // A page read in full that shows no date has none in a window either. Only a page that needed a click (a
+        // launcher opening the assignment in a new tab) may read better in the window, which follows new tabs.
+        return { outcome: { key, status: 'none', host }, fallback: r.clicked.length > 0 };
       case 'text':
         return { outcome: { key, status: 'text', lines: r.lines ?? [], host }, fallback: false };
       default:

@@ -70,6 +70,14 @@ export function applyOutcomes(
 }
 
 /**
+ * After an update: forget which platforms the hidden frames could not read and how often signing back in failed, so the
+ * new version tries the background again at once instead of keeping an old version's verdict for days.
+ */
+export function forgetVisitMemory(state: StoreShape['visitState']): StoreShape['visitState'] {
+  return { ...state, sessions: {}, frame: {} };
+}
+
+/**
  * After an update: forget visits that found no date (misses, failures, blocks), so the new version reads those
  * homeworks again on the next sync instead of waiting out the old backoff. Found dates and page captures stay.
  */

@@ -1,5 +1,5 @@
 import { stripUrl, type VisitMessage } from './messages';
-import { BRIGHTSPACE_HOST, SIGN_IN } from './hosts';
+import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN } from './hosts';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -13,7 +13,8 @@ export interface VisitApi {
    * Resolves once the tab finished loading a page outside Brightspace, or a sign-in page. With brightspacePage, the
    * target is a Brightspace content page (the platform is embedded in it), so that page loading is the landing.
    */
-  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean }): Promise<Landing>;
+  /** `host`: wait until the tab reaches that host (a session visit's last step), not just until it leaves Brightspace. */
+  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean; host?: string }): Promise<Landing>;
   /**
    * The platform host a Brightspace launch goes to, read from the launch page: null when it can't be told (with a note
    * saying why, for the visit log); 'signed_out' when Brightspace asks to sign in.
@@ -167,7 +168,8 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       }
     }
     await api.navigate(tabId, t.launchUrl);
-    const landing = await api.waitForLanding(tabId, perPageMs);
+    const until = t.mode === 'session' && t.platform ? SESSION_HOSTS[t.platform] : undefined;
+    const landing = await api.waitForLanding(tabId, perPageMs, until ? { host: until } : undefined);
     trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { createBrowserVisitApi, deliverVisitMessage, setVisitTab } from '../../src/visits/browserApi';
+import { createBrowserVisitApi, deliverVisitMessage, onHost, setVisitTab } from '../../src/visits/browserApi';
 import type { VisitMessage } from '../../src/visits/messages';
 
 const msg: VisitMessage = { type: 'visitFound', found: null, frameUrl: 'https://www.aleks.com/x', top: true };
@@ -111,5 +111,16 @@ describe('page samples during a visit', () => {
     deliverVisitMessage({ type: 'visitSample', frameUrl: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }, { tab: { id: 5 } });
     expect(await api.samplesSeen(5)).toEqual([{ url: 'https://education.wiley.com/l', text: 'Launching', buttons: ['Open'] }]);
     expect(await api.nextMessage(5, 20)).toBe('timeout');
+  });
+});
+
+describe('onHost', () => {
+  it('is true on the host or a sign-in page, false on the steps before it', () => {
+    expect(onHost('https://mylab.pearson.com/Student/x', 'mylab.pearson.com')).toBe(true);
+    expect(onHost('https://login.purdue.edu/idp/profile/SAML2', 'mylab.pearson.com')).toBe(true);
+    expect(onHost('https://interop.pearson.com/security/login', 'mylab.pearson.com')).toBe(false);
+    expect(onHost('https://purdue.brightspace.com/d2l/lti/x', 'mylab.pearson.com')).toBe(false);
+    expect(onHost('about:blank', 'mylab.pearson.com')).toBe(false);
+    expect(onHost(undefined, 'mylab.pearson.com')).toBe(false);
   });
 });

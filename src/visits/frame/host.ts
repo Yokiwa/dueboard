@@ -1,4 +1,4 @@
-import { BRIGHTSPACE_HOST, SIGN_IN } from '../hosts';
+import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN } from '../hosts';
 import { isVisitMessage, type VisitMessage } from '../messages';
 import type { PageSample } from '../runner';
 import {
@@ -35,6 +35,8 @@ interface Visit {
   finish(r: FrameResult['status'], extra?: Partial<FrameResult>): void;
   host?: string;
   landed?: string;
+  /** The landing came from the iframe itself (not from a frame Brightspace embeds): nested frames no longer move it. */
+  hostDirect?: boolean;
   frames: FrameResult['frames'];
   clicked: string[];
   pages: PageSample[];
@@ -124,13 +126,20 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
     switch (m.type) {
       case 'visitFrame': {
         if (!v.frames.some((f) => f.url === m.frameUrl && f.top === m.top)) v.frames.push({ url: m.frameUrl, top: m.top });
-        if (!direct) return;
-        if (SIGN_IN.test(m.frameUrl)) return v.finish('signed_out');
+        if (direct && SIGN_IN.test(m.frameUrl)) return v.finish('signed_out');
         const host = hostnameOf(m.frameUrl);
-        if (host === BRIGHTSPACE_HOST) return;
+        if (host === BRIGHTSPACE_HOST || SIGN_IN.test(m.frameUrl)) return;
+        // Brightspace shows a platform inside its own launch page, so the platform page is often a nested frame. It counts
+        // until the iframe itself shows a platform page; frames nested in that one (ads, widgets) never move the landing.
+        if (!direct && v.hostDirect) return;
         v.host = host;
         v.landed = m.frameUrl;
-        if (v.req.mode === 'session') return v.finish('landed');
+        if (direct) v.hostDirect = true;
+        if (v.req.mode === 'session') {
+          const until = v.req.platform ? SESSION_HOSTS[v.req.platform] : undefined;
+          if (!until || host === until) return v.finish('landed');
+          return;
+        }
         if (v.readStart === undefined) {
           v.readStart = timers.now();
           arm(v);

@@ -38,6 +38,7 @@ function fakeApi(s: Script) {
     },
     waitForLanding: async (_tab, _ms, o) => {
       if (o?.brightspacePage) calls.push('wait page');
+      if (o?.host) calls.push(`wait host ${o.host}`);
       return landings.shift() ?? 'timeout';
     },
     launchHost: async (url) => {
@@ -121,6 +122,12 @@ describe('runVisits', () => {
     const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session' }], f.api);
     expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
     expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
+  });
+
+  it("a session visit waits for the platform's session host, not the first page on the platform", async () => {
+    const f = fakeApi({ landings: [at('https://mylab.pearson.com/home')] });
+    await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
+    expect(f.calls).toContain('wait host mylab.pearson.com');
   });
 
   it('syllabus visits return the page text', async () => {

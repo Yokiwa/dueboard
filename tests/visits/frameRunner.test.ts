@@ -171,8 +171,13 @@ describe('runFrameVisits', () => {
       expect(d.outcome).toEqual({ key, status: 'found', found, host: 'www.aleks.com' });
       expect(d.fallback).toBe(false);
     });
-    it('none', async () => {
+    it('none on a page read in full: final, no window', async () => {
       const d = await run(res({ status: 'none' }));
+      expect(d.outcome).toEqual({ key, status: 'none', host: 'www.aleks.com' });
+      expect(d.fallback).toBe(false);
+    });
+    it('none after clicking an "open assignment" button: the window tries (it follows new tabs)', async () => {
+      const d = await run(res({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] }));
       expect(d.outcome).toEqual({ key, status: 'none', host: 'www.aleks.com' });
       expect(d.fallback).toBe(true);
     });

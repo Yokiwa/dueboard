@@ -112,3 +112,18 @@ describe('forgetUnfoundVisits (after an update)', () => {
     expect(Object.keys(forgetUnfoundVisits(captured)).sort()).toEqual(['brightspace:topic:3', 'title:hw4']);
   });
 });
+
+describe('forgetVisitMemory (after an update)', () => {
+  it('clears what the old version learned about frames and sign-in attempts; keeps the rest', async () => {
+    const { forgetVisitMemory } = await import('../../src/visits/apply');
+    const before = {
+      windowId: 4,
+      lastRun: 'x',
+      needsPermission: ['a.com'],
+      snoozed: { 'a.com': 'y' },
+      sessions: { pearson: { at: 'z', failures: 3, frame: 'failed' as const } },
+      frame: { gradescope: { blocked: 0, skipUntil: '2026-11-19T00:00:00.000Z' } },
+    };
+    expect(forgetVisitMemory(before)).toEqual({ windowId: 4, lastRun: 'x', needsPermission: ['a.com'], snoozed: { 'a.com': 'y' }, sessions: {}, frame: {} });
+  });
+});

@@ -76,6 +76,17 @@ function landed(url: string | undefined): boolean {
   }
 }
 
+/** The tab is on `host` (a session visit's last step) or on a sign-in page (signed out: no point waiting). */
+export function onHost(url: string | undefined, host: string): boolean {
+  if (!url || url === 'about:blank') return false;
+  if (SIGN_IN.test(url)) return true;
+  try {
+    return new URL(url).hostname === host;
+  } catch {
+    return false;
+  }
+}
+
 function onPage(url: string | undefined): boolean {
   if (!url || url === 'about:blank') return false;
   try {
@@ -122,7 +133,8 @@ export function createBrowserVisitApi(): VisitApi {
           if (id !== tabId) return;
           if (info.status !== 'complete' && tab.status !== 'complete') return;
           // A Brightspace content page is itself the landing (the platform is embedded in it); else wait to leave it.
-          if (opts?.brightspacePage ? onPage(tab.url) : landed(tab.url)) finish({ url: tab.url! });
+          const at = opts?.host ? onHost(tab.url, opts.host) : opts?.brightspacePage ? onPage(tab.url) : landed(tab.url);
+          if (at) finish({ url: tab.url! });
         };
         const onRemoved = (id: number) => {
           if (id === tabId) finish('closed');

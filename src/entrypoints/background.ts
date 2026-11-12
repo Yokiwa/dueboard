@@ -15,7 +15,7 @@ import { runFrameVisits } from '../visits/frameRunner';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
 import { closeLeftover, runVisits, type VisitLogEntry } from '../visits/runner';
-import { forgetUnfoundVisits } from '../visits/apply';
+import { forgetUnfoundVisits, forgetVisitMemory } from '../visits/apply';
 import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visits/browserApi';
 import { isVisitMessage } from '../visits/messages';
 import type { Connector, SourceId } from '../core/types';
@@ -103,7 +103,11 @@ export default defineBackground({
     if (details.reason === 'update') {
       const store = await loadStore();
       const settings = settingsAfterUpdate(store.settings, details.previousVersion);
-      await patchStore({ captured: forgetUnfoundVisits(store.captured), ...(settings !== store.settings && { settings }) });
+      await patchStore({
+        captured: forgetUnfoundVisits(store.captured),
+        visitState: forgetVisitMemory(store.visitState),
+        ...(settings !== store.settings && { settings }),
+      });
     }
     void handleInstalled(details.reason, {
       ensureAlarm,
