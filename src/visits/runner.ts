@@ -191,7 +191,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       // slow frame never reaches "idle"). Frames that are ready have the reader by then, so the round goes on.
       await settleWithin(api.inject(tabId, t.mode, t.platform), injectMs);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;

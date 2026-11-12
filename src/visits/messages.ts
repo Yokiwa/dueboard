@@ -1,4 +1,5 @@
 import type { FoundDue } from './finders/types';
+import type { Listed } from './frame/protocol';
 
 /** Messages the injected finder script sends back to the background. */
 export type VisitMessage =
@@ -9,7 +10,9 @@ export type VisitMessage =
   /** The frame pressed its "open the assignment" button (for the visit log). */
   | { type: 'visitClick'; label: string; frameUrl: string }
   | { type: 'visitFound'; found: FoundDue | null; frameUrl: string; top: boolean }
-  | { type: 'visitText'; lines: string[]; frameUrl: string };
+  | { type: 'visitText'; lines: string[]; frameUrl: string }
+  /** Every listed assignment date the page showed (frame reader only; the visit window ignores it, so it is not in isVisitMessage). */
+  | { type: 'visitListed'; listed: Listed[] };
 
 /** The finder script WXT builds from src/entrypoints/visit-finder.ts. */
 export const FINDER_FILE = '/visit-finder.js';

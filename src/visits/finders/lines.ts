@@ -63,13 +63,15 @@ export function pageLines(doc: Document): string[] {
 
 /**
  * Small blocks read as one line ("<div><div>Due:</div><div>Nov 10</div></div>" → "Due: Nov 10"), for pages that lay
- * out a label and its value as separate blocks.
+ * out a label and its value as separate blocks. With `oneRowOnly`, a block that holds several rows of its own (a table,
+ * a list of cards) is left out, since its text can't say which date belongs to which row.
  */
-export function compactBlocks(doc: Document, maxLength = 160): string[] {
+export function compactBlocks(doc: Document, maxLength = 160, oneRowOnly = false): string[] {
   const out: string[] = [];
   for (const el of Array.from(doc.body?.querySelectorAll('*') ?? [])) {
     if (!isBlock(el) || !hasBlock(el) || el.closest('[hidden],[aria-hidden="true"]')) continue;
     if (Array.from(el.querySelectorAll('*')).some((c) => SKIP.has(c.tagName.toUpperCase()))) continue;
+    if (oneRowOnly && Array.from(el.querySelectorAll('*')).filter((c) => !hiddenEl(c) && isBlock(c) && hasBlock(c)).length > 1) continue;
     const t = clean(visibleText(el));
     if (t && t.length <= maxLength) out.push(t);
   }

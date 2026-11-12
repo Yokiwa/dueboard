@@ -39,7 +39,7 @@ describe('dueVisits', () => {
   it('visits an undated launch that was never visited', () => {
     expect(dueVisits(store([topic(1)]), now, 'auto', [])).toEqual([
       // Opened as a full page, like "Open in new window": platforms refuse to show inside Brightspace's frame.
-      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: launch(1), mode: 'due' },
+      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: launch(1), mode: 'due', titles: [{ key: 'brightspace:topic:1', title: 'HW 1' }] },
     ]);
   });
 
@@ -217,5 +217,28 @@ describe('dueVisits: signing back in to Gradescope through any course', () => {
     const s = store([]);
     s.syncMeta.gradescope = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
     expect(keys(s)).toEqual([]);
+  });
+});
+
+describe('dueVisits titles', () => {
+  it('gives each homework topic the titles of every due target of its course, itself included', () => {
+    const other = topic(9, 'Reading notes', { sourceCourseId: '2' });
+    const s = store([topic(1), topic(2), other]);
+    s.snapshots.brightspace!.courses.push({ source: 'brightspace', sourceCourseId: '2', name: 'PHYS 17200', code: 'PHYS 17200', url: `${B}/d2l/home/2` });
+    const out = dueVisits(s, now, 'auto', ['https://*/*']);
+    const by = (k: string) => out.find((v) => v.key === k)!;
+    expect(by('brightspace:topic:1').titles).toEqual([
+      { key: 'brightspace:topic:1', title: 'HW 1' },
+      { key: 'brightspace:topic:2', title: 'HW 2' },
+    ]);
+    expect(by('brightspace:topic:2').titles).toEqual(by('brightspace:topic:1').titles);
+    expect(by('brightspace:topic:9').titles).toEqual([{ key: 'brightspace:topic:9', title: 'Reading notes' }]);
+  });
+
+  it('caps titles at 40 and gives session targets none', () => {
+    const items = Array.from({ length: 50 }, (_, i) => topic(i + 1, `Homework set ${i + 1}`));
+    const out = dueVisits(store(items), now, 'auto', ['https://*/*']);
+    expect(out.find((v) => v.key === 'brightspace:topic:1')!.titles).toHaveLength(40);
+    expect(out.filter((v) => v.mode !== 'due').every((v) => v.titles === undefined)).toBe(true);
   });
 });

@@ -43,6 +43,8 @@ const NEVER_OPEN = /\b(quiz(?:zes)?|exams?|midterms?|tests?)\b/i;
 export const MAX_VISITS = 60;
 /** The most visits the visit window opens in one run. */
 export const WINDOW_MAX = 25;
+/** The most titles one frame visit looks for on a page. */
+const MAX_TITLES = 40;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {
@@ -133,5 +135,13 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       return t;
     });
   const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
+  // One visit to a course page can date every assignment it lists: each homework target gets its course's titles.
+  const due = out.filter((t) => t.mode === 'due');
+  for (const t of due) {
+    t.titles = due
+      .filter((o) => o.courseId === t.courseId)
+      .slice(0, MAX_TITLES)
+      .map((o) => ({ key: o.key, title: o.title }));
+  }
   return [...sessionTargets(store, now, trigger), ...out];
 }

@@ -1,5 +1,7 @@
 import { stripUrl, type VisitMessage } from '../messages';
+import type { ListedTitle } from '../frame/protocol';
 import { findDue, pageLines } from './index';
+import { findListed } from './listed';
 import { buttonLabels, openButton } from './open';
 
 export interface FinderWindow {
@@ -13,6 +15,8 @@ export interface FinderWindow {
   __dueboardReading?: boolean;
   /** Set by the runner for homework visits: the reader may press "open the assignment" (see open.ts). */
   __dueboardAllowOpen?: boolean;
+  /** Set by the frame reader for homework visits: titles whose dates may be listed on this page (see listed.ts). */
+  __dueboardTitles?: ListedTitle[];
 }
 
 const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
@@ -40,6 +44,13 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   let lastText = '';
   let pressed = false;
   let stableSince = started;
+  // Once per frame, just before its final message: every listed title this page dates (never on Brightspace pages).
+  const titles = win.__dueboardTitles;
+  const sendListed = () => {
+    if (!titles?.length || hostOf(frameUrl) === BRIGHTSPACE_HOST) return;
+    const listed = findListed(win.document, titles, new Date());
+    if (listed.length > 0) send({ type: 'visitListed', listed });
+  };
 
   const tick = () => {
     const elapsed = Date.now() - started;
@@ -58,6 +69,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
     } else {
       const found = findDue(win.document, new Date(), win.__dueboardPlatform);
       if (found) {
+        sendListed();
         send({ type: 'visitFound', found, frameUrl, top });
         return;
       }
@@ -72,6 +84,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
       }
       if (elapsed >= maxMs) {
         // Nothing found here: describe the page for the visit log, so a stuck step can be seen and fixed.
+        sendListed();
         const text = pageLines(win.document).join(' / ').replace(/\s+/g, ' ').slice(0, 300);
         send({ type: 'visitSample', frameUrl: stripUrl(frameUrl), text, buttons: buttonLabels(win.document) });
         if (top) send({ type: 'visitFound', found: null, frameUrl, top });
