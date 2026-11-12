@@ -1,6 +1,6 @@
-# Guide 06: Trial of DueBoard 1.4.0 (background reading)
+# Guide 06: Trial of DueBoard 1.4 (background reading)
 
-This is a test version. It is not on the Chrome Web Store or Firefox Add-ons yet. Version 1.4.0 reads your homework pages
+This is a test version. It is not on the Chrome Web Store or Firefox Add-ons yet. Version 1.4 reads your homework pages
 in the background, without opening a window, and the point of this trial is to find out whether that works on the
 platforms your courses really use. It takes about 15 minutes of your time, spread over a short wait.
 
@@ -19,11 +19,18 @@ You do not need to know anything about programming. If a step does not match wha
 - Use the computer and the browser where you normally do your coursework, signed in to the same accounts. A different account will not show the same platforms.
 - If an older DueBoard is installed, turn it off with its toggle on the extensions page (Chrome: `chrome://extensions`; Firefox: `about:addons`). Do not remove it: turning it off keeps its data and avoids two copies running. Turn it back on after the trial if you go back to it.
 
+## Updating from the 1.4.0 trial
+
+If the 1.4.0 trial build is installed with **Load unpacked**, unzip `dueboard-1.4.1-chrome.zip` into the same folder,
+replacing the files, then click the round arrow (reload) on DueBoard's card on `chrome://extensions`. Your courses and
+settings stay, and DueBoard tries background reading again for every platform. Then continue from step 3 below
+(click **Refresh** on the dashboard to start a sync).
+
 ## Checklist
 
 1. **Install the trial build.**
-   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.0-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
-   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.0-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
+   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.1-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
+   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.1-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
 2. **Sign in.** DueBoard's first-run page opens. Click **Log in to Brightspace**.
    - If you were already signed in to Brightspace, the first sync starts straight away.
    - If not, this tab goes to the Brightspace sign-in page. Sign in as usual. When Brightspace's home page loads, the tab comes back to DueBoard by itself and the sync starts.

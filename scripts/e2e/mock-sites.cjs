@@ -71,6 +71,10 @@ const backgroundToc = (state) => {
     link(23, 'Problem Set 1', 'P1'), // three homeworks listed on one page
     link(24, 'Problem Set 2', 'P2'),
     link(25, 'Problem Set 3', 'P3'),
+    // Like Purdue's real launch pages: Brightspace shows the platform in a frame inside its own page.
+    link(29, 'Embedded Homework', 'E1'), // the embedded page refuses framing too
+    link(30, 'Embedded Launcher', 'E2'), // a launcher that kept its own window.open and opens an empty window first
+    link(31, 'Embedded Course Page', 'E3'), // a page without a date: read in the background, no window
   ];
   if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
   if (state.unknownSite2) topics.push(link(28, 'Lab Report Two', 'U2'));
@@ -78,6 +82,8 @@ const backgroundToc = (state) => {
   if (state.frameless2) topics.push(link(27, 'Windowed Homework Two', 'X2'));
   return { Modules: [{ Title: 'Homework', Modules: [], Topics: topics }] };
 };
+/** Brightspace's own launch page with the platform in a frame, as Purdue's componentLaunch pages show it. */
+const embedPage = (target) => `<html><body><h1>Brightspace</h1><iframe src="${target}" width="900" height="600"></iframe></body></html>`;
 const launchPage = (target) =>
   `<html><body><form id="f" action="${target}" method="get"></form><script>document.getElementById('f').submit()</script></body></html>`;
 
@@ -93,7 +99,7 @@ function createMocks({ scenario = 'default' } = {}) {
     unknownSite2: false,
     frameless: false,
     frameless2: false,
-    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0 },
+    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0 },
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
   };
@@ -109,6 +115,8 @@ function createMocks({ scenario = 'default' } = {}) {
       const rc = /rcode=(\w+)/.exec(u)?.[1];
       const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
       if (to) return html(launchPage(to));
+      const embedded = { E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
+      if (embedded) return html(embedPage(embedded));
       // Signed in, the home page loads; signed out it goes to the sign-in page, like the real one.
       if (/\/d2l\/home\/?$/.test(new URL(u).pathname)) return state.signedOut ? { status: 302, headers: { location: `${B}/d2l/login?target=x` }, body: '' } : html('<h1>Home</h1>');
     }
@@ -150,12 +158,16 @@ function createMocks({ scenario = 'default' } = {}) {
       return html('<h1>PHYS 172H</h1><ul><li>HW10 <span>Due Monday, Nov 9 at 11:59 PM (EST)</span></li><li>HW11 <span>Due Monday, Nov 16 at 11:59 PM (EST)</span></li></ul>');
     if (u.endsWith('/lti-tool-launcher/index.html')) {
       const id = new URL(raw).searchParams.get('launchId');
+      // L7: a launcher that took its own copy of window.open when it loaded and opens an empty window, then sets its address.
+      if (id === 'L7')
+        return html(`<h1>Launching your assignment</h1><script>const openTab = window.open.bind(window);</script><button onclick="const w = openTab('', '_blank'); w.location = '/was/hw12'">Open Assignment</button>`);
       // L5: a button that opens the assignment with window.open (a new tab); L6: a link with target=_blank.
       return html(id === 'L5'
         ? `<h1>Launching your assignment</h1><button onclick="window.open('/was/hw11','_blank')">Open Assignment</button><button>Start Over</button>`
         : `<h1>Launching your assignment</h1><a href="/was/hw10" target="_blank">Launch</a>`);
     }
     if (u.endsWith('/was/hw11')) return html('<main><h1>PHYS 172H - HW11 - FA26</h1><span>Due Monday, Nov 16 at 11:59 PM (EST)</span></main>');
+    if (u.endsWith('/was/hw12')) return html('<main><h1>Embedded Launcher</h1><span>Due Monday, Nov 23 at 11:59 PM (EST)</span></main>');
     if (u.endsWith('/was/hw10')) return html('<main><h1>PHYS 172H - HW10 - FA26</h1><span>Due Monday, Nov 9 at 11:59 PM (EST)</span></main>');
     return notFound();
   }
@@ -186,12 +198,17 @@ function createMocks({ scenario = 'default' } = {}) {
         // A page that refuses to be framed, like the real platforms. Read by hidden frames only (the header rule lifts it).
         if (url.pathname.startsWith('/framed/')) {
           state.hits.framed++;
-          return html('<h1>Homework 7</h1><p>Due Date: 11/20/2026 11:59 PM</p>', {
+          const day = url.pathname.endsWith('hw10') ? '11/24/2026' : '11/20/2026';
+          return html(`<h1>Homework</h1><p>Due Date: ${day} 11:59 PM</p>`, {
             'x-frame-options': 'DENY',
             'content-security-policy': "frame-ancestors 'none'",
           });
         }
         // A page no hidden frame can read (the local server answers frames with an error) that the window tab reads fine.
+        if (url.pathname.startsWith('/nodate/')) {
+          state.hits.nodate++;
+          return html('<nav>Dashboard / Regrade Requests / Instructors / Course staff</nav><h1>TDM 10100 · The Data Mine Seminar I</h1><p>You have no submission for Project 1.</p><p>Credit Hours: 1.00. A supportive environment for students in any major who want to learn data science.</p><table><tr><td>Project 1</td><td>Ungraded</td><td>10 pts</td></tr></table>');
+        }
         if (url.pathname.startsWith('/frameless/')) {
           if (via === 'server') return { status: 500, headers: { 'content-type': 'text/html' }, body: '' };
           const day = url.pathname.endsWith('hw9') ? '11/18/2026' : '11/19/2026';

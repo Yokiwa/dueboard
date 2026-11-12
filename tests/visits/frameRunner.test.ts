@@ -171,10 +171,18 @@ describe('runFrameVisits', () => {
       expect(d.outcome).toEqual({ key, status: 'found', found, host: 'www.aleks.com' });
       expect(d.fallback).toBe(false);
     });
+    const page = (text: string) => ({ url: 'https://www.aleks.com/hw', text, buttons: [] });
+    const full = 'Skip to content / TDM 10100 / The Data Mine Seminar I / Dashboard / Regrade Requests / Instructors / Ungraded / Project #10 / Student / Total Points / 10 pts / Autograder Score / Question 1 / 2 pts / Question 2';
     it('none on a page read in full: final, no window', async () => {
-      const d = await run(res({ status: 'none' }));
+      const d = await run(res({ status: 'none', pages: [page(full)] }));
       expect(d.outcome).toEqual({ key, status: 'none', host: 'www.aleks.com' });
       expect(d.fallback).toBe(false);
+    });
+    it('none on a blank page, or one asking to sign in or allow cookies: the window tries', async () => {
+      for (const pages of [[], [page('')], [page('Please sign in to continue')], [page(`${full} / Cookies are disabled in your browser`)]]) {
+        const d = await run(res({ status: 'none', pages }));
+        expect(d.fallback).toBe(true);
+      }
     });
     it('none after clicking an "open assignment" button: the window tries (it follows new tabs)', async () => {
       const d = await run(res({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] }));

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.1 — 2026-11 (trial build)
+
+- **Background reading works on Purdue's real launch pages**: Brightspace shows a platform inside its own launch page, and 1.4.0 only looked at the outer page, so every page fell back to the window. The hidden frame now reads the platform page inside it
+- **Pearson signs back in by itself**: signing in to Pearson through Brightspace passes through several Pearson pages; DueBoard now waits until MyLab itself has loaded (1.4.0 stopped at the first Pearson page, so the session never came back)
+- **Fewer windows**: a platform page read in the background that shows no due date is final; the window tries again only when the page was blank, asked to sign in, or needed an "Open assignment" click
+- "Open Assignment" buttons that open a new window now open the assignment inside the hidden frame, also on pages that open an empty window first
+- The dashboard says "Fetching your courses and assignments from Brightspace…" while the sync reads Brightspace, also for a sync it didn't start
+- "Session expired" lines wait until the sync has ended, so they only appear when DueBoard could not sign back in by itself
+- On update, DueBoard forgets which platforms 1.4.0 could not read in the background and tries them again
+
 ## 1.4.0 — 2026-11 (trial build)
 
 - **Homework pages are read in the background**: DueBoard opens your Brightspace homework links in hidden frames inside the extension, three at a time, reads each due date and shows it as soon as it arrives. Normally no window or tab opens

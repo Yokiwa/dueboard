@@ -4,6 +4,16 @@ import { stripUrl } from './messages';
 import type { VisitLogEntry } from './runner';
 import type { VisitOutcome, VisitTarget } from './schedule';
 
+/** Text that means the frame got a sign-in or cookie prompt instead of the page (the window, with the student's cookies, may not). */
+const PROMPT = /\b(sign|log)\s?in\b|cookies?\b.{0,40}\b(disabled|blocked|required|enable)|session (has )?expired/i;
+const THIN = 200;
+
+/** The frame read nothing worth trusting: no page, a nearly blank one, or a sign-in / cookie prompt. */
+function notThePage(pages: FrameResult['pages']): boolean {
+  const text = pages.map((p) => p.text).join(' / ');
+  return text.trim().length < THIN || PROMPT.test(text);
+}
+
 export interface FrameVisitDone {
   target: VisitTarget;
   outcome: VisitOutcome;
@@ -161,7 +171,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
       case 'none':
         // A page read in full that shows no date has none in a window either. Only a page that needed a click (a
         // launcher opening the assignment in a new tab) may read better in the window, which follows new tabs.
-        return { outcome: { key, status: 'none', host }, fallback: r.clicked.length > 0 };
+        return { outcome: { key, status: 'none', host }, fallback: r.clicked.length > 0 || notThePage(r.pages) };
       case 'text':
         return { outcome: { key, status: 'text', lines: r.lines ?? [], host }, fallback: false };
       default:

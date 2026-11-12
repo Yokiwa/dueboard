@@ -94,7 +94,10 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       const settle = async (done, what) => {
         let waited = 0;
         while (!(await done())) {
-          if ((waited += 500) > 150000) throw new Error(`timed out waiting for ${what}`);
+          if ((waited += 500) > 150000) {
+            const tail = (await visitLog()).slice(-8).map((e) => `${e.key} ${e.mode} ${e.result}${e.detail ? `:${e.detail}` : ''} ${e.landed ?? ''}`);
+            throw new Error(`timed out waiting for ${what}; last visits:\n    ${tail.join('\n    ')}`);
+          }
           await page.waitForTimeout(500);
         }
         for (let quiet = 0; quiet < 3000; ) {
@@ -116,14 +119,19 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       await page.getByRole('button', { name: 'Log in to Brightspace' }).click();
       await settle(async () => {
         const c = await captured();
-        return ['21', '23', '24', '25'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
+        return ['21', '23', '24', '25', '29', '30'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
       }, 'the first automatic sync to date the homeworks');
       let c = await captured();
       check(c['brightspace:topic:21'].dueAt === (await local20(20)), `a page that refuses framing was dated in the sync (${c['brightspace:topic:21'].dueAt})`);
       check(mocks.state.hits.framed > framedBefore, `its page came from the hidden frame server during this sync (${framedBefore} -> ${mocks.state.hits.framed} hits)`);
       check((await created()).length === 0, `no window or tab opened during the automatic sync (${(await created()).join('; ') || 'none'})`);
+      check(c['brightspace:topic:29'].dueAt === (await local20(24)), `a page Brightspace shows inside its own launch page was dated in the background (${c['brightspace:topic:29'].dueAt})`);
+      check(c['brightspace:topic:30'].dueAt === '2026-11-24T04:59:00.000Z', `a launcher with its own window.open and an empty new window opened the assignment in the frame (${c['brightspace:topic:30'].dueAt})`);
+      check(mocks.state.hits.nodate > 0 && !c['brightspace:topic:31']?.dueAt, `an embedded page without a date was read and left undated (${mocks.state.hits.nodate} hits)`);
       let log = await visitLog();
       check(log.length > 0 && log.every((e) => e.mode === 'frame'), `every visit ran in the background (${log.map((e) => e.mode).join(',')})`);
+      const e3 = log.find((e) => e.key === 'brightspace:topic:31');
+      check(e3?.result === 'none' && e3?.landed?.includes('/nodate/'), `the page without a date ended "none" on the embedded page, not "failed" (${e3?.result}, ${e3?.landed})`);
       const ps = [23, 24, 25].map((n) => c[`brightspace:topic:${n}`]);
       check(ps[0].dueAt === '2026-11-22T04:59:00.000Z' && ps[1].dueAt === '2026-11-29T04:59:00.000Z' && ps[2].dueAt === '2026-12-06T04:59:00.000Z', `a list page dated three homeworks (${ps.map((x) => x.dueAt).join(', ')})`);
       const psLog = log.filter((e) => [23, 24, 25].some((n) => e.key === `brightspace:topic:${n}`));
