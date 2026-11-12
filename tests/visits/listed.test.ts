@@ -67,9 +67,30 @@ describe('findListed', () => {
     ]);
   });
 
+  it('does not carry the next row\'s date into a flat list or flat blocks', () => {
+    const ul = page('<ul><li>HW 4 No due date</li><li>HW 5 Due Nov 12</li></ul>');
+    expect(findListed(ul, [t('a', 'HW 4')], now)).toEqual([]);
+    expect(findListed(ul, [t('b', 'HW 5')], now).map((l) => l.key)).toEqual(['b']);
+    const divs = page('<div><div>HW 4</div><div>No due date</div><div>HW 5</div><div>Due Nov 12</div></div>');
+    expect(findListed(divs, [t('a', 'HW 4')], now)).toEqual([]);
+    const flat = page('<div><div>HW 4 No due date</div><div>HW 5 Due Nov 12</div></div>');
+    expect(findListed(flat, [t('a', 'HW 4')], now)).toEqual([]);
+  });
+
+  it('a title that only starts a longer name, or does not start its row, takes no date', () => {
+    expect(findListed(page('<table><tr><td>HW 5 extra credit</td><td>Due Nov 20</td></tr></table>'), [t('a', 'HW 5')], now)).toEqual([]);
+    expect(findListed(page('<table><tr><td>Study guide for HW 5 Due Nov 20</td></tr></table>'), [t('a', 'HW 5')], now)).toEqual([]);
+    expect(findListed(page('<table><tr><td>HW 5 Problems Due Nov 12</td></tr></table>'), [t('a', 'HW 5')], now)).toEqual([]);
+  });
+
+  it('accepts numbering before the title and a short gap in a block', () => {
+    expect(findListed(page('<ul><li>1. HW 5 Due Nov 12</li></ul>'), [t('a', 'HW 5')], now)).toHaveLength(1);
+    expect(findListed(page('<div><div>HW 5</div><div>10 pts</div><div>Due Nov 12</div></div>'), [t('a', 'HW 5')], now)).toHaveLength(1);
+    expect(findListed(page('<div><div>HW 5</div><div>one two three four five</div><div>Due Nov 12</div></div>'), [t('a', 'HW 5')], now)).toEqual([]);
+  });
+
   it('trims evidence to 120 characters', () => {
-    const d = page(`<table><tr><td>HW 5 ${'x'.repeat(200)}</td><td>Due Nov 12</td></tr></table>`);
-    // the title words must be next to each other; the long filler keeps them so
+    const d = page(`<table><tr><td>HW 5</td><td>Due Nov 12</td><td>${'x'.repeat(200)}</td></tr></table>`);
     expect(findListed(d, [t('a', 'HW 5')], now)[0]!.found.evidence).toHaveLength(120);
   });
 });

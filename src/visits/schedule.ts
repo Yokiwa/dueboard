@@ -138,10 +138,9 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
   // One visit to a course page can date every assignment it lists: each homework target gets its course's titles.
   const due = out.filter((t) => t.mode === 'due');
   for (const t of due) {
-    t.titles = due
-      .filter((o) => o.courseId === t.courseId)
-      .slice(0, MAX_TITLES)
-      .map((o) => ({ key: o.key, title: o.title }));
+    // The target itself first, so one past the cap still looks for its own title.
+    const same = due.filter((o) => o.courseId === t.courseId && o !== t);
+    t.titles = [t, ...same.slice(0, MAX_TITLES - 1)].map((o) => ({ key: o.key, title: o.title }));
   }
   return [...sessionTargets(store, now, trigger), ...out];
 }

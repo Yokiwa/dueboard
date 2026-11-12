@@ -61,6 +61,17 @@ export function pageLines(doc: Document): string[] {
   return out;
 }
 
+const LIST_TAGS = new Set(['UL', 'OL', 'TABLE', 'TBODY', 'THEAD', 'DL']);
+const ROW_TAGS = new Set(['LI', 'TR', 'DT']);
+
+/** An element that holds several rows: a list or table, repeated row children, or nested compound blocks. */
+function holdsRows(el: Element): boolean {
+  if (LIST_TAGS.has(el.tagName.toUpperCase())) return true;
+  const rows = Array.from(el.children).filter((c) => ROW_TAGS.has(c.tagName.toUpperCase()));
+  if (new Set(rows.map((c) => c.tagName)).size < rows.length) return true;
+  return Array.from(el.querySelectorAll('*')).filter((c) => !hiddenEl(c) && isBlock(c) && hasBlock(c)).length > 1;
+}
+
 /**
  * Small blocks read as one line ("<div><div>Due:</div><div>Nov 10</div></div>" → "Due: Nov 10"), for pages that lay
  * out a label and its value as separate blocks. With `oneRowOnly`, a block that holds several rows of its own (a table,
@@ -71,7 +82,7 @@ export function compactBlocks(doc: Document, maxLength = 160, oneRowOnly = false
   for (const el of Array.from(doc.body?.querySelectorAll('*') ?? [])) {
     if (!isBlock(el) || !hasBlock(el) || el.closest('[hidden],[aria-hidden="true"]')) continue;
     if (Array.from(el.querySelectorAll('*')).some((c) => SKIP.has(c.tagName.toUpperCase()))) continue;
-    if (oneRowOnly && Array.from(el.querySelectorAll('*')).filter((c) => !hiddenEl(c) && isBlock(c) && hasBlock(c)).length > 1) continue;
+    if (oneRowOnly && holdsRows(el)) continue;
     const t = clean(visibleText(el));
     if (t && t.length <= maxLength) out.push(t);
   }

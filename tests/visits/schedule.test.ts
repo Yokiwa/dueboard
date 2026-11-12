@@ -231,7 +231,10 @@ describe('dueVisits titles', () => {
       { key: 'brightspace:topic:1', title: 'HW 1' },
       { key: 'brightspace:topic:2', title: 'HW 2' },
     ]);
-    expect(by('brightspace:topic:2').titles).toEqual(by('brightspace:topic:1').titles);
+    expect(by('brightspace:topic:2').titles).toEqual([
+      { key: 'brightspace:topic:2', title: 'HW 2' },
+      { key: 'brightspace:topic:1', title: 'HW 1' },
+    ]);
     expect(by('brightspace:topic:9').titles).toEqual([{ key: 'brightspace:topic:9', title: 'Reading notes' }]);
   });
 
@@ -240,5 +243,12 @@ describe('dueVisits titles', () => {
     const out = dueVisits(store(items), now, 'auto', ['https://*/*']);
     expect(out.find((v) => v.key === 'brightspace:topic:1')!.titles).toHaveLength(40);
     expect(out.filter((v) => v.mode !== 'due').every((v) => v.titles === undefined)).toBe(true);
+  });
+
+  it('puts the target itself first, so one past the cap still carries its own title', () => {
+    const items = Array.from({ length: 45 }, (_, i) => topic(i + 1, `Homework set ${i + 1}`));
+    const last = dueVisits(store(items), now, 'auto', ['https://*/*']).find((v) => v.key === 'brightspace:topic:45')!;
+    expect(last.titles).toHaveLength(40);
+    expect(last.titles![0]).toEqual({ key: 'brightspace:topic:45', title: 'Homework set 45' });
   });
 });
