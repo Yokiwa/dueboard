@@ -73,6 +73,7 @@ const backgroundToc = (state) => {
     link(25, 'Problem Set 3', 'P3'),
   ];
   if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
+  if (state.unknownSite2) topics.push(link(28, 'Lab Report Two', 'U2'));
   if (state.frameless) topics.push(link(22, 'Windowed Homework', 'X1')); // a page no hidden frame can read
   if (state.frameless2) topics.push(link(27, 'Windowed Homework Two', 'X2'));
   return { Modules: [{ Title: 'Homework', Modules: [], Topics: topics }] };
@@ -89,6 +90,7 @@ function createMocks({ scenario = 'default' } = {}) {
   const background = scenario === 'background';
   const state = {
     unknownSite: false,
+    unknownSite2: false,
     frameless: false,
     frameless2: false,
     hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0 },
@@ -105,7 +107,7 @@ function createMocks({ scenario = 'default' } = {}) {
     if (background && u.startsWith(`${LE}/103/content/toc`)) return json(backgroundToc(state));
     if (background) {
       const rc = /rcode=(\w+)/.exec(u)?.[1];
-      const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3' }[rc];
+      const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
       if (to) return html(launchPage(to));
       // Signed in, the home page loads; signed out it goes to the sign-in page, like the real one.
       if (/\/d2l\/home\/?$/.test(new URL(u).pathname)) return state.signedOut ? { status: 302, headers: { location: `${B}/d2l/login?target=x` }, body: '' } : html('<h1>Home</h1>');
@@ -202,6 +204,8 @@ function createMocks({ scenario = 'default' } = {}) {
           return html('<h1>Problem sets</h1><ul><li>Problem Set 1 Due: November 21, 2026, 11:59 PM EST</li><li>Problem Set 2 Due: November 28, 2026, 11:59 PM EST</li><li>Problem Set 3 Due: December 5, 2026, 11:59 PM EST</li></ul>');
         state.hits.norton++;
         return html('<div id="app"></div><script>setTimeout(()=>{document.getElementById("app").innerHTML="<h1>Ch 5: Culture</h1><p>Due: November 21, 2026, 11:59 PM EST</p>"},1500)</script>');
+      case 'example-unknown2.com':
+        return html('<p>Due Nov 23</p>');
       case 'example-unknown.com':
         state.hits.unknown++;
         return html('<p>Due Nov 22</p>');
