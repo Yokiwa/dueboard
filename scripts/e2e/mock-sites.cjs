@@ -32,6 +32,7 @@ function syllabusPdf(now = new Date()) {
   out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return Buffer.from(out, 'latin1');
 }
+const DAY = 86_400_000;
 const ql = (r, ou = 102) => `/d2l/common/dialogs/quickLink/quickLink.d2l?ou=${ou}&type=lti&rcode=${r}`;
 
 const toc = {
@@ -81,6 +82,12 @@ const backgroundToc = (state) => {
   if (state.pearson) topics.push(link(40, 'Access Pearson', 'S2')); // the course's Pearson entry (signs in to MyLab)
   if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
   if (state.unknownSite2) topics.push(link(28, 'Lab Report Two', 'U2'));
+  if (state.completion) {
+    // Past-due platform homework whose pages say whether it was handed in (or don't).
+    const ago = (d) => new Date(Date.now() - d * DAY).toISOString();
+    topics.push({ ...link(34, 'Scored Homework', 'C1'), DueDate: ago(3) }); // "Score: 18/25"
+    topics.push({ ...link(35, 'Blank Homework', 'C2'), DueDate: ago(1) }); // says nothing about it
+  }
   if (state.frameless) topics.push(link(22, 'Windowed Homework', 'X1')); // a page no hidden frame can read
   if (state.frameless2) topics.push(link(27, 'Windowed Homework Two', 'X2'));
   return { Modules: [{ Title: 'Homework', Modules: [], Topics: topics }] };
@@ -109,6 +116,7 @@ function createMocks({ scenario = 'default' } = {}) {
     mylabSignedIn: false, // a MyLab page has been opened (the session the Pearson connector reads with)
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
+    completion: false, // past-due work handed in or not, scores, pages that say so (1.5.0)
   };
 
   function brightspace(u) {
@@ -118,9 +126,25 @@ function createMocks({ scenario = 'default' } = {}) {
     if (background && u.includes('myenrollments'))
       return json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 103, Name: 'CS 18000 Problem Solving', Code: 'CS-18000' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] });
     if (background && u.startsWith(`${LE}/103/content/toc`)) return json(backgroundToc(state));
+    if (background && state.completion) {
+      // Four past-due assignments (one handed in, three not) and a quiz with a gradebook score.
+      const ago = (d) => new Date(Date.now() - d * DAY).toISOString();
+      const sub = /\/dropbox\/folders\/(\d+)\/submissions\/mysubmissions\//.exec(u);
+      if (sub) return json(sub[1] === '501' ? [{ Submissions: [{ Id: 1 }], CompletionDate: ago(10) }] : []);
+      if (u.startsWith(`${LE}/103/dropbox/folders/`))
+        return json([
+          { Id: 501, Name: 'Essay 1', DueDate: ago(10), IsHidden: false },
+          { Id: 502, Name: 'Essay 2', DueDate: ago(9), IsHidden: false },
+          { Id: 503, Name: 'Essay 3', DueDate: ago(8), IsHidden: false },
+          { Id: 504, Name: 'Essay 4', DueDate: ago(7.5), IsHidden: false },
+        ]);
+      if (u.startsWith(`${LE}/103/quizzes/`)) return json({ Objects: [{ QuizId: 601, GradeItemId: 701, Name: 'Quiz 4', IsActive: true, DueDate: ago(6) }], Next: null });
+      if (u.startsWith(`${LE}/103/grades/values/myGradeValues/`))
+        return json([{ GradeObjectIdentifier: '701', GradeObjectName: 'Quiz 4', PointsNumerator: 9, PointsDenominator: 10, DisplayedGrade: '9 / 10' }]);
+    }
     if (background) {
       const rc = /rcode=(\w+)/.exec(u)?.[1];
-      const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
+      const to = { C1: 'https://digital.wwnorton.com/scored/hw', C2: 'https://digital.wwnorton.com/blank/hw', F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
       if (to) return html(launchPage(to));
       // Like Purdue's Pearson entry: in a tab it goes to Pearson; inside a frame, Brightspace shows Pearson in a frame.
       if (rc === 'S2')
@@ -202,7 +226,7 @@ function createMocks({ scenario = 'default' } = {}) {
     return html('');
   }
 
-  /** @param {{ url: string, method?: string, headers?: Record<string, string> }} req */
+  /** @param {{ url: string, method?: string, headers?: Record<string, string>, body?: string }} req */
   function respond(req, via = 'route') {
     const url = new URL(req.url);
     const u = req.url;
@@ -234,6 +258,10 @@ function createMocks({ scenario = 'default' } = {}) {
         state.hits.aleks++;
         return html('<h1>Homework 7</h1><div class="meta"><span>Due Date:</span> <span>11/20/2026 11:59 PM</span></div>');
       case 'digital.wwnorton.com':
+        if (url.pathname.startsWith('/scored/')) return html('<h1>Scored Homework</h1><p>Attempts: 1 of 3</p><p>Score: 18/25</p>');
+        // A page read in full that says nothing about whether the work was handed in.
+        if (url.pathname.startsWith('/blank/'))
+          return html('<h1>Blank Homework</h1><p>Read chapter 6 and answer the questions below. Show your work for every step; partial credit is given for clear reasoning. Questions 1 to 10 cover the material from the lectures of weeks 5 and 6, including the worked examples.</p>');
         if (url.pathname.startsWith('/list/'))
           return html('<h1>Problem sets</h1><ul><li>Problem Set 1 Due: November 21, 2026, 11:59 PM EST</li><li>Problem Set 2 Due: November 28, 2026, 11:59 PM EST</li><li>Problem Set 3 Due: December 5, 2026, 11:59 PM EST</li></ul>');
         state.hits.norton++;
@@ -258,13 +286,18 @@ function createMocks({ scenario = 'default' } = {}) {
         return html(`<h1>Access Pearson for D2L Brightspace</h1><div id="app">Loading…</div><script>setTimeout(() => { document.getElementById('app').innerHTML = '<article><a href="#" aria-label="Open (opens in a new tab)">Open</a></article><ul aria-label="Course links"><li><a id="as" class="link-text" href="#" aria-label="Assignments, , opens in new tab"><span>Assignments</span></a></li><li><a href="#" aria-label="Results, , opens in new tab"><span>Results</span></a></li></ul>'; document.getElementById('as').addEventListener('click', (e) => { e.preventDefault(); const w = window.open('', '_blank'); setTimeout(() => { w.location = 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch'; }, 300); }); }, 3000);</script>`);
       case 'mylab.pearson.com': {
         state.hits.mylab++;
+        if (req.method === 'POST' && state.mylabSignedIn) {
+          const cell = new URLSearchParams(req.body ?? '').get('__CALLBACKPARAM') ?? '';
+          return { status: 200, headers: { 'content-type': 'text/plain' }, body: /^H_\d+_IVF_\d+_\w+$/.test(cell) ? `s${cell}_92%` : 'eError' };
+        }
         // MyLab's launch address hands off once more; the session exists only once the page it leads to has loaded.
         if (url.pathname.startsWith('/api/')) return handOffAfter('https://mylab.pearson.com/Student/DoAssignments.aspx?view=all&from=launch', 1500);
         // Opening MyLab from Pearson's Brightspace page signs the student in; DueBoard's own request reads with that session.
         if (url.searchParams.get('from') === 'launch') state.mylabSignedIn = true;
         if (!state.mylabSignedIn) return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/login.html'), 'utf8'));
         if (!state.pearson) return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td>08/29/26 11:59pm</td><td>Lesson 1</td></tr></table>');
-        return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/assignments.html'), 'utf8'));
+        // The real page's form carries ASP.NET's hidden fields, which the "see score" callback sends back.
+        return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/assignments.html'), 'utf8').replace('<form id="aspnetForm">', '<form id="aspnetForm"><input type="hidden" name="__VIEWSTATE" value="e2e">'));
       }
       default:
         return notFound();
@@ -283,9 +316,14 @@ async function startServer(mocks, { port = 0 } = {}) {
     execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=dueboard-e2e'], { stdio: 'ignore' });
     const server = https.createServer({ key: fs.readFileSync(key), cert: fs.readFileSync(cert) }, (req, res) => {
       const host = String(req.headers.host ?? '').replace(/:\d+$/, '');
-      const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers }, 'server');
-      res.writeHead(out.status, out.headers);
-      res.end(out.body);
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers, body }, 'server');
+        res.writeHead(out.status, out.headers);
+        res.end(out.body);
+      });
     });
     await new Promise((resolve, reject) => {
       server.once('error', reject);

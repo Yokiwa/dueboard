@@ -71,7 +71,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       // server; tabs (the dashboard, the visit window) are answered by routes from the same respond().
       const answer = (r) => {
         const req = r.request();
-        return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers() }, 'route'));
+        return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers(), body: req.postData() ?? '' }, 'route'));
       };
       for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'console.pearson.com', 'mylab.pearson.com'])
         await ctx.route(`https://${host}/**`, answer);
@@ -216,6 +216,66 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         const { settings } = await chrome.storage.local.get('settings');
         await chrome.storage.local.set({ settings: { ...settings, windowFallback: true } });
       });
+
+      console.log('e2e frames: 1.5.0, whether past-due work was handed in, its score, "Not sure" and Overdue');
+      mocks.state.completion = true;
+      mocks.state.gradescopeSignedIn = true;
+      mocks.state.pearson = true;
+      mocks.state.mylabSignedIn = true;
+      const completion = async () => (await local('completion')).completion ?? {};
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => {
+        const k = await completion();
+        return !!(k['brightspace:topic:34'] && k['brightspace:topic:35'] && k['brightspace:dropbox:502']);
+      }, 'the completion of the past-due work to be read');
+      let k = await completion();
+      check(k['brightspace:dropbox:501']?.state === 'done' && k['brightspace:dropbox:501'].by === 'submitted', `a folder with a submission is done (${JSON.stringify(k['brightspace:dropbox:501'])})`);
+      check(k['brightspace:dropbox:502']?.state === 'not_done', `a past-due folder without one is not done (${JSON.stringify(k['brightspace:dropbox:502'])})`);
+      check(k['brightspace:quiz:601']?.state === 'done' && k['brightspace:quiz:601'].score?.earned === 9, `a quiz with a gradebook score is done with it (${JSON.stringify(k['brightspace:quiz:601'])})`);
+      check(k['brightspace:topic:34']?.state === 'done' && k['brightspace:topic:34'].score?.earned === 18 && k['brightspace:topic:34'].score?.possible === 25, `a platform page showing "Score: 18/25" made its homework done (${JSON.stringify(k['brightspace:topic:34'])})`);
+      check(k['brightspace:topic:35']?.state === 'unknown' && k['brightspace:topic:35'].tries === 1, `a page that says nothing is one try with no answer (${JSON.stringify(k['brightspace:topic:35'])})`);
+      check(Object.entries(k).some(([key, r]) => key.startsWith('gradescope:') && r.state === 'not_done'), 'a Gradescope "No Submission" row is not done');
+      check(Object.entries(k).some(([key, r]) => key.startsWith('pearson:') && r.state === 'done' && r.score?.text === '92%'), `a Pearson score from its "see score" callback made that row done (${JSON.stringify(Object.entries(k).filter(([key]) => key.startsWith('pearson:')).map(([, r]) => r.score?.text ?? r.state))})`);
+      log = await visitLog();
+      const c34 = log.find((e) => e.key === 'brightspace:topic:34');
+      check(c34?.mode === 'frame' && c34.result === 'checked' && c34.answer === 'done (score 18/25)' && c34.evidence?.includes('18/25'), `the check ran in the background and the log shows its answer (${JSON.stringify({ mode: c34?.mode, result: c34?.result, answer: c34?.answer, evidence: c34?.evidence })})`);
+      const c35 = log.find((e) => e.key === 'brightspace:topic:35');
+      check(c35?.mode === 'frame' && c35.result === 'checked' && c35.answer === 'no answer', `the page that says nothing was read in the background, no window (${c35?.mode}, ${c35?.answer})`);
+
+      await page.reload();
+      await page.getByRole('tab', { name: 'To-do' }).click();
+      const overdue = page.getByRole('region', { name: 'Overdue' });
+      await overdue.waitFor({ timeout: 10000 });
+      const showAll = overdue.getByRole('button', { name: /^Show all \d+ overdue$/ });
+      check((await showAll.count()) === 1 && (await overdue.getByRole('listitem').count()) === 3, `Overdue shows 3 and "${await showAll.textContent().catch(() => '')}"`);
+      const row = (title) => overdue.getByRole('listitem').filter({ has: page.getByRole('checkbox', { name: title, exact: true }) });
+      check((await row('Blank Homework').getByText('Not sure', { exact: true }).count()) === 1, 'the homework whose page said nothing is "Not sure"');
+      await showAll.click();
+      check((await overdue.getByRole('button', { name: 'Show fewer' }).count()) === 1, '"Show fewer" after showing all');
+      for (const title of ['Essay 2', 'Essay 3', 'Essay 4']) check((await row(title).count()) === 1 && (await row(title).getByText('Not sure', { exact: true }).count()) === 0, `${title}, not handed in, is overdue without "Not sure"`);
+      for (const title of ['Essay 1', 'Scored Homework', 'Quiz 4']) check((await row(title).count()) === 0, `${title}, done, is not in Overdue`);
+      await page.getByText(/^Completed \(\d+\)$/).click();
+      const doneRow = (title) => page.getByRole('listitem').filter({ has: page.getByRole('checkbox', { name: title, exact: true }) });
+      check(((await doneRow('Scored Homework').textContent()) ?? '').includes('18/25'), 'the scored homework shows its score');
+      check(((await doneRow('Quiz 4').textContent()) ?? '').includes('9/10'), 'the quiz shows its gradebook score');
+
+      console.log('e2e frames: un-ticking automatic done work keeps it not done after the next sync');
+      // The box shows what is stored, so it changes once the store has the student's choice.
+      await doneRow('Essay 1').getByRole('checkbox').click();
+      for (let waited = 0; waited < 5000 && !(await local('userState')).userState?.notDone?.['brightspace:dropbox:501']; waited += 250) await page.waitForTimeout(250);
+      check((await local('userState')).userState?.notDone?.['brightspace:dropbox:501'] === true, 'un-ticking recorded "not done" for it');
+      const lastBefore = (await local('syncMeta')).syncMeta?.brightspace?.lastSuccess;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => (await local('syncMeta')).syncMeta?.brightspace?.lastSuccess !== lastBefore, 'the next sync');
+      await page.reload();
+      await page.getByRole('tab', { name: 'To-do' }).click();
+      await overdue.waitFor({ timeout: 10000 });
+      const more = overdue.getByRole('button', { name: /^Show all \d+ overdue$/ });
+      if (await more.count()) await more.click();
+      check((await row('Essay 1').count()) === 1 && !(await row('Essay 1').getByRole('checkbox').isChecked()), 'Essay 1 is overdue and unticked after the sync, though Brightspace still shows its submission');
+      mocks.state.completion = false;
+      mocks.state.gradescopeSignedIn = false;
+      mocks.state.pearson = false;
 
       console.log('e2e frames: first run while signed out');
       await page.evaluate(async () => {

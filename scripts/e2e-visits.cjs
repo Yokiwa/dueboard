@@ -33,7 +33,7 @@ const check = (ok, msg) => {
   const hits = mocks.state.hits;
   const answer = (r) => {
     const req = r.request();
-    return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers() }));
+    return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers(), body: req.postData() ?? '' }));
   };
   for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'www.gradescope.com'])
     await ctx.route(`https://${host}/**`, answer);
