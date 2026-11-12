@@ -11,8 +11,9 @@ type Mode = 'week' | 'month';
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_LIMIT = 3;
 
-function Chip({ item, course }: { item: Item; course: Course | undefined }) {
+function Chip({ item, course, now }: { item: Item; course: Course | undefined; now: Date }) {
   const done = item.doneByUser || item.submitted;
+  const overdue = !done && Date.parse(item.dueAt!) <= now.getTime();
   const time = format(new Date(item.dueAt!), 'h:mm a');
   return (
     <a
@@ -20,9 +21,10 @@ function Chip({ item, course }: { item: Item; course: Course | undefined }) {
       target="_blank"
       rel="noopener noreferrer"
       data-done={String(done)}
+      data-overdue={String(overdue)}
       title={course ? `${course.code} · ${item.title}` : item.title}
       className={`db-press flex min-w-0 items-center gap-1 rounded-md bg-db-subtle px-2 py-1 caption-4 hover:bg-db-hover ${
-        done ? 'text-db-faint line-through' : 'text-db-text no-underline'
+        done ? 'text-db-faint line-through' : overdue ? 'text-db-urgent-fg no-underline' : 'text-db-text no-underline'
       }`}
     >
       <span data-testid="chip-dot" aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
@@ -112,7 +114,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                       {format(day, 'd')}
                     </span>
                     {shown.map((it) => (
-                      <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} />
+                      <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} now={now} />
                     ))}
                     {list.length > shown.length && <span className="px-2 caption-4 text-db-faint">{`+${list.length - shown.length}`}</span>}
                   </div>

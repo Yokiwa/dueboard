@@ -3,6 +3,7 @@ import type { Item } from '../../core/types';
 import { useT } from '../i18n';
 import { sourceLabel } from '../sourceLabel';
 import { DueBadge } from './DueBadge';
+import { NotSure } from './NotSure';
 
 /** Title + "source · due time" on the left, countdown badge on the right. The title links to the item. */
 export function ItemRow({ item, now }: { item: Item; now: Date }) {
@@ -28,7 +29,8 @@ export function ItemRow({ item, now }: { item: Item; now: Date }) {
           <span className="caption-5 text-db-faint">{`${sourceLabel(item, t)} · ${when}`}</span>
         )}
       </div>
-      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
+      {item.notSure && <NotSure />}
+      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} score={item.score} doneBy={item.doneBy} now={now} />
     </div>
   );
 }

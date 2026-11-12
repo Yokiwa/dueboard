@@ -72,3 +72,26 @@ describe('CalendarView', () => {
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('November 2026');
   });
 });
+
+describe('CalendarView 1.5.0: past work', () => {
+  it('shows a done item 5 weeks ago muted and an overdue one urgent', async () => {
+    const { render, screen } = await import('@testing-library/react');
+    const { CalendarView } = await import('../../src/ui/views/CalendarView');
+    const { NOW: now, course: mkCourse, item: mkItem, dash: mkDash } = await import('./fixtures');
+    const when = new Date(now.getTime() - 35 * 86_400_000);
+    const d = mkDash({
+      courses: [mkCourse('brightspace:1', 'CS 18000')],
+      items: [
+        mkItem('brightspace:a', 'brightspace:1', 'Done long ago', when.toISOString(), { submitted: true }),
+        mkItem('brightspace:b', 'brightspace:1', 'Missed long ago', when.toISOString()),
+      ],
+    });
+    render(<CalendarView dashboard={d} now={now} />);
+    for (let i = 0; i < 5; i++) screen.getByRole('button', { name: 'Previous week' }).click();
+    const chip = (t: string) => screen.getByText(t).closest('a')!;
+    await screen.findByText('Done long ago');
+    expect(chip('Done long ago').getAttribute('data-done')).toBe('true');
+    expect(chip('Missed long ago').getAttribute('data-overdue')).toBe('true');
+    expect(chip('Done long ago').getAttribute('data-overdue')).toBe('false');
+  });
+});

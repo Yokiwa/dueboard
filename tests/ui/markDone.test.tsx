@@ -95,13 +95,13 @@ describe('mark done from course cards', () => {
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
   });
 
-  it('submitted items in the detail are checked and locked', () => {
+  it('submitted items in the detail are checked and can be un-ticked (1.5.0)', () => {
     const sub = { ...lab, submitted: true };
     withToast(<CoursesView dashboard={dash({ courses: [cs], items: [sub] })} now={NOW} />);
     fireEvent.click(screen.getByRole('button', { name: 'Open CS 18000 details' }));
     const box = within(screen.getByRole('dialog')).getByRole('checkbox', { name: 'Mark done: Lab 09' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
-    expect(box.disabled).toBe(true);
+    expect(box.disabled).toBe(false);
   });
 });
 

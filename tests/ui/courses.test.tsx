@@ -95,11 +95,11 @@ describe('CoursesView', () => {
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
   });
 
-  it('a submitted item stays on the card, checked and locked', () => {
+  it('a submitted item stays on the card, checked and can be un-ticked (1.5.0)', () => {
     renderIn('en', <CoursesView dashboard={d} now={NOW} />);
     const box = within(card('MA 26100')).getByRole('checkbox', { name: 'Mark done: WebAssign 14.3' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
-    expect(box.disabled).toBe(true);
+    expect(box.disabled).toBe(false);
   });
 
   it('partial course card shows Some data did not sync', () => {

@@ -33,8 +33,7 @@ export function CourseCard({ course, items, links, now, showDone = true, onOpen 
         type="checkbox"
         aria-label={t('done.mark', { title: i.title })}
         checked={i.doneByUser || i.submitted}
-        disabled={i.submitted}
-        onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
+        onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked, { auto: i.submitted })}
         className="size-4 shrink-0 cursor-pointer"
       />
       <div className="min-w-0 grow">

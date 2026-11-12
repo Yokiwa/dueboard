@@ -67,11 +67,11 @@ describe('TodoView', () => {
     await waitFor(async () => expect((await loadStore()).userState.done).toEqual({}));
   });
 
-  it('submitted items show Submitted and are checked and locked', () => {
+  it('submitted items show Submitted and are checked and can be un-ticked (1.5.0)', () => {
     renderIn('en', <TodoView dashboard={d} now={NOW} />);
     const box = screen.getByRole('checkbox', { name: 'Lab 08' }) as HTMLInputElement;
     expect(box.checked).toBe(true);
-    expect(box.disabled).toBe(true);
+    expect(box.disabled).toBe(false);
     expect(screen.getByText('Submitted')).toBeTruthy();
   });
 
@@ -143,5 +143,65 @@ describe('ManualLinkForm', () => {
         { courseId: 'brightspace:1', label: 'Piazza', url: 'https://piazza.com/class/x', category: 'discussion', source: 'manual' },
       ]),
     );
+  });
+});
+
+describe('TodoView 1.5.0: Overdue, "Not sure" and scores', () => {
+  beforeEach(() => fakeBrowser.reset());
+  const overdue = (n: number) => item(`brightspace:o${n}`, 'brightspace:1', `Old ${n}`, new Date(NOW.getTime() - n * 86_400_000).toISOString());
+
+  it('Overdue shows the 3 most recently due and "Show all 5 overdue"; clicking shows all and "Show fewer"', () => {
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [1, 2, 3, 4, 5].map(overdue) })} now={NOW} />);
+    expect(titles(group('Overdue'))).toEqual(['Old 1', 'Old 2', 'Old 3']);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 5 overdue' }));
+    expect(titles(group('Overdue'))).toEqual(['Old 1', 'Old 2', 'Old 3', 'Old 4', 'Old 5']);
+    fireEvent.click(screen.getByRole('button', { name: 'Show fewer' }));
+    expect(titles(group('Overdue'))).toHaveLength(3);
+  });
+
+  it('3 or fewer overdue show no button', () => {
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [1, 2, 3].map(overdue) })} now={NOW} />);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+  });
+
+  it('a notSure item shows "Not sure" with the hint', () => {
+    const i = { ...overdue(2), notSure: true };
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
+    const tag = within(group('Overdue')).getByText('Not sure');
+    expect(tag.getAttribute('title')).toBe("DueBoard couldn't tell whether you've done this — tick it if you have.");
+  });
+
+  it('automatic done work with a score shows "Submitted · 18/25" and "Score from Gradescope"', () => {
+    const i = item('gradescope:9', 'brightspace:1', 'Project 3', '2026-11-06T23:59:00-05:00', { submitted: true, score: { text: '18/25', from: 'Gradescope' }, doneBy: { by: 'score', source: 'Gradescope' } });
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
+    const badge = screen.getByText('Submitted · 18/25');
+    expect(badge.getAttribute('title')).toBe('Score from Gradescope');
+  });
+
+  it('submitted work without a score says where it was seen', () => {
+    const i = item('brightspace:d1', 'brightspace:1', 'HW 1', '2026-11-06T23:59:00-05:00', { submitted: true, doneBy: { by: 'submitted', source: 'Brightspace' } });
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
+    expect(screen.getByText('Submitted').getAttribute('title')).toBe('Brightspace shows it as submitted');
+  });
+
+  it('un-ticking automatic done work records notDone for its keys; ticking it again clears notDone', async () => {
+    const i = item('brightspace:d1', 'brightspace:1', 'HW 1', '2026-11-06T23:59:00-05:00', { sourceKeys: ['brightspace:d1', 'gradescope:7'], submitted: true, doneBy: { by: 'submitted', source: 'Brightspace' } });
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
+    const box = screen.getByRole('checkbox', { name: 'HW 1' }) as HTMLInputElement;
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    await waitFor(async () => expect((await loadStore()).userState.notDone).toEqual({ 'brightspace:d1': true, 'gradescope:7': true }));
+    await toggleDone(['brightspace:d1', 'gradescope:7'], true);
+    const s = await loadStore();
+    expect(s.userState.notDone).toEqual({});
+    expect(s.userState.done).toEqual({ 'brightspace:d1': true, 'gradescope:7': true });
+  });
+
+  it("un-ticking the student's own tick does not record notDone", async () => {
+    await toggleDone(['brightspace:d2'], true);
+    await toggleDone(['brightspace:d2'], false);
+    const s = await loadStore();
+    expect(s.userState.done).toEqual({});
+    expect(s.userState.notDone).toEqual({});
   });
 });

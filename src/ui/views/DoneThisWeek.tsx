@@ -29,8 +29,7 @@ export function DoneThisWeek({ courses, items, now }: { courses: Course[]; items
                 type="checkbox"
                 aria-label={t('done.mark', { title: i.title })}
                 checked
-                disabled={i.submitted}
-                onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked)}
+                onChange={(e) => void toggleDone(i.sourceKeys, e.target.checked, { auto: i.submitted })}
                 className="size-4 shrink-0 cursor-pointer"
               />
               {c && (

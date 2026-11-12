@@ -129,14 +129,24 @@ export async function recordSyncError(source: SourceId, reason: string, detail?:
   });
 }
 
-export async function toggleDone(sourceKeys: string[], done: boolean): Promise<void> {
+/**
+ * Ticks or un-ticks an item. Un-ticking work DueBoard marked done (`auto`) records notDone, so it is never marked done
+ * automatically again; ticking clears that.
+ */
+export async function toggleDone(sourceKeys: string[], done: boolean, opts: { auto?: boolean } = {}): Promise<void> {
   const { userState } = await loadStore();
   const next = { ...userState.done };
+  const notDone = { ...userState.notDone };
   for (const k of sourceKeys) {
-    if (done) next[k] = true;
-    else delete next[k];
+    if (done) {
+      next[k] = true;
+      delete notDone[k];
+    } else {
+      delete next[k];
+      if (opts.auto) notDone[k] = true;
+    }
   }
-  await patchStore({ userState: { ...userState, done: next } });
+  await patchStore({ userState: { ...userState, done: next, notDone } });
 }
 
 /** Calls cb whenever any DueBoard data in local storage changes. Returns an unsubscribe function. */

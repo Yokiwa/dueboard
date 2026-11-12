@@ -9,6 +9,10 @@ import { ManualItemForm } from '../components/ManualItemForm';
 import { CaretRight, CheckCircle, Plus, X } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
 import { SyllabusSuggestions, type SyllabusView } from '../components/SyllabusSuggestions';
+import { NotSure } from '../components/NotSure';
+
+/** Overdue items shown before "Show all N overdue". */
+const OVERDUE_SHOWN = 3;
 
 type Group = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'noDue';
 const GROUPS: [Group, MessageKey][] = [
@@ -40,8 +44,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         type="checkbox"
         aria-label={item.title}
         checked={done}
-        disabled={item.submitted}
-        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked)}
+        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked, { auto: item.submitted })}
         className="size-4 shrink-0 cursor-pointer"
       />
       <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
@@ -63,7 +66,8 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
           <span className="caption-5 text-db-faint">{course?.code}</span>
         )}
       </div>
-      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} now={now} />
+      {item.notSure && <NotSure />}
+      <DueBadge dueAt={item.dueAt} done={item.doneByUser} submitted={item.submitted} score={item.score} doneBy={item.doneBy} now={now} />
       {item.type === 'manual' && (
         <button
           type="button"
@@ -81,6 +85,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
 export function TodoView({ dashboard, now, syllabus }: { dashboard: Dashboard; now: Date; syllabus?: SyllabusView }) {
   const t = useT();
   const [adding, setAdding] = useState(false);
+  const [allOverdue, setAllOverdue] = useState(false);
   const courseOf = new Map(dashboard.courses.map((c) => [c.id, c]));
   const byDue = (a: Item, b: Item) => (a.dueAt ? Date.parse(a.dueAt) : Infinity) - (b.dueAt ? Date.parse(b.dueAt) : Infinity);
   const sorted = [...dashboard.items].sort(byDue);
@@ -109,8 +114,14 @@ export function TodoView({ dashboard, now, syllabus }: { dashboard: Dashboard; n
         </div>
       )}
       {GROUPS.map(([g, key]) => {
-        const list = open.filter((i) => groupOf(i, now) === g);
+        let list = open.filter((i) => groupOf(i, now) === g);
         if (list.length === 0) return null;
+        // Overdue: the most recently due first, the first few unless asked for all.
+        const total = list.length;
+        if (g === 'overdue') {
+          list = [...list].reverse();
+          if (!allOverdue) list = list.slice(0, OVERDUE_SHOWN);
+        }
         const headingId = `todo-${g}`;
         return (
           <section key={g} role="region" aria-labelledby={headingId} className="flex flex-col gap-2">
@@ -122,6 +133,11 @@ export function TodoView({ dashboard, now, syllabus }: { dashboard: Dashboard; n
                 <Row key={i.id} item={i} course={courseOf.get(i.courseId)} now={now} />
               ))}
             </ul>
+            {g === 'overdue' && total > OVERDUE_SHOWN && (
+              <button type="button" onClick={() => setAllOverdue((v) => !v)} className="db-press self-start cursor-pointer rounded-sm border-0 bg-transparent p-0 caption-3 text-db-muted hover:text-db-text">
+                {allOverdue ? t('todo.showFewer') : t('todo.showAllOverdue', { n: total })}
+              </button>
+            )}
           </section>
         );
       })}
