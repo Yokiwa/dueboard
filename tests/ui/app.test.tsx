@@ -44,24 +44,48 @@ describe('dashboard App', () => {
     expect(screen.getByRole('tab', { name: 'Calendar' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('onboarding asks only for Brightspace; Start sync sends sync', async () => {
+  it('onboarding has one Log in button; signed in starts the sync', async () => {
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
-    expect((screen.getByRole('link', { name: 'Open Brightspace' }) as HTMLAnchorElement).href).toBe('https://purdue.brightspace.com/d2l/home');
-    expect(screen.queryByRole('link', { name: 'Open Gradescope' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open Brightspace' })).toBeNull();
     expect(screen.queryByText(/Gradescope|Pearson|Wiley/)).toBeNull();
-    vi.mocked(sendToBackground).mockResolvedValueOnce({ brightspace: 'not_logged_in', gradescope: 'not_logged_in' });
-    fireEvent.click(screen.getByRole('button', { name: 'Start sync' }));
-    expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync', trigger: 'manual' });
+    expect(screen.getByText('Already signed in? This starts reading your courses right away.')).toBeTruthy();
+    vi.mocked(sendToBackground).mockResolvedValueOnce({ signedIn: true }).mockResolvedValueOnce({ brightspace: 'not_logged_in', gradescope: 'not_logged_in' });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in to Brightspace' }));
+    expect(sendToBackground).toHaveBeenCalledWith({ type: 'beginLogin' });
+    await waitFor(() => expect(sendToBackground).toHaveBeenLastCalledWith({ type: 'sync', trigger: 'manual' }));
     await waitFor(() => expect(screen.getByText('Brightspace: not signed in yet')).toBeTruthy());
     expect(screen.queryByText(/Gradescope/)).toBeNull();
+  });
+
+  it('signed out: login starts and nothing more happens in the page', async () => {
+    render(<App />);
+    await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
+    vi.mocked(sendToBackground).mockClear();
+    vi.mocked(sendToBackground).mockResolvedValueOnce({ signedIn: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in to Brightspace' }));
+    await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'beginLogin' }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sendToBackground).toHaveBeenCalledTimes(1);
+  });
+
+  it('?start=1 starts the sync on mount, once, and removes the parameter', async () => {
+    history.replaceState(null, '', '/dashboard.html?start=1');
+    vi.mocked(sendToBackground).mockClear();
+    vi.mocked(sendToBackground).mockImplementation(async (m) => (m.type === 'sync' ? { brightspace: 'ok', gradescope: 'ok' } : null) as never);
+    render(<App />);
+    await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'sync', trigger: 'manual' }));
+    expect(location.search).toBe('');
+    expect(vi.mocked(sendToBackground).mock.calls.filter(([m]) => m.type === 'sync')).toHaveLength(1);
+    await waitFor(() => expect(screen.getByText('Gradescope: read')).toBeTruthy());
+    vi.mocked(sendToBackground).mockImplementation(async () => null);
   });
 
   it('onboarding mentions another platform only when it was found and read', async () => {
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
-    vi.mocked(sendToBackground).mockResolvedValueOnce({ brightspace: 'ok', gradescope: 'ok' });
-    fireEvent.click(screen.getByRole('button', { name: 'Start sync' }));
+    vi.mocked(sendToBackground).mockResolvedValueOnce({ signedIn: true }).mockResolvedValueOnce({ brightspace: 'ok', gradescope: 'ok' });
+    fireEvent.click(screen.getByRole('button', { name: 'Log in to Brightspace' }));
     await waitFor(() => expect(screen.getByText('Gradescope: read')).toBeTruthy());
   });
 

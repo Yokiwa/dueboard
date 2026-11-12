@@ -1,15 +1,13 @@
-import { useState } from 'react';
-import { ArrowUpRight, CheckCircle, LockSimple, WarningCircle } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle, LockSimple, WarningCircle } from '@phosphor-icons/react';
 import type { SyncReport } from '../../sync/runSync';
 import { ALL_SOURCES, type SourceId } from '../../core/types';
 import { sendToBackground } from '../messaging';
 import { useT } from '../i18n';
-import { primaryBtn, secondaryBtn } from '../forms';
+import { primaryBtn } from '../forms';
 import { BrandMark } from './BrandMark';
 
 const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope', pearson: 'Pearson' };
-const step = 'flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-db-border bg-db-surface p-4';
-const num = 'inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-db-accent-soft caption-3 text-db-accent tabular-nums';
 
 /** First-run guide, shown until the first platform has synced successfully. */
 export function Onboarding() {
@@ -26,10 +24,27 @@ export function Onboarding() {
     }
   };
 
-  const steps = [
-    { text: t('onb.step1'), action: <a className={secondaryBtn} href="https://purdue.brightspace.com/d2l/home" target="_blank" rel="noopener noreferrer">{t('onb.openBs')}<ArrowUpRight aria-hidden="true" size={14} weight="bold" /></a> },
-    { text: t('onb.step3'), action: <button type="button" className={primaryBtn} onClick={start} disabled={syncing}>{syncing ? t('onb.syncing') : t('onb.start')}</button> },
-  ];
+  const login = async () => {
+    setSyncing(true);
+    try {
+      const res = await sendToBackground<{ signedIn?: boolean } | null>({ type: 'beginLogin' });
+      if (res?.signedIn) await start();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Back from signing in: the address carries ?start=1, so the sync starts at once.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current) return;
+    const url = new URL(location.href);
+    if (!url.searchParams.has('start')) return;
+    autoStarted.current = true;
+    url.searchParams.delete('start');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+    void start();
+  }, []);
 
   return (
     <div className="flex min-h-screen justify-center bg-db-bg px-4 py-16">
@@ -41,19 +56,12 @@ export function Onboarding() {
           </h1>
           <p className="m-0 body-3 text-db-muted">{t('onb.intro')}</p>
         </div>
-        <ol className="m-0 flex list-none flex-col gap-3 p-0">
-          {steps.map((s, i) => (
-            <li key={i} className={step}>
-              <span className="flex min-w-0 items-center gap-3 body-5 text-db-text">
-                <span aria-hidden="true" className={num}>
-                  {i + 1}
-                </span>
-                {s.text}
-              </span>
-              {s.action}
-            </li>
-          ))}
-        </ol>
+        <div className="flex flex-col items-start gap-2">
+          <button type="button" className={primaryBtn} onClick={login} disabled={syncing}>
+            {syncing ? t('onb.signingIn') : t('onb.login')}
+          </button>
+          <p className="m-0 caption-5 text-db-faint">{t('onb.already')}</p>
+        </div>
         {report && (
           <ul role="status" className="m-0 flex list-none flex-col gap-2 p-0">
             {/* Brightspace always; other platforms only when they were found and read. */}

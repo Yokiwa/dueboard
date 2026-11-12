@@ -3,7 +3,7 @@ import { handleInstalled, settingsAfterUpdate } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
-import { appendVisitLog, getVisitWindow, loadStore, patchStore, saveCaptured, setVisitProgress } from '../storage/store';
+import { appendVisitLog, getLoginTab, getVisitWindow, loadStore, patchStore, saveCaptured, setLoginTab, setVisitProgress } from '../storage/store';
 import { acceptCapture } from '../capture/accept';
 import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
@@ -22,6 +22,8 @@ import { withKeepAlive } from '../sync/keepAlive';
 import { IS_FIREFOX } from '../core/env';
 import { createFrameApi, getBackgroundFrameHost } from '../visits/frame/api';
 import { isOwnPageSender } from '../visits/frame/probe';
+import { beginLogin, onTabUpdated } from '../background/login';
+import { BRIGHTSPACE_HOST } from '../visits/hosts';
 import type { FrameVisitRequest } from '../visits/frame/protocol';
 
 const ALARM = 'dueboard-sync';
@@ -118,6 +120,22 @@ export default defineBackground({
     if (alarm.name === ALARM) void syncNow('auto');
   });
 
+  const loginDeps = {
+    signedIn: () => visitApi.signedIn(),
+    navigate: async (tabId: number, url: string) => void (await browser.tabs.update(tabId, { url })),
+    remember: (id: number | null) => setLoginTab(id),
+  };
+  browser.tabs.onUpdated.addListener((tabId, info, tab) => {
+    void onTabUpdated(tabId, tab.url, info.status === 'complete', {
+      ...loginDeps,
+      remembered: getLoginTab,
+      dashboardUrl: browser.runtime.getURL('/dashboard.html') + '?start=1',
+    }).catch(() => undefined);
+  });
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void getLoginTab().then((id) => (id === tabId ? setLoginTab(null) : undefined)).catch(() => undefined);
+  });
+
   const route = createRouter({
     sync: (msg) => syncNow(msg.trigger === 'manual' ? 'manual' : 'auto'),
     syncIfStale: async () => {
@@ -139,6 +157,19 @@ export default defineBackground({
       } finally {
         if (msg.headers !== false) await frameApi.end();
       }
+    },
+    // First-run login: the dashboard tab (or a new tab, from the popup) goes to Brightspace and is brought back afterwards.
+    beginLogin: async (_msg, sender) => {
+      if (!isOwnPageSender(sender, browser.runtime.getURL(''))) return undefined;
+      const tabId = sender?.tab?.id;
+      if (tabId === undefined) {
+        if (await visitApi.signedIn()) return { signedIn: true };
+        const tab = await browser.tabs.create({ url: `https://${BRIGHTSPACE_HOST}/d2l/home` });
+        if (tab.id === undefined) return { signedIn: false };
+        await setLoginTab(tab.id);
+        return { signedIn: false };
+      }
+      return beginLogin(tabId, loginDeps);
     },
     probe: () => probe(),
     collectFixtures: () => collectFixtures(),

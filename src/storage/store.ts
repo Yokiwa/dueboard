@@ -251,6 +251,15 @@ export async function getVisitWindow(): Promise<number | undefined> {
   return typeof r.visitWindowId === 'number' ? r.visitWindowId : undefined;
 }
 
+/** The tab the student is signing in with (first-run login); forgotten once they are back. */
+export async function setLoginTab(id: number | null): Promise<void> {
+  await sessionArea().set({ loginTabId: id });
+}
+export async function getLoginTab(): Promise<number | undefined> {
+  const r = (await sessionArea().get('loginTabId')) as { loginTabId?: number | null };
+  return typeof r.loginTabId === 'number' ? r.loginTabId : undefined;
+}
+
 /** The local visit log (Diagnostics): the latest 100 visits. Never sent anywhere. */
 const LOG_MAX = 100;
 export interface StoredVisitLogEntry {
