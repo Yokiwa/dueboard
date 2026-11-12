@@ -1,6 +1,7 @@
 import { platformByHost } from '../core/platformRegistry';
 import type { CapturedDue, StoreShape } from '../core/types';
 import { courseTerm, syllabusFromLines } from '../syllabus/read';
+import { syllabusSources } from '../syllabus/sources';
 import type { VisitOutcome, VisitTarget } from './schedule';
 
 /** Folds a visit run's outcomes into the captured dates and the visit state. Pure. */
@@ -27,7 +28,9 @@ export function applyOutcomes(
     }
     if (target?.mode === 'syllabus') {
       const ou = o.key.slice('syllabus:'.length);
-      const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: null };
+      // The link's last-modified time is kept: a stored syllabus without it reads as "changed" on every sync.
+      const known = syllabusSources(store).find((s) => s.ou === ou && s.url === target.launchUrl);
+      const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: known?.modified ?? null };
       const course = store.snapshots.brightspace?.courses.find((c) => c.sourceCourseId === ou) ?? {};
       if (o.status === 'text') syllabus[ou] = syllabusFromLines(src, o.lines, courseTerm(course, now), now);
       else if (o.status !== 'signed_out') syllabus[ou] = { ...syllabusFromLines(src, [], courseTerm(course, now), now), rows: store.syllabus[ou]?.rows ?? [] };

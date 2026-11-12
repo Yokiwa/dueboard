@@ -7,6 +7,8 @@ import type { VisitOutcome, VisitTarget } from './schedule';
 /** Text that means the frame got a sign-in or cookie prompt instead of the page (the window, with the student's cookies, may not). */
 const PROMPT = /\b(sign|log)\s?in\b|cookies?\b.{0,40}\b(disabled|blocked|required|enable)|session (has )?expired/i;
 const THIN = 200;
+/** Read time of a sign-in visit's hidden frame (the reader looks for its next link for 35 s). */
+const SESSION_READ_MS = 40_000;
 
 /** The frame read nothing worth trusting: no page, a nearly blank one, or a sign-in / cookie prompt. */
 function notThePage(pages: FrameResult['pages']): boolean {
@@ -116,6 +118,8 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
     const req: FrameVisitRequest = { token: newToken(), url: t.launchUrl, mode: t.mode };
     if (t.platform) req.platform = t.platform;
     if (t.titles) req.titles = t.titles;
+    // A sign-in visit waits for its page to show the next link (Pearson's portal loads slowly), then for the platform.
+    if (t.mode === 'session') req.readMs = SESSION_READ_MS;
     const res = await (async () => api.visit(req))().catch(blockedResult);
     let { outcome, fallback } = await map(t, res);
     if (outcome.status === 'signed_out') signedOut = true;

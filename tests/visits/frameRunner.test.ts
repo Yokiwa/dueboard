@@ -159,6 +159,14 @@ describe('runFrameVisits', () => {
     expect(reqs[1]!.mode).toBe('syllabus');
   });
 
+  it('a sign-in visit gets longer to read (its page may load slowly before its next link shows)', async () => {
+    const reqs: FrameVisitRequest[] = [];
+    const f = fake((r) => (reqs.push(r), res({ status: 'landed', host: 'mylab.pearson.com' })));
+    await runFrameVisits([target(1, { key: 'pearson:session', mode: 'session', platform: 'pearson' }), target(2)], f.api, base());
+    expect(reqs[0]!.readMs).toBe(40_000);
+    expect(reqs[1]!.readMs).toBeUndefined();
+  });
+
   describe('result mapping', () => {
     const run = async (r: FrameResult, o: { signedIn?: boolean } = {}) => {
       const f = fake(() => r);

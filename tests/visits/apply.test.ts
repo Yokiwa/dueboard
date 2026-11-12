@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyOutcomes, type VisitTarget } from '../../src/visits/schedule';
+import { applyOutcomes, type VisitOutcome, type VisitTarget } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
 import type { CapturedDue } from '../../src/core/types';
 
@@ -89,6 +89,23 @@ describe('applyOutcomes: syllabus visits', () => {
     const r = applyOutcomes(base(), [st], [{ key: 'syllabus:1', status: 'needs_permission', host: 'purdue.simplesyllabus.com' }], now);
     expect(r.syllabus?.['1']).toMatchObject({ error: 'unreadable', readAt: now.toISOString() });
     expect(r.visitState.needsPermission).toEqual(['purdue.simplesyllabus.com']);
+  });
+  it("keeps the course link's last-modified time, so a syllabus read once is not read again every sync", async () => {
+    const { dueVisits } = await import('../../src/visits/schedule');
+    const s = base();
+    s.settings.syllabus = true;
+    s.settings.visits = 'auto';
+    s.snapshots.brightspace!.syllabusSources = [{ ou: '1', kind: 'visit', url: st.launchUrl, title: 'Syllabus Quiz', modified: '2026-08-20T15:00:00.000Z' }];
+    const outcomes: VisitOutcome[] = [
+      { key: 'syllabus:1', status: 'text', host: 'www.gradescope.com', lines: ['Project #9', 'Total Points'] },
+      { key: 'syllabus:1', status: 'failed', reason: 'timeout' },
+    ];
+    for (const outcome of outcomes) {
+      const r = applyOutcomes(s, [st], [outcome], now);
+      expect(r.syllabus['1']!.modified).toBe('2026-08-20T15:00:00.000Z');
+      const later = new Date(now.getTime() + 5 * 60_000);
+      expect(dueVisits({ ...s, ...r }, later, 'auto', ['https://*/*']).map((t) => t.key)).not.toContain('syllabus:1');
+    }
   });
 });
 

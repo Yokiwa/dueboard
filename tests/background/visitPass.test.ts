@@ -382,6 +382,13 @@ describe('runVisitPass: learning that only the window reads a platform', () => {
     expect(memory(s.store).aleks).toEqual({ blocked: 0, skipUntil: week });
   });
 
+  it('a syllabus the window read is not learned (its next run is keyed by course, not by platform)', async () => {
+    const syl = t('s', { key: 'syllabus:9', mode: 'syllabus', platform: undefined, courseId: 'brightspace:9' });
+    const s = setup({ frames: scripted(() => [done(syl, blocked('s'), true)]), windows: async () => [{ key: 'syllabus:9', status: 'text', lines: ['Oct 1 | Exam'], host: 'x.example.com' }] });
+    await runVisitPass(s.deps, [syl]);
+    expect(memory(s.store)['x.example.com']).toBeUndefined();
+  });
+
   it('nothing is learned when the window found nothing either, or when the frame read the page itself', async () => {
     const s = setup({ frames: scripted(() => [done(t(1), none(1), true)]), windows: async () => [none(1)] });
     await runVisitPass(s.deps, [t(1)]);

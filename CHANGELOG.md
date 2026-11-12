@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.8 — 2026-11 (trial build)
+
+- **Pearson signs back in more reliably**: in the minimized window, a Pearson sign-in page that moves on to the next one while DueBoard is setting up no longer ends the attempt with an error; in the background, Pearson's page gets up to 35 seconds to show its Assignments link (the whole sign-in up to about a minute)
+- **Refresh tries signing back in to Pearson or Gradescope at once**; automatic syncs still try at most every 6 hours
+- When a sign-in does not get through, the visit log says what the page showed (or which error the window hit), so the cause can be found
+- A course syllabus read from a Brightspace link (for example "Syllabus Quiz") is no longer read again on every sync: DueBoard kept the read but not the link's last-changed time, so the link always looked changed
+- A syllabus page the minimized window read no longer sends its platform to the window for 7 days (only homework pages do)
+
 ## 1.4.7 — 2026-11 (trial build)
 
 - **Faster syncs**:

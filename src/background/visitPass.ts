@@ -154,7 +154,8 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   const learned = new Set<string>();
   for (const o of windowOutcomes) {
     const target = tried.get(o.key);
-    if (!target || (o.status !== 'found' && o.status !== 'text')) continue;
+    // Homework only: the next run keys a homework by the platform it was read on (a syllabus by its course).
+    if (!target || o.status !== 'found') continue;
     learned.add(target.platform ?? platformByHost(o.host)?.id ?? o.host);
   }
   if (learned.size > 0) {
