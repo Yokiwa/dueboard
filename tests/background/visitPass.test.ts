@@ -391,3 +391,38 @@ describe('runVisitPass: learning that only the window reads a platform', () => {
     expect(memory(s2.store).aleks?.skipUntil).toBeUndefined();
   });
 });
+
+describe('runVisitPass: a platform the frames hand to the window, within one run', () => {
+  const run = async (outcome: (n: string) => VisitOutcome, fallback: boolean) => {
+    const started: string[] = [];
+    let windowed: string[] = [];
+    const s = setup({
+      frames: async (ts, opts) => {
+        for (const x of ts) {
+          if (opts.skipKey?.(opts.keyOf(x))) continue;
+          started.push(x.key);
+          await opts.onDone(done(x, outcome(x.key.split(':')[2]!), fallback));
+        }
+        return [];
+      },
+      windows: async (ts) => {
+        windowed = ts.map((x) => x.key);
+        return ts.map((x) => found(x.key.split(':')[2]!));
+      },
+    });
+    await runVisitPass(s.deps, [1, 2, 3, 4, 5].map((n) => t(n)));
+    return { started, windowed };
+  };
+
+  it('after 2 pages in a row the frames read but left to the window (a button they could not follow), the rest go straight to the window', async () => {
+    const { started, windowed } = await run(none, true);
+    expect(started).toEqual(['1', '2'].map((n) => `brightspace:topic:${n}`));
+    expect(windowed).toEqual([1, 2, 3, 4, 5].map((n) => `brightspace:topic:${n}`));
+  });
+
+  it('pages that were read in full (no window needed) do not count', async () => {
+    const { started, windowed } = await run(none, false);
+    expect(started.length).toBe(5);
+    expect(windowed).toEqual([]);
+  });
+});

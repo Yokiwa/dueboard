@@ -7,6 +7,8 @@ import { applyOutcomes, WINDOW_MAX, type VisitOutcome, type VisitTarget } from '
 const DAY = 86_400_000;
 /** Frame visits in a row that end blocked before a platform goes straight to the window. */
 const BLOCKED_LIMIT = 3;
+/** Pages in a row that the frames read but left to the window (a button they could not follow) within one run. */
+const HANDED_LIMIT = 2;
 const SKIP_DAYS = 7;
 
 /** Which platform a target belongs to for frame memory and for "one platform at a time". */
@@ -76,7 +78,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   let signedOut = false;
   /** Frame visits in a row that ended blocked, per key, in this pass. */
   const blockedNow = new Map<string, number>();
-  const skipNow = (k: string) => (blockedNow.get(k) ?? 0) >= BLOCKED_LIMIT;
+  /** Frame visits in a row that read a page and still handed it to the window, per key, in this pass. */
+  const handedNow = new Map<string, number>();
+  const skipNow = (k: string) => (blockedNow.get(k) ?? 0) >= BLOCKED_LIMIT || (windowFallback && (handedNow.get(k) ?? 0) >= HANDED_LIMIT);
 
   const remember = (store: StoreShape, d: FrameVisitDone): StoreShape['visitState'] => {
     const frame = { ...store.visitState.frame };
@@ -100,6 +104,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
     const bk = keyOf(d.target);
     if (d.outcome.status === 'failed' && d.outcome.reason === 'frame') blockedNow.set(bk, (blockedNow.get(bk) ?? 0) + 1);
     else if (d.outcome.status !== 'failed' && d.outcome.status !== 'signed_out') blockedNow.delete(bk);
+    // A page read in the frame that still goes to the window (WileyPLUS: its assignment opens only in a real window).
+    if (d.outcome.status === 'none' && d.fallback) handedNow.set(bk, (handedNow.get(bk) ?? 0) + 1);
+    else if (d.outcome.status !== 'failed' && d.outcome.status !== 'signed_out') handedNow.delete(bk);
     deps.log(d.log);
     return serial(async () => {
       const store = await deps.load();

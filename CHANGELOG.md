@@ -3,7 +3,7 @@
 ## 1.4.7 — 2026-11 (trial build)
 
 - **Faster syncs**:
-  - A platform whose pages the background could not read but the minimized window could (WileyPLUS) now goes straight to the window for 7 days, instead of costing a background attempt of about 20 seconds per homework every time
+  - A platform whose pages the background could not read but the minimized window could (WileyPLUS) now goes straight to the window for 7 days, instead of costing a background attempt of about 20 seconds per homework every time. Within one sync, after two such pages in a row the rest of that platform goes straight to the window too, so the first sync after installing is fast as well
   - Brightspace links that land on Gradescope (or Pearson) and show no due date are not opened again: DueBoard reads those platforms' dates directly
   - A page read in the background that shows no due date ends as soon as it has been read, instead of waiting out about 20 seconds
 
