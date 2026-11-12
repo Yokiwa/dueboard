@@ -342,3 +342,55 @@ describe('runFrameVisits', () => {
     expect(done[1]!.log.result).toBe('none');
   });
 });
+
+describe('runFrameVisits: check visits', () => {
+  const key = 'brightspace:topic:1';
+  const check = { state: 'done' as const, by: 'score' as const, source: 'aleks', score: { text: '18/25', earned: 18, possible: 25, from: 'aleks' }, evidence: 'Score: 18/25' };
+  const full = 'Skip to content / TDM 10100 / The Data Mine Seminar I / Dashboard / Regrade Requests / Instructors / Ungraded / Project #10 / Student / Total Points / 10 pts / Autograder Score / Question 1 / 2 pts / Question 2';
+  const run = async (r: FrameResult, t = target(1, { mode: 'check' })) => {
+    const f = fake(() => r);
+    const out = await runFrameVisits([t], f.api, base());
+    return { d: out[0]!, req: f };
+  };
+
+  it('asks the frame host for check mode', async () => {
+    const reqs: FrameVisitRequest[] = [];
+    const f = fake((req) => (reqs.push(req), res({ status: 'checked', check })));
+    await runFrameVisits([target(1, { mode: 'check' })], f.api, base());
+    expect(reqs[0]!.mode).toBe('check');
+  });
+
+  it('checked outcomes map and log their answer and evidence', async () => {
+    const { d } = await run(res({ status: 'checked', check }));
+    expect(d.outcome).toEqual({ key, status: 'checked', check, host: 'www.aleks.com' });
+    expect(d.fallback).toBe(false);
+    expect(d.log).toMatchObject({ result: 'checked', answer: 'done (score 18/25)', evidence: 'Score: 18/25' });
+  });
+
+  it('a page read in full that shows nothing is a checked outcome with no answer, final', async () => {
+    const { d } = await run(res({ status: 'none', pages: [{ url: 'https://www.aleks.com/hw', text: full, buttons: [] }] }));
+    expect(d.outcome).toEqual({ key, status: 'checked', check: null, host: 'www.aleks.com' });
+    expect(d.fallback).toBe(false);
+    expect(d.log).toMatchObject({ result: 'checked', answer: 'no answer' });
+    expect(d.log.pages).toHaveLength(1);
+  });
+
+  it('nothing after a click, or on a blank page: the window tries', async () => {
+    for (const r of [res({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] }), res({ status: 'none', pages: [] })]) {
+      const { d } = await run(r);
+      expect(d.outcome).toEqual({ key, status: 'checked', check: null, host: 'www.aleks.com' });
+      expect(d.fallback).toBe(true);
+    }
+  });
+
+  it('a not-done answer is logged as such', async () => {
+    const { d } = await run(res({ status: 'checked', check: { state: 'not_done', source: 'aleks', evidence: 'Not submitted' } }));
+    expect(d.log).toMatchObject({ result: 'checked', answer: 'not done', evidence: 'Not submitted' });
+  });
+
+  it('a due-mode date found with a check carries it, and the log shows both', async () => {
+    const { d } = await run(res({ status: 'found', found, check }), target(1));
+    expect(d.outcome).toEqual({ key, status: 'found', found, host: 'www.aleks.com', check });
+    expect(d.log).toMatchObject({ result: 'found', due: found.dueAt, evidence: 'Due 11/10', answer: 'done (score 18/25)' });
+  });
+});

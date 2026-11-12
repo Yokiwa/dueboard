@@ -433,3 +433,58 @@ describe('runVisitPass: a platform the frames hand to the window, within one run
     expect(windowed).toEqual([]);
   });
 });
+
+describe('runVisitPass: check visits', () => {
+  const memory = (s: StoreShape) => s.visitState.frame ?? {};
+  const week = new Date(now.getTime() + 7 * 86_400_000).toISOString();
+  const ct = (n: number, extra: Partial<VisitTarget> = {}) => t(n, { mode: 'check', ...extra });
+  const checked = (n: number, check: Extract<VisitOutcome, { status: 'checked' }>['check'], host = 'education.wiley.com'): VisitOutcome => ({ key: `brightspace:topic:${n}`, status: 'checked', check, host });
+  const answer = { state: 'done' as const, by: 'score' as const, source: 'wileyplus', score: { text: '18/25', earned: 18, possible: 25, from: 'wileyplus' }, evidence: 'Score: 18/25' };
+
+  it('a platform the window checked and the frame could not is learned like a found date', async () => {
+    const target = ct(1, { platform: undefined });
+    const s = setup({ frames: scripted(() => [done(target, checked(1, null), true)]), windows: async () => [checked(1, answer)] });
+    await runVisitPass(s.deps, [target]);
+    expect(memory(s.store).wileyplus).toEqual({ blocked: 0, skipUntil: week });
+    expect(s.store.completion['brightspace:topic:1']).toMatchObject({ state: 'done', by: 'score', source: 'WileyPLUS' });
+  });
+
+  it('nothing is learned when the window could not tell either', async () => {
+    const target = ct(1, { platform: undefined });
+    const s = setup({ frames: scripted(() => [done(target, checked(1, null), true)]), windows: async () => [checked(1, null)] });
+    await runVisitPass(s.deps, [target]);
+    expect(memory(s.store).wileyplus?.skipUntil).toBeUndefined();
+    // One try for the item, not two: the frame result was held for the window and the window's counts.
+    expect(s.store.completion['brightspace:topic:1']).toMatchObject({ state: 'unknown', tries: 1 });
+  });
+
+  it('a frame check with no answer that the window should try counts toward handing the platform to the window', async () => {
+    const started: string[] = [];
+    let windowed: string[] = [];
+    const s = setup({
+      frames: async (ts, opts) => {
+        for (const x of ts) {
+          if (opts.skipKey?.(opts.keyOf(x))) continue;
+          started.push(x.key);
+          await opts.onDone(done(x, checked(Number(x.key.split(':')[2]), null, 'www.aleks.com'), true));
+        }
+        return [];
+      },
+      windows: async (ts) => {
+        windowed = ts.map((x) => x.key);
+        return ts.map((x) => checked(Number(x.key.split(':')[2]), answer, 'www.aleks.com'));
+      },
+    });
+    await runVisitPass(s.deps, [1, 2, 3, 4].map((n) => ct(n)));
+    expect(started).toHaveLength(2);
+    expect(windowed).toHaveLength(4);
+  });
+
+  it('a frame check answered in full is saved at once and needs no window', async () => {
+    const windows = vi.fn(async () => [] as VisitOutcome[]);
+    const s = setup({ frames: scripted(() => [done(ct(1), checked(1, answer, 'www.aleks.com'))]), windows });
+    await runVisitPass(s.deps, [ct(1)]);
+    expect(windows).not.toHaveBeenCalled();
+    expect(s.store.completion['brightspace:topic:1']).toMatchObject({ state: 'done', source: 'ALEKS' });
+  });
+});

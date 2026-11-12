@@ -290,6 +290,8 @@ export interface StoredVisitLogEntry {
   pages?: { url: string; text: string; buttons: string[] }[];
   due?: string;
   evidence?: string;
+  /** What a page said about whether the work was handed in. */
+  answer?: string;
   result: string;
   detail?: string;
   mode?: 'frame' | 'window';

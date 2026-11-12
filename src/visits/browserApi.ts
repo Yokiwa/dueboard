@@ -216,7 +216,7 @@ export function createBrowserVisitApi(): VisitApi {
 
     async inject(tabId, mode, platform) {
       // Homework visits may press "open the assignment"; sign-in visits one link (Pearson's Assignments).
-      const allowOpen = mode === 'due' || mode === 'session';
+      const allowOpen = mode === 'due' || mode === 'check' || mode === 'session';
       if (allowOpen) {
         // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
         await browser.scripting

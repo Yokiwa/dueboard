@@ -1,7 +1,7 @@
 import type { FrameApi } from './frame/api';
 import type { FrameResult, FrameVisitRequest } from './frame/protocol';
 import { stripUrl } from './messages';
-import type { VisitLogEntry } from './runner';
+import { describeCheck, type VisitLogEntry } from './runner';
 import type { VisitOutcome, VisitTarget } from './schedule';
 
 /** Text that means the frame got a sign-in or cookie prompt instead of the page (the window, with the student's cookies, may not). */
@@ -171,8 +171,13 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
     const host = r.host;
     switch (r.status) {
       case 'found':
-        return r.found ? { outcome: { key, status: 'found', found: r.found, host }, fallback: false } : failed();
+        if (!r.found || t.mode !== 'due') return failed();
+        return { outcome: { key, status: 'found', found: r.found, host, ...(r.check ? { check: r.check } : {}) }, fallback: false };
+      case 'checked':
+        return r.check && t.mode === 'check' ? { outcome: { key, status: 'checked', check: r.check, host }, fallback: false } : failed();
       case 'none':
+        // A check visit that read a page saying nothing: one try with no answer (same window rule as a date).
+        if (t.mode === 'check') return { outcome: { key, status: 'checked', check: null, host }, fallback: r.clicked.length > 0 || notThePage(r.pages) };
         // A page read in full that shows no date has none in a window either. Only a page that needed a click (a
         // launcher opening the assignment in a new tab) may read better in the window, which follows new tabs.
         return { outcome: { key, status: 'none', host }, fallback: r.clicked.length > 0 || notThePage(r.pages) };
@@ -193,6 +198,11 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
     if (outcome.status === 'found') {
       entry.due = outcome.found.dueAt;
       entry.evidence = outcome.found.evidence;
+      if (outcome.check) entry.answer = describeCheck(outcome.check);
+    } else if (outcome.status === 'checked') {
+      entry.answer = describeCheck(outcome.check);
+      if (outcome.check?.evidence) entry.evidence = outcome.check.evidence;
+      if (!outcome.check && r.pages.length) entry.pages = r.pages;
     } else if (r.pages.length) entry.pages = r.pages;
     return entry;
   }

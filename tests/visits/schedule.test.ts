@@ -79,8 +79,10 @@ describe('dueVisits', () => {
     expect(keys(store([topic(1)], cap(1, { dueAt: '2026-11-10T04:59:00.000Z', checkedAt: ago(25) })))).toEqual(['brightspace:topic:1']);
   });
 
-  it('never visits again once the found date has passed', () => {
-    expect(keys(store([topic(1)], cap(1, { dueAt: ago(2), checkedAt: ago(48) })))).toEqual([]);
+  it('never visits again for its date once the found date has passed (only to check whether it was handed in)', () => {
+    const targets = dueVisits(store([topic(1)], cap(1, { dueAt: ago(2), checkedAt: ago(48) })), now, 'auto', ['https://*/*']);
+    expect(targets.filter((t) => t.mode === 'due')).toEqual([]);
+    expect(targets.map((t) => [t.key, t.mode])).toEqual([['brightspace:topic:1', 'check']]);
   });
 
   it('retries "no date found" after 24 hours, up to 3 times', () => {
@@ -281,5 +283,82 @@ describe('dueVisits: links that land on a platform DueBoard reads directly', () 
   it('one that landed on another platform without a date is still read again later', () => {
     const s = store([topic(1, 'HW 1')], cap(1, { platform: 'aleks', dueAt: null, misses: 1, checkedAt: ago(48) }));
     expect(keys(s)).toEqual(['brightspace:topic:1']);
+  });
+});
+
+describe('dueVisits: check targets (whether past-due work was handed in)', () => {
+  const D = 24 * H;
+  const past = (days: number) => new Date(now.getTime() - days * D).toISOString();
+  const rec = (state: 'done' | 'not_done' | 'unknown', checkedAt: string, extra: Record<string, unknown> = {}) => ({ state, checkedAt, ...(state === 'done' ? { by: 'score', source: 'ALEKS' } : {}), ...extra });
+  const checks = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto') => dueVisits(s, now, trigger, ['https://*/*']).filter((t) => t.mode === 'check').map((t) => t.key);
+
+  it('check targets: past-due platform homework not known, or done and due in the last 14 days not checked today', () => {
+    const s = store(
+      [
+        topic(1, 'HW 1', { dueAt: past(3) }), // never checked
+        topic(2, 'HW 2', { dueAt: past(5) }), // done, checked 30 h ago: regrade
+        topic(3, 'HW 3', { dueAt: past(5) }), // done, checked 2 h ago
+        topic(4, 'HW 4', { dueAt: past(20) }), // done, due more than 14 days ago
+        topic(5, 'HW 5', { dueAt: new Date(now.getTime() + 3 * D).toISOString() }), // not due yet
+        topic(6, 'HW 6', { dueAt: past(4) }), // not handed in, checked 30 h ago: may have been handed in late
+        topic(7, 'HW 7', { dueAt: past(30) }), // unknown, checked 2 days ago, 1 try
+      ],
+      {},
+      {
+        completion: {
+          'brightspace:topic:2': rec('done', ago(30)),
+          'brightspace:topic:3': rec('done', ago(2)),
+          'brightspace:topic:4': rec('done', ago(48)),
+          'brightspace:topic:6': rec('not_done', ago(30)),
+          'brightspace:topic:7': rec('unknown', ago(48), { tries: 1 }),
+        },
+      },
+    );
+    expect(checks(s).sort()).toEqual(['brightspace:topic:1', 'brightspace:topic:2', 'brightspace:topic:6', 'brightspace:topic:7']);
+    const t1 = dueVisits(s, now, 'auto', ['https://*/*']).find((t) => t.key === 'brightspace:topic:1')!;
+    expect(t1).toMatchObject({ mode: 'check', title: 'HW 1', launchUrl: launch(1), courseId: 'brightspace:1' });
+  });
+
+  it('an unknown item checked less than a day ago waits', () => {
+    const s = store([topic(1, 'HW 1', { dueAt: past(3) })], {}, { completion: { 'brightspace:topic:1': rec('unknown', ago(10), { tries: 1 }) } });
+    expect(checks(s)).toEqual([]);
+  });
+
+  it('not: quizzes, Gradescope/Pearson, items without a launch link, notDone or ticked items', () => {
+    const s = store(
+      [
+        topic(1, 'Quiz 3', { dueAt: past(3) }),
+        topic(2, 'Gradescope HW 2', { dueAt: past(3) }),
+        topic(3, 'Pearson MyLab HW 3', { dueAt: past(3) }),
+        topic(4, 'HW 4', { dueAt: past(3), launchUrl: undefined }),
+        topic(5, 'HW 5', { dueAt: past(3) }),
+        topic(6, 'HW 6', { dueAt: past(3) }),
+      ],
+      {},
+      { userState: { notDone: { 'brightspace:topic:5': true }, done: { 'brightspace:topic:6': true } } },
+    );
+    expect(checks(s)).toEqual([]);
+  });
+
+  it('after 3 tries only on Refresh', () => {
+    const s = store([topic(1, 'HW 1', { dueAt: past(3) })], {}, { completion: { 'brightspace:topic:1': rec('unknown', ago(30), { tries: 3 }) } });
+    expect(checks(s, 'auto')).toEqual([]);
+    expect(checks(s, 'manual')).toEqual(['brightspace:topic:1']);
+  });
+
+  it('at most 15, after due-date targets, most recently due first', () => {
+    const undated = Array.from({ length: 20 }, (_, i) => topic(100 + i));
+    const pastDue = Array.from({ length: 20 }, (_, i) => topic(200 + i, `HW ${200 + i}`, { dueAt: past(1 + i) }));
+    const all = dueVisits(store([...pastDue, ...undated]), now, 'auto', ['https://*/*']);
+    const modes = all.map((t) => t.mode);
+    expect(modes.filter((m) => m === 'due')).toHaveLength(20);
+    expect(modes.filter((m) => m === 'check')).toHaveLength(15);
+    expect(modes.lastIndexOf('due')).toBeLessThan(modes.indexOf('check'));
+    expect(all.filter((t) => t.mode === 'check').map((t) => t.key)).toEqual(Array.from({ length: 15 }, (_, i) => `brightspace:topic:${200 + i}`));
+  });
+
+  it('no check targets when visits are off', () => {
+    const s = store([topic(1, 'HW 1', { dueAt: past(3) })], {}, { settings: { visits: 'off', syllabus: true } });
+    expect(checks(s)).toEqual([]);
   });
 });

@@ -78,6 +78,7 @@ export function VisitLog() {
                   <td style={cell}>
                     {e.detail ? `${e.result} (${e.detail})` : e.result}
                     {e.due ? <div>{new Date(e.due).toLocaleString()}{e.evidence ? ` — “${e.evidence}”` : ''}</div> : null}
+                    {e.answer ? <div>{e.answer}{!e.due && e.evidence ? ` — “${e.evidence}”` : ''}</div> : null}
                     {e.clicked?.length ? <div style={{ color: '#6B7280' }}>pressed: {e.clicked.join(', ')}</div> : null}
                   </td>
                 </tr>

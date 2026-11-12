@@ -105,7 +105,8 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
     if (d.outcome.status === 'failed' && d.outcome.reason === 'frame') blockedNow.set(bk, (blockedNow.get(bk) ?? 0) + 1);
     else if (d.outcome.status !== 'failed' && d.outcome.status !== 'signed_out') blockedNow.delete(bk);
     // A page read in the frame that still goes to the window (WileyPLUS: its assignment opens only in a real window).
-    if (d.outcome.status === 'none' && d.fallback) handedNow.set(bk, (handedNow.get(bk) ?? 0) + 1);
+    const saidNothing = d.outcome.status === 'none' || (d.outcome.status === 'checked' && !d.outcome.check);
+    if (saidNothing && d.fallback) handedNow.set(bk, (handedNow.get(bk) ?? 0) + 1);
     else if (d.outcome.status !== 'failed' && d.outcome.status !== 'signed_out') handedNow.delete(bk);
     deps.log(d.log);
     return serial(async () => {
@@ -155,7 +156,8 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   for (const o of windowOutcomes) {
     const target = tried.get(o.key);
     // Homework only: the next run keys a homework by the platform it was read on (a syllabus by its course).
-    if (!target || o.status !== 'found') continue;
+    const read = o.status === 'found' || (o.status === 'checked' && o.check !== null);
+    if (!target || !read) continue;
     learned.add(target.platform ?? platformByHost(o.host)?.id ?? o.host);
   }
   if (learned.size > 0) {

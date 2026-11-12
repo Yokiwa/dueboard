@@ -1,5 +1,6 @@
 import { stripUrl, type VisitMessage } from './messages';
 import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN, sessionDone } from './hosts';
+import type { CheckAnswer } from '../core/types';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -29,7 +30,7 @@ export interface VisitApi {
   windowState(windowId: number): Promise<'minimized' | 'open' | 'gone'>;
   /** permissions.getAll().origins */
   granted(): Promise<string[]>;
-  inject(tabId: number, mode: 'due' | 'syllabus' | 'session', platform?: string): Promise<void>;
+  inject(tabId: number, mode: 'due' | 'syllabus' | 'session' | 'check', platform?: string): Promise<void>;
   nextMessage(tabId: number, timeoutMs: number): Promise<VisitMessage | 'timeout'>;
   closeWindow(windowId: number): Promise<void>;
   /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
@@ -72,9 +73,18 @@ export interface VisitLogEntry {
   due?: string;
   evidence?: string;
   result: VisitOutcome['status'];
+  /** What a page said about whether the work was handed in: "done (score 18/25)", "not done", "no answer". */
+  answer?: string;
   detail?: string;
   /** How the page was read: in a hidden frame or in the visit window. */
   mode: 'frame' | 'window';
+}
+
+/** A page's answer in a few words, for the visit log. */
+export function describeCheck(check: CheckAnswer | null): string {
+  if (!check) return 'no answer';
+  if (check.state === 'not_done') return 'not done';
+  return check.score ? `done (score ${check.score.text})` : 'done (submitted)';
 }
 
 export interface RunOptions {
@@ -132,10 +142,15 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         if (outcome.status === 'found') {
           entry.due = outcome.found.dueAt;
           entry.evidence = outcome.found.evidence;
+          if (outcome.check) entry.answer = describeCheck(outcome.check);
+        }
+        if (outcome.status === 'checked') {
+          entry.answer = describeCheck(outcome.check);
+          if (outcome.check?.evidence) entry.evidence = outcome.check.evidence;
         }
         const clicked = await api.clicksSeen(tabId).catch(() => []);
         if (clicked.length) entry.clicked = clicked;
-        if (outcome.status !== 'found') {
+        if (outcome.status !== 'found' && !(outcome.status === 'checked' && outcome.check)) {
           const pages = await api.samplesSeen(tabId).catch(() => []);
           if (pages.length) entry.pages = pages;
         }
@@ -172,7 +187,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         // Purdue's launch links never reveal their site ahead of time. A homework link is the student's own Brightspace
         // link, so it is opened anyway, and only pages on sites the student allowed are read. Other links (syllabus)
         // are opened only for a known platform the student allowed.
-        if (!t.platform && t.mode !== 'due') return { key: t.key, status: 'failed', reason: 'unknown' };
+        if (!t.platform && t.mode !== 'due' && t.mode !== 'check') return { key: t.key, status: 'failed', reason: 'unknown' };
       }
     }
     await api.navigate(tabId, t.launchUrl);
@@ -220,11 +235,18 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       const msg = await api.nextMessage(tabId, ROUND_MS);
       if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
-      if (msg.type === 'visitCheck') continue;
-      if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
+      if (msg.type === 'visitCheck') {
+        if (t.mode !== 'check') continue;
+        if (msg.check) return { key: t.key, status: 'checked', check: msg.check, host: frameHost(msg.frameUrl) ?? host };
+        sawNothing = true;
+        continue;
+      }
+      if (t.mode === 'check') continue;
+      if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host, ...(msg.check ? { check: msg.check } : {}) };
       sawNothing = true;
     }
-    return sawNothing ? { key: t.key, status: 'none', host } : { key: t.key, status: 'failed', reason: 'timeout' };
+    if (!sawNothing) return { key: t.key, status: 'failed', reason: 'timeout' };
+    return t.mode === 'check' ? { key: t.key, status: 'checked', check: null, host } : { key: t.key, status: 'none', host };
   }
 }
 

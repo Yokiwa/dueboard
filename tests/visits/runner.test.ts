@@ -397,3 +397,45 @@ describe('runVisits: visit log of found dates', () => {
     expect(log[0]).toMatchObject({ due: '2026-11-11T04:59:00.000Z', evidence: 'Due Nov 11' });
   });
 });
+
+describe('runVisits: check visits', () => {
+  const check = { state: 'done' as const, by: 'score' as const, source: 'aleks', score: { text: '18/25', earned: 18, possible: 25, from: 'aleks' }, evidence: 'Score: 18/25' };
+  const ct = (n: number): VisitTarget => ({ ...target(n, 'check'), platform: 'aleks' });
+
+  it('reads the answer in check mode and logs it with its evidence', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/hw1')], messages: [{ type: 'visitCheck', check, frameUrl: 'https://www.aleks.com/hw1', top: true }] });
+    const logs: VisitLogEntry[] = [];
+    const out = await runVisits([ct(1)], f.api, { onLog: (e) => logs.push(e) });
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'checked', check, host: 'www.aleks.com' }]);
+    expect(f.calls).toContain('inject check aleks');
+    expect(logs[0]).toMatchObject({ mode: 'window', result: 'checked', answer: 'done (score 18/25)', evidence: 'Score: 18/25' });
+  });
+
+  it('a page that says nothing until the end is a checked outcome with no answer', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/hw1')], messages: [{ type: 'visitCheck', check: null, frameUrl: 'https://www.aleks.com/hw1', top: true }] });
+    const logs: VisitLogEntry[] = [];
+    const out = await runVisits([ct(1)], f.api, { finderMs: 1, onLog: (e) => logs.push(e) });
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'checked', check: null, host: 'www.aleks.com' }]);
+    expect(logs[0]).toMatchObject({ result: 'checked', answer: 'no answer' });
+  });
+
+  it('a page that never answers is a timeout (nothing recorded)', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/hw1')], messages: [] });
+    const out = await runVisits([ct(1)], f.api, { finderMs: 1 });
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'timeout' }]);
+  });
+
+  it('a homework of an unknown platform is opened for a check as for its date', async () => {
+    const f = fakeApi({ hosts: [null], landings: [at('https://learn.example.com/hw1')], messages: [{ type: 'visitCheck', check, frameUrl: 'https://learn.example.com/hw1', top: true }] });
+    const out = await runVisits([target(1, 'check')], f.api);
+    expect(out[0]).toMatchObject({ status: 'checked', host: 'learn.example.com' });
+  });
+
+  it('a due-mode date that comes with a check keeps it', async () => {
+    const f = fakeApi({ landings: [at('https://www.aleks.com/hw1')], messages: [{ ...(found(1) as Extract<VisitMessage, { type: 'visitFound' }>), check }] });
+    const logs: VisitLogEntry[] = [];
+    const out = await runVisits([target(1)], f.api, { onLog: (e) => logs.push(e) });
+    expect(out[0]).toMatchObject({ status: 'found', check });
+    expect(logs[0]).toMatchObject({ result: 'found', answer: 'done (score 18/25)' });
+  });
+});

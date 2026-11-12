@@ -144,3 +144,53 @@ describe('forgetVisitMemory (after an update)', () => {
     expect(forgetVisitMemory(before)).toEqual({ windowId: 4, lastRun: 'x', needsPermission: ['a.com'], snoozed: { 'a.com': 'y' }, sessions: {}, frame: {} });
   });
 });
+
+describe('applyOutcomes: check visits', () => {
+  const ct = (n: number): VisitTarget => ({ ...t(n), mode: 'check', platform: 'aleks' });
+  const score = { text: '18/25', earned: 18, possible: 25, from: 'aleks', evidence: 'Score: 18/25' };
+  const apply = (outcomes: VisitOutcome[], extra: Record<string, unknown> = {}, targets = [ct(1)]) => applyOutcomes(migrate(extra), targets, outcomes, now);
+
+  it('a checked answer folds into completion, named by the platform it was read on', () => {
+    const r = apply([{ key: 'brightspace:topic:1', status: 'checked', host: 'www.aleks.com', check: { state: 'done', by: 'score', source: 'aleks', score, evidence: 'Score: 18/25' } }]);
+    expect(r.completion['brightspace:topic:1']).toEqual({
+      state: 'done', by: 'score', source: 'ALEKS', score: { ...score, from: 'ALEKS' }, evidence: 'Score: 18/25', checkedAt: now.toISOString(),
+    });
+    expect(r.captured['brightspace:topic:1']).toBeUndefined();
+  });
+
+  it('a null answer adds a try and keeps what was known', () => {
+    const r = apply([{ key: 'brightspace:topic:1', status: 'checked', host: 'www.aleks.com', check: null }], {
+      completion: { 'brightspace:topic:1': { state: 'unknown', checkedAt: 'old', tries: 1 } },
+    });
+    expect(r.completion['brightspace:topic:1']).toEqual({ state: 'unknown', checkedAt: now.toISOString(), tries: 2 });
+    const first = apply([{ key: 'brightspace:topic:1', status: 'checked', host: 'www.aleks.com', check: null }]);
+    expect(first.completion['brightspace:topic:1']).toMatchObject({ state: 'unknown', tries: 1 });
+  });
+
+  it('a failed check visit records nothing (the page was not read)', () => {
+    const r = apply([{ key: 'brightspace:topic:1', status: 'failed', reason: 'timeout' }]);
+    expect(r.completion['brightspace:topic:1']).toBeUndefined();
+    expect(r.captured['brightspace:topic:1']).toBeUndefined();
+  });
+
+  it('a check visit without access asks for the site once', () => {
+    const r = apply([{ key: 'brightspace:topic:1', status: 'needs_permission', host: 'learn.example.com' }]);
+    expect(r.visitState.needsPermission).toEqual(['learn.example.com']);
+    expect(r.completion['brightspace:topic:1']).toBeUndefined();
+  });
+
+  it('a found outcome with a check also records it', () => {
+    const r = apply(
+      [{ key: 'brightspace:topic:1', status: 'found', host: 'www.aleks.com', found: { title: 'HW 1', dueAt: '2026-11-05T04:59:00.000Z', evidence: 'Due Nov 4' }, check: { state: 'not_done', source: 'aleks', evidence: 'Not submitted' } }],
+      {},
+      [t(1)],
+    );
+    expect(r.captured['brightspace:topic:1']).toMatchObject({ dueAt: '2026-11-05T04:59:00.000Z' });
+    expect(r.completion['brightspace:topic:1']).toEqual({ state: 'not_done', source: 'ALEKS', evidence: 'Not submitted', checkedAt: now.toISOString() });
+  });
+
+  it('a found outcome without a check leaves completion alone', () => {
+    const r = apply([{ key: 'brightspace:topic:1', status: 'found', host: 'www.aleks.com', found: { title: 'HW 1', dueAt: '2026-11-05T04:59:00.000Z', evidence: 'Due Nov 4' } }], {}, [t(1)]);
+    expect(r.completion).toEqual({});
+  });
+});

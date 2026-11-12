@@ -1,5 +1,6 @@
-import { platformByHost } from '../core/platformRegistry';
-import type { CapturedDue, StoreShape } from '../core/types';
+import { foldAnswer } from '../core/completion';
+import { platformByHost, platformById } from '../core/platformRegistry';
+import type { CapturedDue, CheckAnswer, StoreShape } from '../core/types';
 import { courseTerm, syllabusFromLines } from '../syllabus/read';
 import { syllabusSources } from '../syllabus/sources';
 import type { VisitOutcome, VisitTarget } from './schedule';
@@ -10,9 +11,17 @@ export function applyOutcomes(
   targets: VisitTarget[],
   outcomes: VisitOutcome[],
   now: Date,
-): Pick<StoreShape, 'captured' | 'visitState' | 'syllabus'> {
+): Pick<StoreShape, 'captured' | 'visitState' | 'syllabus' | 'completion'> {
   const at = now.toISOString();
   const captured = { ...store.captured };
+  const completion = { ...store.completion };
+  /** A page's answer, named by the platform it was read on ("Score from ALEKS"), folded into the item's record. */
+  const record = (key: string, check: CheckAnswer | null, host: string, platform?: string) => {
+    const label = platformByHost(host)?.label ?? (platform ? platformById(platform)?.label : undefined) ?? host;
+    const named: CheckAnswer | null = !check ? null : check.state === 'done' && check.score ? { ...check, source: label, score: { ...check.score, from: label } } : { ...check, source: label };
+    const next = foldAnswer(completion[key], named, now, { page: true });
+    if (next) completion[key] = next;
+  };
   const syllabus = { ...store.syllabus };
   const needsPermission = [...store.visitState.needsPermission];
   const byKey = new Map(targets.map((t) => [t.key, t]));
@@ -37,6 +46,12 @@ export function applyOutcomes(
       if (o.status === 'needs_permission' && !needsPermission.includes(o.host)) needsPermission.push(o.host);
       continue;
     }
+    if (target?.mode === 'check') {
+      // Only a page read in full counts as a try; a visit that never got there records nothing.
+      if (o.status === 'checked') record(o.key, o.check, o.host, target.platform);
+      if (o.status === 'needs_permission' && !needsPermission.includes(o.host)) needsPermission.push(o.host);
+      continue;
+    }
     if (!target || target.mode !== 'due') continue;
     const prev = captured[o.key];
     const base: CapturedDue = prev
@@ -50,6 +65,7 @@ export function applyOutcomes(
       case 'found':
         captured[o.key] = { ...base, title: o.found.title || target.title, dueAt: o.found.dueAt, platform: platformOf(o.host), evidence: o.found.evidence, misses: 0, failures: 0 };
         delete captured[o.key]!.blocked;
+        if (o.check) record(o.key, o.check, o.host, target.platform);
         break;
       case 'none':
         captured[o.key] = { ...base, platform: platformOf(o.host), misses: (prev?.misses ?? 0) + 1, failures: 0 };
@@ -69,7 +85,7 @@ export function applyOutcomes(
   }
   const visitState = { ...store.visitState, needsPermission, lastRun: at };
   if (Object.keys(sessions).length) visitState.sessions = sessions;
-  return { captured, syllabus, visitState };
+  return { captured, syllabus, visitState, completion };
 }
 
 /**

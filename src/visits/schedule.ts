@@ -5,7 +5,7 @@ import { platformByHost, platformById, platformByTitle } from '../core/platformR
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
-import type { CapturedDue, RawItem, StoreShape } from '../core/types';
+import type { CapturedDue, CheckAnswer, CompletionRecord, Item, RawItem, StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
 import type { ListedTitle } from './frame/protocol';
 
@@ -23,12 +23,15 @@ export interface VisitTarget {
   probeUrl?: string;
   /** Registry id guessed from the title or link. */
   platform?: string;
-  mode: 'due' | 'session' | 'syllabus';
+  /** 'check': read whether past-due work was handed in (and its score), not its date. */
+  mode: 'due' | 'session' | 'syllabus' | 'check';
   /** Titles to look for on the page, with their keys, for frame visits that list several assignments at once. */
   titles?: ListedTitle[];
 }
 export type VisitOutcome =
-  | { key: string; status: 'found'; found: FoundDue; host: string }
+  | { key: string; status: 'found'; found: FoundDue; host: string; check?: CheckAnswer }
+  /** A check visit read the page in full: its answer, or null when the page did not say. */
+  | { key: string; status: 'checked'; check: CheckAnswer | null; host: string }
   | { key: string; status: 'none'; host: string }
   | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' | 'frame' }
   | { key: string; status: 'needs_permission'; host: string }
@@ -45,6 +48,10 @@ export const MAX_VISITS = 60;
 export const WINDOW_MAX = 25;
 /** The most titles one frame visit looks for on a page. */
 const MAX_TITLES = 40;
+/** The most check visits one run plans, after the due-date visits. */
+export const MAX_CHECKS = 15;
+/** Finished (or not handed in) work due this recently is read again daily: regrades, late hand-ins. */
+const RECHECK_DAYS = 14;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {
@@ -65,6 +72,56 @@ function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted
   }
   if ((c.misses ?? 0) < 3) return age > 24 * H ? 1 + stamp : null;
   return trigger === 'manual' && age > H ? 1 + stamp : null;
+}
+
+/**
+ * When an item's page is due for a check of whether it was handed in; null = not now. Lower rank goes first. Unknown
+ * work is read daily, and after 3 reads with no answer only on Refresh; known work due in the last 14 days daily
+ * (regrades, late hand-ins); older known work never.
+ */
+function checkRank(rec: CompletionRecord | undefined, dueMs: number, now: number, trigger: Trigger): number | null {
+  if (!rec) return 0;
+  const age = now - (Date.parse(rec.checkedAt) || 0);
+  const stamp = Date.parse(rec.checkedAt) || 0;
+  if (rec.state === 'unknown') {
+    if ((rec.tries ?? 0) >= 3) return trigger === 'manual' && age > H ? 1 + stamp : null;
+    return age > 24 * H ? 1 + stamp : null;
+  }
+  if (now - dueMs > RECHECK_DAYS * 24 * H) return null;
+  return age > 24 * H ? 1 + stamp : null;
+}
+
+/**
+ * Past-due platform homework whose page may say whether it was handed in: Brightspace launch topics, not quizzes or
+ * exams, not platforms read on their own (Gradescope, Pearson), not work the student ticked or un-ticked.
+ */
+function checkTargets(dash: { items: Item[] }, raw: Map<string, RawItem>, store: StoreShape, now: Date, trigger: Trigger, granted: string[], skip: Set<string>): VisitTarget[] {
+  const ranked: { target: VisitTarget; rank: number; due: number }[] = [];
+  const nowMs = now.getTime();
+  for (const item of dash.items) {
+    if (!item.dueAt || item.doneByUser) continue;
+    const due = Date.parse(item.dueAt);
+    if (!(due < nowMs)) continue;
+    if (item.sourceKeys.some((k) => store.userState.notDone[k] || store.userState.done[k])) continue;
+    const key = item.sourceKeys.find((k) => k.startsWith('brightspace:topic:') && raw.get(k)?.launchUrl);
+    if (!key || skip.has(key)) continue;
+    const r = raw.get(key)!;
+    if (NEVER_OPEN.test(r.title)) continue;
+    const seen = store.captured[key]?.platform;
+    const platform = platformByTitle(r.title) ?? (seen ? platformById(seen) : undefined);
+    if (platform && (platform.reader === 'fetch' || platform.reader === 'none' || platform.neverOpen)) continue;
+    if (platform && platform.hosts.length > 0 && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
+    const rec = store.completion[key];
+    // Done through another source (Brightspace's dropbox or gradebook, a merged platform): nothing to read here.
+    if (item.submitted && rec?.state !== 'done') continue;
+    const n = checkRank(rec, due, nowMs, trigger);
+    if (n === null) continue;
+    const target: VisitTarget = { key, title: r.title, courseId: item.courseId, launchUrl: r.launchUrl!, mode: 'check' };
+    if (platform) target.platform = platform.id;
+    ranked.push({ target, rank: n, due });
+  }
+  ranked.sort((a, b) => a.rank - b.rank || b.due - a.due);
+  return ranked.slice(0, MAX_CHECKS).map((r) => r.target);
 }
 
 const SESSION_SOURCES = ['gradescope', 'pearson'] as const;
@@ -138,7 +195,9 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       if (def) t.platform = def.id;
       return t;
     });
-  const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
+  const dueTargets = [...ranked.map((r) => r.target), ...syllabi];
+  const checks = checkTargets(dash, raw, store, now, trigger, granted, new Set(dueTargets.map((t) => t.key)));
+  const out = [...dueTargets, ...checks].slice(0, MAX_VISITS);
   // One visit to a course page can date every assignment it lists: each homework target gets its course's titles.
   const due = out.filter((t) => t.mode === 'due');
   for (const t of due) {

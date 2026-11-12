@@ -56,3 +56,17 @@ describe('Diagnostics: page samples', () => {
     expect(screen.getByText(/check the file before sending/i)).toBeTruthy();
   });
 });
+
+describe('Diagnostics: check visits', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('shows what a page said about whether the work was handed in, with its evidence', async () => {
+    await appendVisitLog([
+      { at: '2026-11-08T10:00:00.000Z', key: 'k', title: 'HW11', opened: 'o', frames: [], result: 'checked', answer: 'done (score 18/25)', evidence: 'Score: 18/25', mode: 'frame' },
+      { at: '2026-11-08T10:01:00.000Z', key: 'j', title: 'HW12', opened: 'o', frames: [], result: 'checked', answer: 'no answer', mode: 'frame' },
+    ]);
+    render(<VisitLog />);
+    const rows = await screen.findAllByRole('row');
+    expect(rows[2]!.textContent).toContain('done (score 18/25) — “Score: 18/25”');
+    expect(rows[1]!.textContent).toContain('no answer');
+  });
+});
