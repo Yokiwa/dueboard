@@ -10,6 +10,28 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const B = 'https://purdue.brightspace.com';
 const LE = `${B}/d2l/api/le/1.80`;
+
+// Minimal one-page syllabus PDF built at run time so the dated rows stay in the future whatever today is.
+function syllabusPdf(now = new Date()) {
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const at = (days) => { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days); return `${MONTHS[d.getMonth()]} ${d.getDate()}`; };
+  const lines = ['Course Schedule', `${at(-3)} Exam 2`, `${at(4)} Project proposal due`];
+  const content = 'BT /F1 14 Tf 72 720 Td 18 TL\n' + lines.map((l) => `(${l}) Tj T*`).join('\n') + '\nET';
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objs.forEach((o, i) => { offsets.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
 const ql = (r) => `/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rcode=${r}`;
 
 const toc = {
@@ -64,7 +86,7 @@ function createMocks() {
     if (u.includes('/dropbox/folders/')) return json([]);
     if (u.includes('/quizzes/')) return json({ Objects: [], Next: null });
     if (u.includes('myEvents')) return json({ Objects: [], Next: null });
-    if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return { status: 200, headers: { 'content-type': 'application/pdf' }, body: fs.readFileSync(path.join(ROOT, 'tests/fixtures/syllabus/schedule.pdf')) };
+    if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return { status: 200, headers: { 'content-type': 'application/pdf' }, body: syllabusPdf() };
     // Like Purdue's real launch pages, this one hands off in a way DueBoard can't read ahead of time.
     if (u.includes('rcode=W1')) return handOff('https://education.wiley.com/was/course');
     // Like Purdue's real launch pages: the hand-off can't be read ahead; Wiley shows a launcher that waits for a click.
