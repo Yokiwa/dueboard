@@ -1,5 +1,6 @@
 export interface Sender {
   url?: string;
+  origin?: string;
   tab?: { id?: number };
   frameId?: number;
 }

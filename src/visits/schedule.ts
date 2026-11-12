@@ -1,12 +1,13 @@
 import { buildDashboard } from '../core/dashboard';
 import { syllabusDue } from '../syllabus/sources';
 import { launchLinks } from '../core/platforms';
-import { platformByHost, platformByTitle } from '../core/platformRegistry';
+import { platformByHost, platformById, platformByTitle } from '../core/platformRegistry';
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
 import type { CapturedDue, RawItem, StoreShape } from '../core/types';
 import type { FoundDue } from './finders/types';
+import type { ListedTitle } from './frame/protocol';
 
 export { applyOutcomes } from './apply';
 
@@ -23,24 +24,34 @@ export interface VisitTarget {
   /** Registry id guessed from the title or link. */
   platform?: string;
   mode: 'due' | 'session' | 'syllabus';
+  /** Titles to look for on the page, with their keys, for frame visits that list several assignments at once. */
+  titles?: ListedTitle[];
 }
 export type VisitOutcome =
   | { key: string; status: 'found'; found: FoundDue; host: string }
   | { key: string; status: 'none'; host: string }
-  | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' }
+  | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' | 'frame' }
   | { key: string; status: 'needs_permission'; host: string }
   | { key: string; status: 'text'; lines: string[]; host: string }
-  | { key: string; status: 'landed'; host: string }
+  | { key: string; status: 'landed'; host: string; via?: 'frame' }
   | { key: string; status: 'signed_out' };
 
 const H = 3_600_000;
 /** Opening these could start a timed or proctored attempt; they are never opened automatically. */
 const NEVER_OPEN = /\b(quiz(?:zes)?|exams?|midterms?|tests?)\b/i;
-export const MAX_VISITS = 25;
+/** The most visits one run plans (frame visits are cheap; the visit window takes WINDOW_MAX of them). */
+export const MAX_VISITS = 60;
+/** The most visits the visit window opens in one run. */
+export const WINDOW_MAX = 25;
+/** The most titles one frame visit looks for on a page. */
+const MAX_TITLES = 40;
 
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {
   if (!c) return 0;
+  // It landed on a platform DueBoard reads on its own (Gradescope, Pearson), and that page shows no date: its dates
+  // come from that platform's own reading, so the link is not opened again.
+  if (!c.dueAt && platformById(c.platform)?.reader === 'fetch') return null;
   if (c.blocked) return originAllowed(granted, c.blocked) ? 0 : null;
   if (c.dueAt && Date.parse(c.dueAt) < now) return null;
   const age = now - Date.parse(c.checkedAt);
@@ -62,14 +73,15 @@ const LABEL: Record<(typeof SESSION_SOURCES)[number], string> = { gradescope: 'G
 /**
  * Platforms DueBoard reads in the background (Gradescope, Pearson) sign the student in through Brightspace. When one
  * reports "signed out" and any course has its Brightspace entry, that entry is opened once to sign back in: at most
- * every 6 h; after 3 attempts that didn't help, on Refresh only.
+ * every 6 h automatically, at once on Refresh; after 3 attempts that didn't help, on Refresh only.
  */
 function sessionTargets(store: StoreShape, now: Date, trigger: Trigger): VisitTarget[] {
   const links = launchLinks(store);
   const out: VisitTarget[] = [];
   for (const src of SESSION_SOURCES) {
     const last = store.visitState.sessions?.[src];
-    if (last && now.getTime() - Date.parse(last.at) < 6 * H) continue;
+    // Automatic syncs try at most every 6 hours; Refresh (the student asking) tries at once.
+    if (last && trigger !== 'manual' && now.getTime() - Date.parse(last.at) < 6 * H) continue;
     if (last && last.failures >= 3 && trigger !== 'manual') continue;
     const meta = store.syncMeta[src];
     const err = meta?.lastError;
@@ -106,9 +118,10 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
     const r = raw.get(key)!;
     if (NEVER_OPEN.test(r.title)) continue;
     const platform = platformByTitle(r.title);
-    if (platform && (platform.reader === 'fetch' || platform.reader === 'none')) continue;
-    // A known platform is visited only with access to its sites; an unknown one is visited to learn its site.
-    if (platform && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
+    if (platform && (platform.reader === 'fetch' || platform.reader === 'none' || platform.neverOpen)) continue;
+    // A known platform is visited only with access to its sites; an unknown one (or one with no known host) is
+    // visited to learn its site.
+    if (platform && platform.hosts.length > 0 && !platform.hosts.every((h) => originAllowed(granted, h.replace(/^\*\./, '')))) continue;
     const n = rank(store.captured[key], now.getTime(), trigger, granted);
     if (n === null) continue;
     // Opened as a full page (like "Open in new window"): platforms refuse to show inside Brightspace's own frame.
@@ -126,5 +139,12 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
       return t;
     });
   const out = [...ranked.map((r) => r.target), ...syllabi].slice(0, MAX_VISITS);
+  // One visit to a course page can date every assignment it lists: each homework target gets its course's titles.
+  const due = out.filter((t) => t.mode === 'due');
+  for (const t of due) {
+    // The target itself first, so one past the cap still looks for its own title.
+    const same = due.filter((o) => o.courseId === t.courseId && o !== t);
+    t.titles = [t, ...same.slice(0, MAX_TITLES - 1)].map((o) => ({ key: o.key, title: o.title }));
+  }
   return [...sessionTargets(store, now, trigger), ...out];
 }

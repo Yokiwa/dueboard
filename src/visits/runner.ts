@@ -1,4 +1,5 @@
 import { stripUrl, type VisitMessage } from './messages';
+import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN, sessionDone } from './hosts';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -12,7 +13,11 @@ export interface VisitApi {
    * Resolves once the tab finished loading a page outside Brightspace, or a sign-in page. With brightspacePage, the
    * target is a Brightspace content page (the platform is embedded in it), so that page loading is the landing.
    */
-  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean }): Promise<Landing>;
+  /**
+   * `session`: wait until a sign-in for that platform reaches the page its session belongs to (see sessionDone), not just
+   * until the tab leaves Brightspace. Resolves at once when the tab is already there.
+   */
+  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean; session?: string }): Promise<Landing>;
   /**
    * The platform host a Brightspace launch goes to, read from the launch page: null when it can't be told (with a note
    * saying why, for the visit log); 'signed_out' when Brightspace asks to sign in.
@@ -24,7 +29,7 @@ export interface VisitApi {
   windowState(windowId: number): Promise<'minimized' | 'open' | 'gone'>;
   /** permissions.getAll().origins */
   granted(): Promise<string[]>;
-  inject(tabId: number, mode: 'due' | 'syllabus', platform?: string): Promise<void>;
+  inject(tabId: number, mode: 'due' | 'syllabus' | 'session', platform?: string): Promise<void>;
   nextMessage(tabId: number, timeoutMs: number): Promise<VisitMessage | 'timeout'>;
   closeWindow(windowId: number): Promise<void>;
   /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
@@ -37,9 +42,7 @@ export interface VisitApi {
   remember(windowId: number | null): Promise<void>;
 }
 
-/** Brightspace's own sign-in page, Purdue's identity provider, and Duo. */
-export const SIGN_IN = /\/d2l\/login|login\.purdue\.edu|\/idp\/profile\/|duosecurity\.com/i;
-const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
+export { SIGN_IN };
 
 export interface PageSample {
   url: string;
@@ -70,6 +73,8 @@ export interface VisitLogEntry {
   evidence?: string;
   result: VisitOutcome['status'];
   detail?: string;
+  /** How the page was read: in a hidden frame or in the visit window. */
+  mode: 'frame' | 'window';
 }
 
 export interface RunOptions {
@@ -113,11 +118,16 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         break;
       }
       const trace: Partial<VisitLogEntry> = {};
-      const outcome = await visit(t, granted, trace).catch(async (): Promise<VisitOutcome | 'stop'> => ((await api.windowState(windowId)) === 'gone' ? 'stop' : { key: t.key, status: 'failed', reason: 'error' }));
+      const outcome = await visit(t, granted, trace).catch(async (e: unknown): Promise<VisitOutcome | 'stop'> => {
+        if ((await api.windowState(windowId)) === 'gone') return 'stop';
+        // Which error, for the visit log (the browser's message names no page content).
+        trace.siteNote = `error: ${e instanceof Error ? e.message : String(e)}`.slice(0, 200);
+        return { key: t.key, status: 'failed', reason: 'error' };
+      });
       if (outcome === 'stop') break;
       out.push(outcome);
       if (opts.onLog) {
-        const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
+        const entry: VisitLogEntry = { at: new Date(now()).toISOString(), key: t.key, title: t.title, mode: 'window', ...trace, opened: stripUrl(t.launchUrl), frames: await api.framesSeen(tabId).catch(() => []), result: outcome.status } as VisitLogEntry;
         if (outcome.status === 'failed') entry.detail = outcome.reason;
         if (outcome.status === 'found') {
           entry.due = outcome.found.dueAt;
@@ -166,12 +176,30 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       }
     }
     await api.navigate(tabId, t.launchUrl);
-    const landing = await api.waitForLanding(tabId, perPageMs);
+    const until = t.mode === 'session' && t.platform ? SESSION_HOSTS[t.platform] : undefined;
+    let landing = await api.waitForLanding(tabId, perPageMs);
+    // A sign-in that stops on the way (Pearson's Brightspace page) needs its next link pressed before the platform's
+    // own site loads: the reader is put on each page in turn until the tab reaches that site.
+    if (until && typeof landing !== 'string' && !SIGN_IN.test(landing.url) && !sessionDone(t.platform, landing.url)) landing = await signInSteps(t, until);
     trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
     if (SIGN_IN.test(landing.url)) return { key: t.key, status: 'signed_out' };
     return read(t, new URL(landing.url).hostname, site);
+  }
+
+  async function signInSteps(t: VisitTarget, until: string): Promise<Landing> {
+    // About a minute: Pearson's course page is a slow app, and MyLab's launch address hands off once more.
+    const rounds = Math.max(1, Math.ceil(Math.max(perPageMs, SESSION_MS) / SESSION_ROUND_MS));
+    for (let i = 0; i < rounds; i++) {
+      // A sign-in page may move on while the reader is being put on it (Pearson's first stop hands off at once): the
+      // next page gets it in the next round.
+      await settleWithin(api.inject(tabId, 'session', t.platform), injectMs).catch(() => undefined);
+      const l = await api.waitForLanding(tabId, SESSION_ROUND_MS, { session: t.platform });
+      // On the session host but not yet the page the session belongs to (MyLab's /api/ launch address): keep going.
+      if (l !== 'timeout' && (typeof l === 'string' || SIGN_IN.test(l.url) || sessionDone(t.platform, l.url))) return l;
+    }
+    return 'timeout';
   }
 
   async function read(t: VisitTarget, host: string, site: string | null): Promise<VisitOutcome> {
@@ -190,7 +218,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       // slow frame never reaches "idle"). Frames that are ready have the reader by then, so the round goes on.
       await settleWithin(api.inject(tabId, t.mode, t.platform), injectMs);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;
@@ -200,6 +228,17 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 }
 
 const ROUND_MS = 2_500;
+const SESSION_ROUND_MS = 5_000;
+/** The longest a window sign-in waits after leaving Brightspace. */
+const SESSION_MS = 60_000;
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
 /** Waits for `work` (and passes on its error) for at most `ms`; after that, goes on as if it had finished. */
 function settleWithin(work: Promise<unknown>, ms: number): Promise<void> {

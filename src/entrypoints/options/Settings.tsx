@@ -139,6 +139,7 @@ function ReadingPlatforms({ store }: { store: StoreShape }) {
   const t = useT();
   const id = useId();
   const granted = useGranted();
+  const fallbackOff = store.settings.visits === 'off';
   const platforms = granted ? grantedPlatforms(granted) : [];
   return (
     <section className={card}>
@@ -152,6 +153,21 @@ function ReadingPlatforms({ store }: { store: StoreShape }) {
           <option value="off">{t('settings.visits.off')}</option>
         </select>
       </label>
+      <label className={`${label} flex-row items-center gap-3`}>
+        <input
+          type="checkbox"
+          checked={store.settings.windowFallback}
+          disabled={fallbackOff}
+          aria-describedby={fallbackOff ? `${id}-fallback-off` : undefined}
+          onChange={(e) => void saveSettings({ windowFallback: e.target.checked })}
+        />
+        {t('settings.windowFallback')}
+      </label>
+      {fallbackOff && (
+        <p id={`${id}-fallback-off`} className={hint}>
+          {t('settings.windowFallbackOff')}
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         <span className="caption-3 text-db-muted">{t('settings.access')}</span>
         {platforms.length === 0 && <p className={hint}>{t('settings.noAccess')}</p>}

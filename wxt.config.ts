@@ -1,7 +1,6 @@
 import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
-
-const REQUIRED_HOSTS = ['https://purdue.brightspace.com/*', 'https://www.gradescope.com/*', 'https://mylab.pearson.com/*'];
+import { manifestOrigins } from './src/core/platformRegistry';
 
 export default defineConfig({
   srcDir: 'src',
@@ -12,10 +11,12 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'DueBoard',
     description: 'Every deadline from Brightspace and the homework platforms your courses use, on one page.',
-    permissions: ['storage', 'alarms', 'activeTab', 'scripting', ...(browser === 'firefox' ? [] : ['offscreen'])],
-    host_permissions: REQUIRED_HOSTS,
-    // Homework platforms are asked for one at a time, with a click, once a course is found to use them.
+    permissions: ['storage', 'alarms', 'activeTab', 'scripting', 'declarativeNetRequestWithHostAccess', ...(browser === 'firefox' ? [] : ['offscreen'])],
+    host_permissions: manifestOrigins(),
+    // Sites of every known platform are granted at install; anything else is asked for one at a time, with a click.
     optional_host_permissions: ['https://*/*'],
+    // The frame reader adds this to a frame of the hidden frame host, to run in the page's own world.
+    web_accessible_resources: [{ resources: ['open-here.js'], matches: manifestOrigins() }],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

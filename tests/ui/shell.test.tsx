@@ -43,6 +43,17 @@ describe('Header', () => {
     rerender(<Header now={now} pendingWeek={1} lastSynced={null} syncing onRefresh={onRefresh} />);
     expect((screen.getByRole('button', { name: 'Syncing…' }) as HTMLButtonElement).disabled).toBe(true);
   });
+  it('says it is reading Brightspace while the sync reads the sources', () => {
+    const { rerender } = renderIn('en', <Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} progress={{ done: 0, total: 0, phase: 'sources' }} onRefresh={() => {}} />);
+    expect(screen.getByText('Fetching your courses and assignments from Brightspace…')).toBeTruthy();
+    // A sync this page started, before the background has said anything.
+    rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing progress={null} onRefresh={() => {}} />);
+    expect(screen.getByText('Fetching your courses and assignments from Brightspace…')).toBeTruthy();
+    rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} progress={{ done: 0, total: 0, phase: 'syllabus' }} onRefresh={() => {}} />);
+    expect(screen.getByText('Reading your course syllabi…')).toBeTruthy();
+    rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} progress={{ done: 2, total: 9 }} onRefresh={() => {}} />);
+    expect(screen.getByText('Reading 2 of 9 platform pages…')).toBeTruthy();
+  });
 });
 
 const course: Course = { id: 'brightspace:1', code: 'CS 18000', name: 'CS 18000', sources: {}, color: '#EA580C', hidden: false, url: '', partial: false, isCourse: true };
@@ -145,6 +156,11 @@ describe('SourceBanners for Pearson', () => {
     expect(screen.getByText('Pearson session expired — open it once from Brightspace')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open Pearson' }));
     expect(open).toHaveBeenCalledWith(`https://purdue.brightspace.com${PEARSON_LINK}`, '_blank', 'noopener');
+  });
+  it('waits while a sync is running (DueBoard may sign back in by itself)', () => {
+    const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    const { container } = renderIn('en', <SourceBanners store={store} now={now} busy />);
+    expect(container.textContent).toBe('');
   });
 });
 

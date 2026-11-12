@@ -19,15 +19,18 @@ export interface PlatformDef {
   /** Identifies a Brightspace LTI launch whose URL doesn't show the platform. */
   title: RegExp;
   reader: Reader;
+  /** Launches of this platform are never opened automatically (timed or proctored attempts). */
+  neverOpen?: boolean;
 }
 
-const p = (id: string, label: string, category: LinkCategory, hosts: string[], title: RegExp, reader: Reader): PlatformDef => ({
+const p = (id: string, label: string, category: LinkCategory, hosts: string[], title: RegExp, reader: Reader, neverOpen?: boolean): PlatformDef => ({
   id,
   label,
   category,
   hosts,
   title,
   reader,
+  ...(neverOpen ? { neverOpen } : {}),
 });
 
 /** Every platform DueBoard knows. Ordered: the first match wins. 1.0 entries come first, unchanged. */
@@ -63,6 +66,19 @@ export const PLATFORMS: PlatformDef[] = [
   p('vocareum', 'Vocareum', 'homework', ['*.vocareum.com'], /vocareum/i, 'universal'),
   p('goreact', 'GoReact', 'homework', ['*.goreact.com'], /goreact/i, 'universal'),
   p('simplesyllabus', 'Simple Syllabus', 'website', ['*.simplesyllabus.com'], /simple\s?syllabus/i, 'syllabus'),
+  p('labflow', 'LabFlow', 'homework', ['*.labflow.com'], /labflow/i, 'universal'),
+  p('beyondlabz', 'BeyondLabz', 'homework', ['*.beyondlabz.com'], /beyond\s*labz/i, 'universal'),
+  // No known host: recognized by launch title only.
+  p('circuit', 'Circuit', 'homework', [], /\bcircuit\b.*(peer|review)|peer review.*\bcircuit\b/i, 'universal'),
+  p('variate', 'Variate', 'homework', [], /\bvariate\b/i, 'universal'),
+  p('campuswire', 'Campuswire', 'discussion', ['*.campuswire.com'], /campuswire/i, 'none'),
+  p('iclicker', 'iClicker', 'other', ['*.iclicker.com'], /i-?clicker/i, 'none'),
+  p('googleforms', 'Google Forms', 'other', ['forms.gle', 'forms.google.com'], /google forms?/i, 'none'),
+  p('turnitin', 'Turnitin', 'other', ['*.turnitin.com'], /turnitin/i, 'none'),
+  p('examsoft', 'ExamSoft', 'other', ['*.examsoft.com'], /examsoft|examplify/i, 'none', true),
+  p('respondus', 'Respondus', 'other', ['*.respondus.com'], /respondus|lockdown browser/i, 'none', true),
+  p('honorlock', 'Honorlock', 'other', ['*.honorlock.com'], /honorlock/i, 'none', true),
+  p('examity', 'Examity', 'other', ['*.examity.com'], /examity/i, 'none', true),
 ];
 
 export function hostMatches(glob: string, hostname: string): boolean {
@@ -89,4 +105,10 @@ export function platformById(id: string): PlatformDef | undefined {
 /** Match patterns for permissions.request / permissions.contains. */
 export function originPatterns(def: PlatformDef): string[] {
   return def.hosts.map((h) => `https://${h}/*`);
+}
+
+/** The manifest's host_permissions: Brightspace, then every site of a platform DueBoard reads. Build-time safe. */
+export function manifestOrigins(): string[] {
+  const origins = new Set(PLATFORMS.filter((x) => x.reader !== 'none').flatMap(originPatterns));
+  return ['https://purdue.brightspace.com/*', ...[...origins].sort()];
 }

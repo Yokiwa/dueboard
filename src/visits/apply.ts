@@ -1,6 +1,7 @@
 import { platformByHost } from '../core/platformRegistry';
 import type { CapturedDue, StoreShape } from '../core/types';
 import { courseTerm, syllabusFromLines } from '../syllabus/read';
+import { syllabusSources } from '../syllabus/sources';
 import type { VisitOutcome, VisitTarget } from './schedule';
 
 /** Folds a visit run's outcomes into the captured dates and the visit state. Pure. */
@@ -22,12 +23,14 @@ export function applyOutcomes(
     if (target?.mode === 'session') {
       // Landing is not yet success (re-reading the platform decides that); anything else is a failed attempt.
       const src = target.platform as 'gradescope' | 'pearson';
-      sessions[src] = { at, failures: (sessions[src]?.failures ?? 0) + (o.status === 'landed' ? 0 : 1) };
+      sessions[src] = { ...sessions[src], at, failures: (sessions[src]?.failures ?? 0) + (o.status === 'landed' ? 0 : 1) };
       continue;
     }
     if (target?.mode === 'syllabus') {
       const ou = o.key.slice('syllabus:'.length);
-      const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: null };
+      // The link's last-modified time is kept: a stored syllabus without it reads as "changed" on every sync.
+      const known = syllabusSources(store).find((s) => s.ou === ou && s.url === target.launchUrl);
+      const src = { ou, kind: 'visit' as const, url: target.launchUrl, title: target.title, modified: known?.modified ?? null };
       const course = store.snapshots.brightspace?.courses.find((c) => c.sourceCourseId === ou) ?? {};
       if (o.status === 'text') syllabus[ou] = syllabusFromLines(src, o.lines, courseTerm(course, now), now);
       else if (o.status !== 'signed_out') syllabus[ou] = { ...syllabusFromLines(src, [], courseTerm(course, now), now), rows: store.syllabus[ou]?.rows ?? [] };
@@ -67,6 +70,14 @@ export function applyOutcomes(
   const visitState = { ...store.visitState, needsPermission, lastRun: at };
   if (Object.keys(sessions).length) visitState.sessions = sessions;
   return { captured, syllabus, visitState };
+}
+
+/**
+ * After an update: forget which platforms the hidden frames could not read and how often signing back in failed, so the
+ * new version tries the background again at once instead of keeping an old version's verdict for days.
+ */
+export function forgetVisitMemory(state: StoreShape['visitState']): StoreShape['visitState'] {
+  return { ...state, sessions: {}, frame: {} };
 }
 
 /**

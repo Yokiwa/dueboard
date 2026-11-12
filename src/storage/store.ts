@@ -21,6 +21,7 @@ function migrateSettings(v: unknown): Settings {
   return {
     visits: r.visits === 'auto' || r.visits === 'manual' || r.visits === 'off' ? r.visits : DEFAULT_SETTINGS.visits,
     syllabus: typeof r.syllabus === 'boolean' ? r.syllabus : DEFAULT_SETTINGS.syllabus,
+    windowFallback: typeof r.windowFallback === 'boolean' ? r.windowFallback : DEFAULT_SETTINGS.windowFallback,
     completed: r.completed === 'card' || r.completed === 'section' ? r.completed : DEFAULT_SETTINGS.completed,
   };
 }
@@ -30,7 +31,13 @@ function migrateVisitState(v: unknown): VisitState {
   const out: VisitState = {
     needsPermission: arr<unknown>(r.needsPermission).filter((h): h is string => typeof h === 'string'),
     snoozed: obj(r.snoozed) as Record<string, string>,
+    frame: {},
   };
+  for (const [k, v] of Object.entries(obj(r.frame))) {
+    const o = obj(v);
+    if (typeof o.blocked !== 'number') continue;
+    out.frame[k] = typeof o.skipUntil === 'string' ? { blocked: o.blocked, skipUntil: o.skipUntil } : { blocked: o.blocked };
+  }
   if (typeof r.windowId === 'number') out.windowId = r.windowId;
   if (typeof r.lastRun === 'string') out.lastRun = r.lastRun;
   const sessions: NonNullable<VisitState['sessions']> = {};
@@ -38,7 +45,7 @@ function migrateVisitState(v: unknown): VisitState {
   if (typeof legacy.at === 'string' && typeof legacy.failures === 'number') sessions.pearson = { at: legacy.at, failures: legacy.failures };
   for (const [src, v] of Object.entries(obj(r.sessions))) {
     const o = obj(v);
-    if ((src === 'gradescope' || src === 'pearson') && typeof o.at === 'string' && typeof o.failures === 'number') sessions[src] = { at: o.at, failures: o.failures };
+    if ((src === 'gradescope' || src === 'pearson') && typeof o.at === 'string' && typeof o.failures === 'number') sessions[src] = o.frame === 'failed' ? { at: o.at, failures: o.failures, frame: 'failed' } : { at: o.at, failures: o.failures };
   }
   if (Object.keys(sessions).length) out.sessions = sessions;
   return out;
@@ -217,6 +224,8 @@ export async function patchVisitState(patch: Partial<VisitState>): Promise<void>
 export interface VisitProgress {
   done: number;
   total: number;
+  /** Before the platform pages: reading Brightspace and the other sources, then syllabi (done and total are 0 then). */
+  phase?: 'sources' | 'syllabus';
 }
 export async function setVisitProgress(p: VisitProgress | null): Promise<void> {
   await browser.storage.local.set({ visitProgress: p });
@@ -244,6 +253,16 @@ export async function getVisitWindow(): Promise<number | undefined> {
   return typeof r.visitWindowId === 'number' ? r.visitWindowId : undefined;
 }
 
+/** The tab the student is signing in with (first-run login); forgotten once they are back. */
+export async function setLoginTab(id: number | null, at: number = Date.now()): Promise<void> {
+  await sessionArea().set({ loginTab: id === null ? null : { id, at } });
+}
+export async function getLoginTab(): Promise<{ id: number; at: number } | undefined> {
+  const r = (await sessionArea().get('loginTab')) as { loginTab?: { id?: unknown; at?: unknown } | null };
+  const t = r.loginTab;
+  return t && typeof t.id === 'number' && typeof t.at === 'number' ? { id: t.id, at: t.at } : undefined;
+}
+
 /** The local visit log (Diagnostics): the latest 100 visits. Never sent anywhere. */
 const LOG_MAX = 100;
 export interface StoredVisitLogEntry {
@@ -261,6 +280,7 @@ export interface StoredVisitLogEntry {
   evidence?: string;
   result: string;
   detail?: string;
+  mode?: 'frame' | 'window';
 }
 export async function appendVisitLog(entries: StoredVisitLogEntry[]): Promise<void> {
   if (entries.length === 0) return;

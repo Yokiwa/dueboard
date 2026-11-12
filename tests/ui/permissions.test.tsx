@@ -52,10 +52,11 @@ describe('SiteAccessBanner', () => {
   it('asks to restore required site access (Firefox lets users remove it)', async () => {
     const request = vi.fn(async () => true);
     (browser.permissions as unknown as { request: unknown }).request = request;
-    render(<SiteAccessBanner granted={['https://purdue.brightspace.com/*']} />);
+    const granted = REQUIRED_ORIGINS.filter((o) => !o.includes('gradescope') && !o.includes('pearson.com'));
+    render(<SiteAccessBanner granted={granted} />);
     expect(screen.getByText("DueBoard can't reach Gradescope and Pearson. Allow access to keep syncing.")).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
-    await waitFor(() => expect(request).toHaveBeenCalledWith({ origins: ['https://www.gradescope.com/*', 'https://mylab.pearson.com/*'] }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith({ origins: ['https://*.gradescope.com/*', 'https://*.pearson.com/*', 'https://mylab.pearson.com/*'] }));
   });
   it('is empty with full access', () => {
     expect(render(<SiteAccessBanner granted={REQUIRED_ORIGINS} />).container.textContent).toBe('');
@@ -85,13 +86,13 @@ describe('visit progress in the header', () => {
 describe('Settings: reading platforms', () => {
   beforeEach(async () => {
     vi.spyOn(browser.runtime, 'getManifest').mockReturnValue({ version: '1.1.0' } as never);
-    (browser.permissions as unknown as { getAll: unknown }).getAll = vi.fn(async () => ({ origins: [...REQUIRED_ORIGINS, 'https://*.aleks.com/*'], permissions: [] }));
+    (browser.permissions as unknown as { getAll: unknown }).getAll = vi.fn(async () => ({ origins: [...REQUIRED_ORIGINS, 'https://*.turnitin.com/*'], permissions: [] }));
     await saveSnapshot('brightspace', { syncedAt: 'x', partial: [], items: [], links: [], courses: [{ source: 'brightspace', sourceCourseId: '1', name: 'MA 16100', code: 'MA 16100', url: 'u' }] });
   });
 
   it('saves when to read platforms', async () => {
     render(<Settings />);
-    const select = await screen.findByLabelText('Read platforms in a minimized window');
+    const select = await screen.findByLabelText('Read homework pages from your platforms');
     fireEvent.change(select, { target: { value: 'manual' } });
     await waitFor(async () => expect((await loadStore()).settings.visits).toBe('manual'));
     expect(screen.getByRole('option', { name: 'Only when I click Refresh' })).toBeTruthy();
@@ -102,12 +103,12 @@ describe('Settings: reading platforms', () => {
     const remove = vi.fn(async () => true);
     (browser.permissions as unknown as { remove: unknown }).remove = remove;
     render(<Settings />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove ALEKS' }));
-    await waitFor(() => expect(remove).toHaveBeenCalledWith({ origins: ['https://*.aleks.com/*'] }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Turnitin' }));
+    await waitFor(() => expect(remove).toHaveBeenCalledWith({ origins: ['https://*.turnitin.com/*'] }));
   });
 
   it('turns syllabus suggestions off', async () => {
-    await patchStore({ settings: { visits: 'auto', syllabus: true, completed: 'card' } });
+    await patchStore({ settings: { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true } });
     render(<Settings />);
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Syllabus suggestions' }));
     await waitFor(async () => expect((await loadStore()).settings.syllabus).toBe(false));

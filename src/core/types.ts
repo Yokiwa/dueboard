@@ -139,15 +139,17 @@ export interface UserState {
 }
 export type VisitMode = 'auto' | 'manual' | 'off';
 export interface Settings {
-  /** When to read platforms in a minimized window. */
+  /** When to read platform pages (in the background, with a window fallback). */
   visits: VisitMode;
   /** Show dates found in syllabi as suggestions. */
   syllabus: boolean;
   /** Where finished work shows on the Courses page: at the bottom of each course card, or in a "Done this week" section. */
   completed: CompletedPlacement;
+  /** Read pages the hidden frames could not read in a minimized window, in the same run. */
+  windowFallback: boolean;
 }
 export type CompletedPlacement = 'card' | 'section';
-export const DEFAULT_SETTINGS: Settings = { visits: 'manual', syllabus: true, completed: 'card' };
+export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;
@@ -160,7 +162,12 @@ export interface VisitState {
    * Per platform read in the background (Gradescope, Pearson): the last attempt to sign back in through a course's
    * Brightspace entry, and how many attempts in a row did not help.
    */
-  sessions?: Partial<Record<SourceId, { at: string; failures: number }>>;
+  sessions?: Partial<Record<SourceId, { at: string; failures: number; /** The hidden frame signed in but the platform still read as signed out: go straight to the window. */ frame?: 'failed' }>>;
+  /**
+   * Per platform key (see frameKey): how many hidden-frame visits in a row ended blocked, and until when frame mode
+   * is skipped for it (its pages go straight to the window).
+   */
+  frame: Record<string, { blocked: number; skipUntil?: string }>;
 }
 export interface SyncMeta {
   lastSuccess?: string;

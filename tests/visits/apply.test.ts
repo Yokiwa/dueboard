@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyOutcomes, type VisitTarget } from '../../src/visits/schedule';
+import { applyOutcomes, type VisitOutcome, type VisitTarget } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
 import type { CapturedDue } from '../../src/core/types';
 
@@ -46,6 +46,24 @@ describe('applyOutcomes', () => {
     expect(r.visitState.needsPermission).toEqual(['learn.example.com']);
   });
 
+  it('counts a frame failure like any other failure', () => {
+    const r = run([{ key: 'brightspace:topic:1', status: 'failed', reason: 'frame' }], { 'brightspace:topic:1': prev({ failures: 1 }) });
+    expect(r.captured['brightspace:topic:1']!.failures).toBe(2);
+  });
+
+  it('a session target that landed in a frame is handled like a window landing', () => {
+    const session: VisitTarget = { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: 'x', platform: 'pearson', mode: 'session' };
+    const r = applyOutcomes(migrate({}), [session], [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com', via: 'frame' }], now);
+    expect(r.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 0 });
+  });
+
+  it('keeps the frame mark of a session across a visit', () => {
+    const session: VisitTarget = { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: 'x', platform: 'pearson', mode: 'session' };
+    const store = migrate({ visitState: { sessions: { pearson: { at: 'old', failures: 1, frame: 'failed' } } } });
+    const r = applyOutcomes(store, [session], [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], now);
+    expect(r.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 1, frame: 'failed' });
+  });
+
   it('clears the block once a visit gets through', () => {
     const r = run([{ key: 'brightspace:topic:1', status: 'none', host: 'learn.example.com' }], { 'brightspace:topic:1': prev({ blocked: 'learn.example.com' }) });
     expect(r.captured['brightspace:topic:1']!.blocked).toBeUndefined();
@@ -72,6 +90,23 @@ describe('applyOutcomes: syllabus visits', () => {
     expect(r.syllabus?.['1']).toMatchObject({ error: 'unreadable', readAt: now.toISOString() });
     expect(r.visitState.needsPermission).toEqual(['purdue.simplesyllabus.com']);
   });
+  it("keeps the course link's last-modified time, so a syllabus read once is not read again every sync", async () => {
+    const { dueVisits } = await import('../../src/visits/schedule');
+    const s = base();
+    s.settings.syllabus = true;
+    s.settings.visits = 'auto';
+    s.snapshots.brightspace!.syllabusSources = [{ ou: '1', kind: 'visit', url: st.launchUrl, title: 'Syllabus Quiz', modified: '2026-08-20T15:00:00.000Z' }];
+    const outcomes: VisitOutcome[] = [
+      { key: 'syllabus:1', status: 'text', host: 'www.gradescope.com', lines: ['Project #9', 'Total Points'] },
+      { key: 'syllabus:1', status: 'failed', reason: 'timeout' },
+    ];
+    for (const outcome of outcomes) {
+      const r = applyOutcomes(s, [st], [outcome], now);
+      expect(r.syllabus['1']!.modified).toBe('2026-08-20T15:00:00.000Z');
+      const later = new Date(now.getTime() + 5 * 60_000);
+      expect(dueVisits({ ...s, ...r }, later, 'auto', ['https://*/*']).map((t) => t.key)).not.toContain('syllabus:1');
+    }
+  });
 });
 
 describe('applyOutcomes: blocked items once allowed', () => {
@@ -92,5 +127,20 @@ describe('forgetUnfoundVisits (after an update)', () => {
       'title:hw4': { title: 'HW4', dueAt: '2026-11-12T04:59:00.000Z', platform: 'wileyplus', via: 'opened', checkedAt: 'x' },
     };
     expect(Object.keys(forgetUnfoundVisits(captured)).sort()).toEqual(['brightspace:topic:3', 'title:hw4']);
+  });
+});
+
+describe('forgetVisitMemory (after an update)', () => {
+  it('clears what the old version learned about frames and sign-in attempts; keeps the rest', async () => {
+    const { forgetVisitMemory } = await import('../../src/visits/apply');
+    const before = {
+      windowId: 4,
+      lastRun: 'x',
+      needsPermission: ['a.com'],
+      snoozed: { 'a.com': 'y' },
+      sessions: { pearson: { at: 'z', failures: 3, frame: 'failed' as const } },
+      frame: { gradescope: { blocked: 0, skipUntil: '2026-11-19T00:00:00.000Z' } },
+    };
+    expect(forgetVisitMemory(before)).toEqual({ windowId: 4, lastRun: 'x', needsPermission: ['a.com'], snoozed: { 'a.com': 'y' }, sessions: {}, frame: {} });
   });
 });

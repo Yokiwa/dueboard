@@ -14,7 +14,7 @@
     </header>
     <main class="doc">
       <h1>Privacy Policy</h1>
-      <p class="lang">Last updated: November 2026</p>
+      <p class="lang">Last updated: November 2026 (version 1.4.0)</p>
 
       <h2>In short</h2>
       <p>DueBoard does not collect, transmit or sell any personal data. Your data stays in your own browser.</p>
@@ -26,16 +26,18 @@
         <li><code>www.gradescope.com</code>: your courses, assignments, due dates and submission status, if you are signed in;</li>
         <li><code>mylab.pearson.com</code> (only if one of your courses links to Pearson MyLab): your assignment list and due dates;</li>
         <li><code>education.wiley.com</code>: when you open a WileyPLUS assignment yourself, only the assignment title and its “Due …” line;</li>
-        <li>homework platforms your courses use (for example WileyPLUS, ALEKS, InQuizitive, WebAssign), only after you allow each one: the assignment page DueBoard opens through your Brightspace homework link, and on it only the page heading and its due date (see below);</li>
+        <li>the homework platforms your courses use (for example WileyPLUS, ALEKS, InQuizitive, WebAssign): the assignment page DueBoard opens through your Brightspace homework link, and on it only the page heading and its due date (see below). Access to the platform sites DueBoard knows about is granted when you install it; any other site is read only after you allow it;</li>
         <li>your course syllabus, if Brightspace has one: a syllabus file in course content (PDF or web page) or the Simple Syllabus page, to find dated work.</li>
       </ul>
       <p>DueBoard's own requests only read. It never changes, submits or deletes anything on these sites, and it never sees or stores your password.</p>
 
       <h2>Reading platform pages</h2>
-      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link as a page in a minimized browser window, like “Open in new window”. Brightspace signs you in to the platform as it always does when you click the link. DueBoard then reads the page's heading and its “Due …” line, and closes the window. It reads only pages on platforms you allowed. It never types or submits anything.</p>
+      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link in a hidden frame inside the extension itself, in the background and without opening any window or tab. Brightspace signs you in to the platform as it always does when you click the link. DueBoard reads the page's heading and its “Due …” line and removes the frame. It never types or submits anything.</p>
+      <p>Platforms usually forbid being shown inside another page by sending “do not embed” headers (<code>X-Frame-Options</code> and <code>Content-Security-Policy</code>). While DueBoard is reading, one session rule removes the <code>X-Frame-Options</code> and <code>Content-Security-Policy</code> response headers from page loads inside DueBoard's own hidden frames (requests that belong to no browser tab) on the homework sites it has access to. It never applies to your own tabs, and it is removed when reading ends.</p>
+      <p>Pages that cannot be read in a hidden frame are opened in a small minimized browser window instead, like “Open in new window”, read, and closed. A homework on a site DueBoard doesn't know yet is also opened once in that small window to find out which site it is; DueBoard then asks you to allow that site. You can turn this window off in Settings, and the pages that need it then stay without a date.</p>
       <p>Some platforms first show a launcher that waits for a click (WileyPLUS, for example). There DueBoard may press that one button, and only buttons that open the assignment (labels such as “Open”, “Launch” or “View assignment”). It never presses anything that starts, continues, retries or submits work (“Start”, “Begin”, “Continue”, “Resume”, “Attempt”, “Take”, “Submit” and similar).</p>
       <ul>
-        <li>By default this happens only when you click Refresh, for new homework without a date and to recheck dates (daily when due within 3 days, otherwise every 3 days). You can choose “Automatically” or “Never” in Settings.</li>
+        <li>By default this happens automatically in the background, not only when you click Refresh, for new homework without a date and to recheck dates (daily when due within 3 days, otherwise every 3 days). In Settings you can choose “Only when I click Refresh” or “Never”.</li>
         <li>Quizzes, tests and exams are never opened this way, so DueBoard can't start a timed or proctored attempt.</li>
         <li>Because DueBoard opens the link as you, a platform (and your instructor, if the platform reports it) may see these visits as you opening the assignment page.</li>
         <li>If you open or click into the window while it works, DueBoard stops and leaves the window to you.</li>
@@ -45,8 +47,8 @@
         <li>What DueBoard reads stays in your browser like everything else.</li>
       </ul>
 
-      <h2>Optional site access</h2>
-      <p>DueBoard needs your browser's permission to read a platform's pages. It asks only after it finds that platform in your courses, by name, and only when you click “Allow”. You can remove access for any platform in DueBoard's Settings or in your browser's extension settings.</p>
+      <h2>Site access</h2>
+      <p>Your browser asks you to approve DueBoard's access to the listed platform sites when you install it (the list is the one in the extension's permissions). For a homework platform that is not on that list, DueBoard names the site and asks for access only when you click “Allow”. You can remove access in DueBoard's Settings or in your browser's extension settings.</p>
 
       <h2>Syllabus files</h2>
       <p>DueBoard downloads syllabus files from your Brightspace course content with your existing session and reads them in your browser to find dated work. The dates are shown only as suggestions; nothing is added until you click “Add”.</p>

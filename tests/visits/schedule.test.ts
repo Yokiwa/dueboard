@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { dueVisits, originAllowed } from '../../src/visits/schedule';
+import { dueVisits, originAllowed, MAX_VISITS, WINDOW_MAX } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
+import { DEFAULT_SETTINGS } from '../../src/core/types';
 import type { CapturedDue, RawItem, StoreShape } from '../../src/core/types';
 
 const now = new Date('2026-11-07T12:00:00-05:00');
@@ -32,10 +33,19 @@ const cap = (n: number, p: Partial<CapturedDue>): Record<string, CapturedDue> =>
 const keys = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => dueVisits(s, now, trigger, granted).map((t) => t.key);
 
 describe('dueVisits', () => {
+  it('a fresh install (default settings) reads an undated homework on the automatic trigger', () => {
+    const s = store([topic(1)], {}, { settings: undefined });
+    expect(s.settings).toEqual(DEFAULT_SETTINGS);
+    expect(keys(s, 'auto')).toEqual(['brightspace:topic:1']);
+  });
+  it('never opens proctoring launches', () => {
+    expect(keys(store([topic(1, 'Honorlock practice'), topic(2, 'ExamSoft setup')]))).toEqual([]);
+  });
+
   it('visits an undated launch that was never visited', () => {
     expect(dueVisits(store([topic(1)]), now, 'auto', [])).toEqual([
       // Opened as a full page, like "Open in new window": platforms refuse to show inside Brightspace's frame.
-      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: launch(1), mode: 'due' },
+      { key: 'brightspace:topic:1', title: 'HW 1', courseId: 'brightspace:1', launchUrl: launch(1), mode: 'due', titles: [{ key: 'brightspace:topic:1', title: 'HW 1' }] },
     ]);
   });
 
@@ -101,12 +111,12 @@ describe('dueVisits', () => {
     expect(keys(store([topic(1)], {}, { settings: { visits: 'manual', syllabus: true } }), 'manual')).toEqual(['brightspace:topic:1']);
   });
 
-  it('puts never-visited first, then oldest, and caps at 25', () => {
-    const items = Array.from({ length: 30 }, (_, i) => topic(i + 1));
-    const captured = Object.assign({}, ...items.slice(0, 28).map((_, i) => cap(i + 1, { misses: 1, checkedAt: ago(30 + i) })));
+  it('puts never-visited first, then oldest, and caps at MAX_VISITS', () => {
+    const items = Array.from({ length: MAX_VISITS + 5 }, (_, i) => topic(i + 1));
+    const captured = Object.assign({}, ...items.slice(0, MAX_VISITS + 3).map((_, i) => cap(i + 1, { misses: 1, checkedAt: ago(30 + i) })));
     const got = keys(store(items, captured));
-    expect(got).toHaveLength(25);
-    expect(got.slice(0, 3)).toEqual(['brightspace:topic:29', 'brightspace:topic:30', 'brightspace:topic:28']);
+    expect(got).toHaveLength(MAX_VISITS);
+    expect(got.slice(0, 3)).toEqual([`brightspace:topic:${MAX_VISITS + 4}`, `brightspace:topic:${MAX_VISITS + 5}`, `brightspace:topic:${MAX_VISITS + 3}`]);
   });
 
   it('adds a Pearson session visit when Pearson is signed out and a course launches it', () => {
@@ -116,6 +126,13 @@ describe('dueVisits', () => {
     expect(dueVisits(base, now, 'auto', [])[0]).toMatchObject({ key: 'pearson:session', mode: 'session', launchUrl: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` });
     base.syncMeta.pearson = { lastSuccess: ago(0.5), lastError: { at: ago(1), reason: 'not_logged_in' } };
     expect(keys(base)).toEqual([]);
+  });
+});
+
+describe('limits', () => {
+  it('allows 60 frame visits and 25 window visits', () => {
+    expect(MAX_VISITS).toBe(60);
+    expect(WINDOW_MAX).toBe(25);
   });
 });
 
@@ -202,9 +219,61 @@ describe('dueVisits: signing back in to Gradescope through any course', () => {
     expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(7), failures: 1 } }))).toEqual(['gradescope:session']);
   });
 
+  it('Refresh tries again at once, even within 6 hours or after 3 attempts that did not help', () => {
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(0.2), failures: 1 } }), 'manual')).toEqual(['gradescope:session']);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(0.2), failures: 3 } }), 'manual')).toEqual(['gradescope:session']);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(7), failures: 3 } }), 'auto')).toEqual([]);
+  });
+
   it('a course without a Gradescope entry adds nothing', () => {
     const s = store([]);
     s.syncMeta.gradescope = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };
     expect(keys(s)).toEqual([]);
+  });
+});
+
+describe('dueVisits titles', () => {
+  it('gives each homework topic the titles of every due target of its course, itself included', () => {
+    const other = topic(9, 'Reading notes', { sourceCourseId: '2' });
+    const s = store([topic(1), topic(2), other]);
+    s.snapshots.brightspace!.courses.push({ source: 'brightspace', sourceCourseId: '2', name: 'PHYS 17200', code: 'PHYS 17200', url: `${B}/d2l/home/2` });
+    const out = dueVisits(s, now, 'auto', ['https://*/*']);
+    const by = (k: string) => out.find((v) => v.key === k)!;
+    expect(by('brightspace:topic:1').titles).toEqual([
+      { key: 'brightspace:topic:1', title: 'HW 1' },
+      { key: 'brightspace:topic:2', title: 'HW 2' },
+    ]);
+    expect(by('brightspace:topic:2').titles).toEqual([
+      { key: 'brightspace:topic:2', title: 'HW 2' },
+      { key: 'brightspace:topic:1', title: 'HW 1' },
+    ]);
+    expect(by('brightspace:topic:9').titles).toEqual([{ key: 'brightspace:topic:9', title: 'Reading notes' }]);
+  });
+
+  it('caps titles at 40 and gives session targets none', () => {
+    const items = Array.from({ length: 50 }, (_, i) => topic(i + 1, `Homework set ${i + 1}`));
+    const out = dueVisits(store(items), now, 'auto', ['https://*/*']);
+    expect(out.find((v) => v.key === 'brightspace:topic:1')!.titles).toHaveLength(40);
+    expect(out.filter((v) => v.mode !== 'due').every((v) => v.titles === undefined)).toBe(true);
+  });
+
+  it('puts the target itself first, so one past the cap still carries its own title', () => {
+    const items = Array.from({ length: 45 }, (_, i) => topic(i + 1, `Homework set ${i + 1}`));
+    const last = dueVisits(store(items), now, 'auto', ['https://*/*']).find((v) => v.key === 'brightspace:topic:45')!;
+    expect(last.titles).toHaveLength(40);
+    expect(last.titles![0]).toEqual({ key: 'brightspace:topic:45', title: 'Homework set 45' });
+  });
+});
+
+describe('dueVisits: links that land on a platform DueBoard reads directly', () => {
+  it('a Brightspace link that landed on Gradescope without a date is not visited again (Gradescope is read on its own)', () => {
+    const s = store([topic(1, 'Project #1')], cap(1, { platform: 'gradescope', dueAt: null, misses: 1, checkedAt: ago(48) }));
+    expect(keys(s)).toEqual([]);
+    expect(keys(s, 'manual')).toEqual([]);
+  });
+
+  it('one that landed on another platform without a date is still read again later', () => {
+    const s = store([topic(1, 'HW 1')], cap(1, { platform: 'aleks', dueAt: null, misses: 1, checkedAt: ago(48) }));
+    expect(keys(s)).toEqual(['brightspace:topic:1']);
   });
 });

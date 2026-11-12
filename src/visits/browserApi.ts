@@ -3,6 +3,8 @@ import { IS_FIREFOX } from '../core/env';
 import { setVisitWindow } from '../storage/store';
 import { FINDER_FILE, stripUrl, type VisitMessage } from './messages';
 import { launchTargetHost, SIGN_IN, type Landing, type VisitApi } from './runner';
+import { installOpenHere } from './frame/openHere';
+import { sessionDone } from './hosts';
 
 const BASE = 'https://purdue.brightspace.com';
 const BRIGHTSPACE_HOST = new URL(BASE).hostname;
@@ -76,6 +78,12 @@ function landed(url: string | undefined): boolean {
   }
 }
 
+/** A sign-in for `platform` has reached the page its session belongs to, or a sign-in page (signed out: no point waiting). */
+export function onSessionPage(url: string | undefined, platform: string): boolean {
+  if (!url || url === 'about:blank') return false;
+  return SIGN_IN.test(url) || sessionDone(platform, url);
+}
+
 function onPage(url: string | undefined): boolean {
   if (!url || url === 'about:blank') return false;
   try {
@@ -122,7 +130,8 @@ export function createBrowserVisitApi(): VisitApi {
           if (id !== tabId) return;
           if (info.status !== 'complete' && tab.status !== 'complete') return;
           // A Brightspace content page is itself the landing (the platform is embedded in it); else wait to leave it.
-          if (opts?.brightspacePage ? onPage(tab.url) : landed(tab.url)) finish({ url: tab.url! });
+          const at = opts?.session ? onSessionPage(tab.url, opts.session) : opts?.brightspacePage ? onPage(tab.url) : landed(tab.url);
+          if (at) finish({ url: tab.url! });
         };
         const onRemoved = (id: number) => {
           if (id === tabId) finish('closed');
@@ -130,6 +139,16 @@ export function createBrowserVisitApi(): VisitApi {
         const timer = setTimeout(() => finish('timeout'), timeoutMs);
         browser.tabs.onUpdated.addListener(onUpdated);
         browser.tabs.onRemoved.addListener(onRemoved);
+        // A sign-in may have reached its page between two waits: the tab already there counts.
+        if (opts?.session) {
+          const platform = opts.session;
+          void browser.tabs
+            .get(tabId)
+            .then((tab) => {
+              if (tab.status === 'complete' && onSessionPage(tab.url, platform)) finish({ url: tab.url! });
+            })
+            .catch(() => undefined);
+        }
       });
     },
 
@@ -196,23 +215,12 @@ export function createBrowserVisitApi(): VisitApi {
     },
 
     async inject(tabId, mode, platform) {
-      const allowOpen = mode === 'due';
+      // Homework visits may press "open the assignment"; sign-in visits one link (Pearson's Assignments).
+      const allowOpen = mode === 'due' || mode === 'session';
       if (allowOpen) {
         // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
         await browser.scripting
-          .executeScript({
-            target: { tabId, allFrames: true },
-            world: 'MAIN',
-            func: () => {
-              const w = window as unknown as { __dueboardOpenHere?: boolean; open: (u?: string | URL) => Window | null };
-              if (w.__dueboardOpenHere) return;
-              w.__dueboardOpenHere = true;
-              w.open = (u?: string | URL) => {
-                if (u) location.assign(String(u));
-                return null;
-              };
-            },
-          })
+          .executeScript({ target: { tabId, allFrames: true }, world: 'MAIN', func: installOpenHere })
           .catch(() => undefined);
       }
       await browser.scripting.executeScript({

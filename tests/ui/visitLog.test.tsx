@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { VisitLog } from '../../src/entrypoints/diagnostics/VisitLog';
 import { appendVisitLog } from '../../src/storage/store';
@@ -26,6 +26,23 @@ describe('Diagnostics: visit log', () => {
   it('says when there is nothing yet', async () => {
     render(<VisitLog />);
     await waitFor(() => expect(screen.getByText(/No platform visits yet/)).toBeTruthy());
+  });
+});
+
+describe('Diagnostics: visit mode', () => {
+  beforeEach(() => fakeBrowser.reset());
+  it('shows Background for frame reads and Window for window reads or older entries', async () => {
+    await appendVisitLog([
+      { at: '2026-11-08T10:00:00.000Z', key: 'a', title: 'Old HW', opened: 'o', frames: [], result: 'none' },
+      { at: '2026-11-08T10:01:00.000Z', key: 'b', title: 'Win HW', opened: 'o', frames: [], result: 'none', mode: 'window' },
+      { at: '2026-11-08T10:02:00.000Z', key: 'c', title: 'Frame HW', opened: 'o', frames: [], result: 'none', mode: 'frame' },
+    ]);
+    render(<VisitLog />);
+    expect(await screen.findByRole('columnheader', { name: 'Mode' })).toBeTruthy();
+    const rows = screen.getAllByRole('row');
+    expect(within(rows[1]!).getByText('Background')).toBeTruthy();
+    expect(within(rows[2]!).getByText('Window')).toBeTruthy();
+    expect(within(rows[3]!).getByText('Window')).toBeTruthy();
   });
 });
 

@@ -1,5 +1,71 @@
 # Changelog
 
+## 1.4.9 — 2026-11 (trial build)
+
+- **Pearson signs back in by itself (for real this time)**: the visit log showed DueBoard pressing Assignments on Pearson's course page and then closing the window on MyLab's launch address, one step before MyLab had signed the student in. A sign-in now ends only on a MyLab page itself, and the minimized window gives Pearson's slow course page up to a minute
+
+## 1.4.8 — 2026-11 (trial build)
+
+- **Pearson signs back in more reliably**: in the minimized window, a Pearson sign-in page that moves on to the next one while DueBoard is setting up no longer ends the attempt with an error; in the background, Pearson's page gets up to 35 seconds to show its Assignments link (the whole sign-in up to about a minute)
+- **Refresh tries signing back in to Pearson or Gradescope at once**; automatic syncs still try at most every 6 hours
+- When a sign-in does not get through, the visit log says what the page showed (or which error the window hit), so the cause can be found
+- A course syllabus read from a Brightspace link (for example "Syllabus Quiz") is no longer read again on every sync: DueBoard kept the read but not the link's last-changed time, so the link always looked changed
+- A syllabus page the minimized window read no longer sends its platform to the window for 7 days (only homework pages do)
+
+## 1.4.7 — 2026-11 (trial build)
+
+- **Faster syncs**:
+  - A platform whose pages the background could not read but the minimized window could (WileyPLUS) now goes straight to the window for 7 days, instead of costing a background attempt of about 20 seconds per homework every time. Within one sync, after two such pages in a row the rest of that platform goes straight to the window too, so the first sync after installing is fast as well
+  - Brightspace links that land on Gradescope (or Pearson) and show no due date are not opened again: DueBoard reads those platforms' dates directly
+  - A page read in the background that shows no due date ends as soon as it has been read, instead of waiting out about 20 seconds
+
+## 1.4.6 — 2026-11 (trial build)
+
+- **No page read in the background can open a tab or window any more**: the hidden frames are now sandboxed without permission to open new windows, so the browser itself refuses, whatever way a page tries (1.4.4 and 1.4.5 caught specific ways only; Brightspace's launch page for an "open in a new window" tool still got through). Pages DueBoard can move into the frame are still read in the background; the others are read by the minimized window
+
+## 1.4.5 — 2026-11 (trial build)
+
+- **No more stray tabs, second part**: a launch page whose script clicks a link it never adds to the page (or one inside a web component, or sends it a click event) still opened a real tab in 1.4.4. The click itself is now caught, so the page opens inside the hidden frame
+
+## 1.4.4 — 2026-11 (trial build)
+
+- **No more stray tabs during a sync**: a tool your instructor set to "open in a new window" (for example Achieve / Macmillan) made Brightspace's launch page open a real tab in front of you while DueBoard read it in the background. Forms and links meant for a new window now open inside DueBoard's hidden frame, where the page is read without a window
+
+## 1.4.3 — 2026-11 (trial build)
+
+- **The dashboard always says what a sync is doing**, from start to end: "Fetching your courses and assignments from Brightspace…", then "Reading your course syllabi…", then "Reading 3 of 20 platform pages…". 1.4.2 showed "Synced" while syllabi were read, so a sync that had started on its own (after installing or updating) looked finished
+- "Session expired" lines stay hidden for the whole run, until DueBoard has tried to sign back in
+
+## 1.4.2 — 2026-11 (trial build)
+
+- **Pearson signs back in by itself**: Purdue's Pearson link first shows "Access Pearson for D2L Brightspace", and MyLab only signs you in once its **Assignments** link is opened. DueBoard now presses that link (the only one it presses there) and waits for MyLab, in the background and, if needed, in the minimized window
+- An "open in a new tab" link pressed in the minimized window opens in that window, also on pages that open an empty window first
+- On update, DueBoard again forgets which platforms it could not read in the background and how often Pearson's sign-in failed
+
+## 1.4.1 — 2026-11 (trial build)
+
+- **Background reading works on Purdue's real launch pages**: Brightspace shows a platform inside its own launch page, and 1.4.0 only looked at the outer page, so every page fell back to the window. The hidden frame now reads the platform page inside it
+- **Pearson signs back in by itself**: signing in to Pearson through Brightspace passes through several Pearson pages; DueBoard now waits until MyLab itself has loaded (1.4.0 stopped at the first Pearson page, so the session never came back)
+- **Fewer windows**: a platform page read in the background that shows no due date is final; the window tries again only when the page was blank, asked to sign in, or needed an "Open assignment" click
+- "Open Assignment" buttons that open a new window now open the assignment inside the hidden frame, also on pages that open an empty window first
+- The dashboard says "Fetching your courses and assignments from Brightspace…" while the sync reads Brightspace, also for a sync it didn't start
+- "Session expired" lines wait until the sync has ended, so they only appear when DueBoard could not sign back in by itself
+- On update, DueBoard forgets which platforms 1.4.0 could not read in the background and tries them again
+
+## 1.4.0 — 2026-11 (trial build)
+
+- **Homework pages are read in the background**: DueBoard opens your Brightspace homework links in hidden frames inside the extension, three at a time, reads each due date and shows it as soon as it arrives. Normally no window or tab opens
+- **A small minimized window only as a fallback**: pages that can't be read in a hidden frame are read in the minimized window in the same run, which then closes. Settings has a new checkbox to turn the window off
+- **Automatic by default**: "Automatically, in the background" is the new default for reading platforms (existing "Only when I click Refresh" choices move to it once; "Never" stays)
+- **No more "Allow" prompts for known platforms**: access to every platform site DueBoard knows is part of the install, so the banner now appears only for a site DueBoard doesn't know. The platform list covers more sites (Achieve, Connect, WebAssign, Top Hat, Perusall, Sapling and others)
+- **"Log in to Brightspace" on the first-run page**: one button signs you in (or starts the sync if you already are) and brings you back to the dashboard, where the first sync starts
+- **Faster**: a page that lists several homeworks with their dates (a course page with "HW11 … Due Nov 11") dates all of them from one visit
+- Settings → Diagnostics shows a Mode column (Background or Window) in the visit log
+- A homework on a site DueBoard doesn't know yet is opened once in a small minimized window to find out which site it is; DueBoard then asks you to allow that site (as in 1.2.4)
+- While a page is read in a hidden frame, DueBoard removes the "do not embed" headers from that one hidden request; your own tabs are never affected
+- On update, Chrome asks once to accept the new list of homework sites (DueBoard stays off until you accept); Firefox may ask in a similar way
+- This trial build does not include the scores feature, which is still on its own branch. Firefox support for background reading is untested
+
 ## 1.2.4 — 2026-11
 
 - **Course cards keep their place**: courses are sorted by code instead of by their next deadline, so ticking off work no longer reshuffles the page

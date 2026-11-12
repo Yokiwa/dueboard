@@ -45,6 +45,7 @@ export function VisitLog() {
               <tr>
                 <th style={cell}>When</th>
                 <th style={cell}>Homework</th>
+                <th style={cell}>Mode</th>
                 <th style={cell}>Site</th>
                 <th style={cell}>Opened → ended up on</th>
                 <th style={cell}>Frames that loaded</th>
@@ -56,6 +57,7 @@ export function VisitLog() {
                 <tr key={`${e.at}-${i}`}>
                   <td style={cell}>{new Date(e.at).toLocaleString()}</td>
                   <td style={cell}>{e.title}</td>
+                  <td style={cell}>{e.mode === 'frame' ? 'Background' : 'Window'}</td>
                   <td style={cell}>
                     {e.site ?? ''}
                     {e.siteNote && <div style={{ color: '#6B7280' }}>{e.siteNote}</div>}

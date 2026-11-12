@@ -33,7 +33,9 @@ The build environment can't run Firefox, so do this check once on a real compute
 5. Check:
    - [ ] Your courses appear as cards. This is the important one: it proves Firefox lets DueBoard use your Brightspace sign-in.
    - [ ] If you use Gradescope: its assignments appear.
-   - [ ] If a banner asks to allow a homework platform (for example WileyPLUS), click **Allow**, then **Refresh**. A minimized window briefly appears and closes, and homework from that platform gets due dates marked "Read from …".
+   - [ ] Background reading: homework from platforms such as WileyPLUS or ALEKS gets due dates marked "Read from …" without any window opening. Open **Settings → Diagnostics** and look at the **Mode** column of the visit log. "Background" means a hidden frame read the page (the goal). "Window" means Firefox could not read it in a frame and a minimized window was used instead. If every row says "Window", background reading does not work in Firefox yet: download the visit log (**Download visit log**) and send it to the developer.
+   - [ ] To check that the window is really only a fallback, clear **Use a small minimized window…** in Settings and press **Refresh**: pages that need the window stay without a date and no window appears.
+   - [ ] A banner asking to allow a platform appears only for a site DueBoard does not know. Known platforms are allowed when the add-on is installed.
    - [ ] No error banner stays on the dashboard.
 6. If courses don't appear, open `about:debugging` → DueBoard → **Inspect**, copy the messages from the **Console** tab, and send them to the developer.
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { VisitProgress } from '../../storage/store';
 import { format } from 'date-fns';
 import { ArrowClockwise, Gear } from '@phosphor-icons/react';
 import { iconBtn, secondaryBtn } from '../forms';
@@ -11,7 +12,7 @@ export interface HeaderProps {
   lastSynced: string | null;
   syncing: boolean;
   /** While platform pages are read after a sync. */
-  progress?: { done: number; total: number } | null;
+  progress?: VisitProgress | null;
   onRefresh(): void;
   /** Opens DueBoard's settings page. */
   onSettings?(): void;
@@ -46,7 +47,11 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
             aria-hidden="true"
             className={`size-2 shrink-0 rounded-full ${syncing || progress ? 'animate-pulse bg-db-accent' : lastSynced ? 'bg-db-ok' : 'bg-db-faint'}`}
           />
-          {progress
+          {progress?.phase === 'sources' || (syncing && !progress)
+            ? t('sync.fetching')
+            : progress?.phase === 'syllabus'
+            ? t('sync.syllabi')
+            : progress
             ? t('sync.visiting', { done: progress.done, total: progress.total })
             : lastSynced
               ? t('sync.synced', { ago: t('ago', { iso: lastSynced, now }) })

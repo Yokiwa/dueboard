@@ -47,19 +47,28 @@ export function createProxyParser(send: (msg: unknown) => Promise<unknown>, ensu
 
 let creating: Promise<void> | null = null;
 
-/** Creates the offscreen document once; later calls are no-ops. */
-export async function ensureOffscreenDocument(): Promise<void> {
-  const url = browser.runtime.getURL('/offscreen.html');
+/** Whether the offscreen document is open now (asking does not create it). */
+export async function offscreenDocumentExists(): Promise<boolean> {
   const existing = await browser.runtime.getContexts({
     contextTypes: [browser.runtime.ContextType.OFFSCREEN_DOCUMENT],
-    documentUrls: [url],
+    documentUrls: [browser.runtime.getURL('/offscreen.html')],
   });
-  if (existing.length > 0) return;
+  return existing.length > 0;
+}
+
+/**
+ * Creates the offscreen document once; later calls are no-ops. A document an older version created with fewer reasons
+ * keeps working and is left alone.
+ */
+export async function ensureOffscreenDocument(): Promise<void> {
+  const url = browser.runtime.getURL('/offscreen.html');
+  if (await offscreenDocumentExists()) return;
   creating ??= browser.offscreen
     .createDocument({
       url,
-      reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS],
-      justification: 'Parse Gradescope, Pearson and syllabus pages into assignments',
+      reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS, browser.offscreen.Reason.DOM_SCRAPING],
+      justification:
+        "Parse Gradescope, Pearson and syllabus pages into assignments, and read due dates from the student's own assignment pages",
     })
     .finally(() => {
       creating = null;

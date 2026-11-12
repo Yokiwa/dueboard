@@ -2,7 +2,8 @@ import type { Connector, SourceId, StoreShape } from '../core/types';
 import type { SyncReport } from '../sync/runSync';
 import { activeSourceIds } from './sources';
 import { platformByHost } from '../core/platformRegistry';
-import { applyOutcomes, dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
+import { dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
+import type { VisitProgress } from '../storage/store';
 
 /**
  * One sync: the platforms known so far, then — in the same run — any platform the fresh Brightspace data just
@@ -24,6 +25,7 @@ export interface SyncAndVisitDeps {
   load: () => Promise<StoreShape>;
   sync: () => Promise<SyncReport>;
   granted: () => Promise<string[]>;
+  /** The visit pass: reads the targets, saves their results itself, and returns the final outcome per target. */
   visit: (targets: VisitTarget[]) => Promise<VisitOutcome[]>;
   save: (patch: Partial<StoreShape>) => Promise<void>;
   /** Reads syllabus files and checks course navigation bars; returns what changed. */
@@ -31,6 +33,11 @@ export interface SyncAndVisitDeps {
   /** Reads one background source again (after its sign-in was restored through Brightspace). */
   resync: (source: 'gradescope' | 'pearson') => Promise<SyncReport>;
   now: () => Date;
+  /**
+   * The dashboard's status line, kept for the whole run: Brightspace and the other sources, then syllabi; the visit
+   * pass reports its own page count; null when the run has ended (however it ended).
+   */
+  status?: (p: VisitProgress | null) => Promise<void>;
 }
 
 /**
@@ -75,6 +82,21 @@ export function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<
 }
 
 async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: SyncReport) => void): Promise<SyncReport> {
+  const status = (p: VisitProgress | null) => (deps.status ? deps.status(p).catch(() => undefined) : Promise.resolve());
+  await status({ done: 0, total: 0, phase: 'sources' });
+  try {
+    return await readAndVisit(deps, trigger, onReport, status);
+  } finally {
+    await status(null);
+  }
+}
+
+async function readAndVisit(
+  deps: SyncAndVisitDeps,
+  trigger: Trigger,
+  onReport: (r: SyncReport) => void,
+  status: (p: VisitProgress | null) => Promise<unknown>,
+): Promise<SyncReport> {
   let report: SyncReport = {};
   try {
     report = await deps.sync();
@@ -83,6 +105,7 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
   }
   if (report.brightspace === 'not_logged_in') return report;
   if (deps.syllabus) {
+    await status({ done: 0, total: 0, phase: 'syllabus' });
     const before = await deps.load();
     const patch = await deps.syllabus(before);
     if (Object.keys(patch.syllabus).length || Object.keys(patch.syllabusNav).length) {
@@ -97,7 +120,6 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     console.warn('DueBoard: platform visits stopped early', e);
     return [] as VisitOutcome[];
   });
-  await deps.save(applyOutcomes(await deps.load(), targets, outcomes, deps.now()));
   // A visit that reached Gradescope or Pearson signed the student in there (sign-in visits often end on pages DueBoard
   // can't see): read that platform again in this same run.
   for (const src of ['gradescope', 'pearson'] as const) {
@@ -112,8 +134,13 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     const { visitState } = await deps.load();
     const prev = visitState.sessions?.[src];
     const at = prev?.at ?? deps.now().toISOString();
-    const failures = again[src] === 'ok' ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
-    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: { at, failures } } } });
+    const ok = again[src] === 'ok';
+    const failures = ok ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
+    // A hidden frame that "signed in" without the platform noticing: next time go straight to the window.
+    // The mark is cleared only by a successful resync; otherwise a window attempt leaves it as it was.
+    const frame = ok ? undefined : session.status === 'landed' && session.via === 'frame' ? ('failed' as const) : prev?.frame;
+    const entry = frame ? { at, failures, frame } : { at, failures };
+    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: entry } } });
   }
   return report;
 }
