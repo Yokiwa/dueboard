@@ -105,7 +105,7 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
   for (const r of store.snapshots.brightspace?.items ?? []) raw.set(`brightspace:${r.sourceItemId}`, r);
 
   const dash = buildDashboard(
-    { snapshots: store.snapshots, manualItems: store.manualItems, manualLinks: store.manualLinks, userState: store.userState, captured: store.captured },
+    { snapshots: store.snapshots, manualItems: store.manualItems, manualLinks: store.manualLinks, userState: store.userState, captured: store.captured, completion: store.completion },
     now,
     { includeHidden: true },
   );

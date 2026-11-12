@@ -1,3 +1,5 @@
+import { foldSnapshots, itemState } from './completion';
+import { courseTerm } from '../syllabus/read';
 import { platformById } from './platformRegistry';
 import { findDueMatches } from './dueText';
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
@@ -27,6 +29,8 @@ export interface DashboardInput {
   userState: UserState;
   /** Due dates read on platform pages (visits, or pages the student opened). */
   captured?: StoreShape['captured'];
+  /** Whether each item was handed in, as learned over syncs (1.5.0). */
+  completion?: StoreShape['completion'];
 }
 export interface Dashboard {
   courses: Course[];
@@ -235,13 +239,19 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   const { all, alias, gsUrl, pearsonLaunch } = buildCourses(input);
   const visible = new Set([...all.values()].filter((c) => !c.hidden).map((c) => c.id));
   const minDue = now.getTime() - WINDOW_MS;
-  const inWindow = (i: { dueAt: string | null }) => !i.dueAt || Date.parse(i.dueAt) >= minDue;
+  // Work to hand in (assignments, quizzes, the student's own entries) stays from the start of its course's term; exams and
+  // events leave 7 days after their date.
+  const termStart = new Map<string, number>();
+  for (const c of input.snapshots.brightspace?.courses ?? []) termStart.set(courseId('brightspace', c.sourceCourseId), courseTerm(c, now).start.getTime());
+  const guessStart = courseTerm({}, now).start.getTime();
+  const windowStart = (type: ItemType, cid: string) => (type === 'exam' || type === 'event' ? minDue : Math.min(minDue, termStart.get(cid) ?? guessStart));
+  const inWindow = (i: { dueAt: string | null; type: ItemType }, cid: string) => !i.dueAt || Date.parse(i.dueAt) >= windowStart(i.type, cid);
 
   const raw: Item[] = [];
   for (const source of ['brightspace', 'gradescope', 'pearson'] as const) {
     for (const r of input.snapshots[source]?.items ?? []) {
       const cid = alias.get(courseId(source, r.sourceCourseId));
-      if (cid && visible.has(cid) && inWindow(r)) raw.push(fromRaw(r, cid));
+      if (cid && visible.has(cid) && inWindow(r, cid)) raw.push(fromRaw(r, cid));
     }
   }
   raw.sort((a, b) => dueMs(a) - dueMs(b));
@@ -261,14 +271,24 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
     if (launch) m.url = launch;
   }
   // Dates filled in from titles and platform pages follow the same 7-day limit as the rest.
-  merged.splice(0, merged.length, ...merged.filter(inWindow));
+  merged.splice(0, merged.length, ...merged.filter((m) => inWindow(m, m.courseId)));
 
   for (const m of input.manualItems) {
     const cid = alias.get(m.courseId) ?? m.courseId;
-    if (!visible.has(cid) || !inWindow(m)) continue;
+    if (!visible.has(cid) || !inWindow({ dueAt: m.dueAt, type: 'manual' }, cid)) continue;
     merged.push({ id: m.id, courseId: cid, title: m.title, type: 'manual', dueAt: m.dueAt, url: m.url, sources: ['manual'], sourceKeys: [m.id], submitted: false, doneByUser: false });
   }
-  for (const m of merged) m.doneByUser = m.sourceKeys.some((k) => input.userState.done[k]);
+  // Whether each item was handed in: the student's choices, then what the sources said (this sync's answers included).
+  const completion = foldSnapshots(input.completion ?? {}, input.snapshots, now);
+  for (const m of merged) {
+    const st = itemState(m.sourceKeys, completion, input.userState);
+    m.doneByUser = st.doneBy?.by === 'user';
+    m.submitted = st.done && st.doneBy?.by !== 'user';
+    if (st.score) m.score = st.score;
+    if (st.done && st.doneBy) m.doneBy = st.doneBy;
+    const pastDue = m.dueAt !== null && Date.parse(m.dueAt) <= now.getTime();
+    if (!st.done && pastDue && (m.type === 'assignment' || m.type === 'quiz') && st.known === 'unknown') m.notSure = true;
+  }
 
   const items = merged.sort((a, b) => dueMs(a) - dueMs(b) || a.title.localeCompare(b.title));
   const pending = (i: Item) => !i.doneByUser && !i.submitted;

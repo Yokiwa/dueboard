@@ -68,3 +68,13 @@ describe('detailGroups', () => {
     expect(titles(g.completed)).toEqual(['Soon done', 'Done HW', 'Old HW']);
   });
 });
+
+describe('detailGroups: overdue order (1.5.0)', () => {
+  it('lists overdue most recently due first', async () => {
+    const { detailGroups } = await import('../../src/core/courseWeek');
+    const now = new Date('2026-11-12T12:00:00Z');
+    const mk = (id: string, dueAt: string) => ({ id, courseId: 'c', title: id, type: 'assignment' as const, dueAt, url: '', sources: ['brightspace' as const], sourceKeys: [id], submitted: false, doneByUser: false });
+    const g = detailGroups([mk('a', '2026-10-01T00:00:00Z'), mk('b', '2026-11-10T00:00:00Z'), mk('c', '2026-10-20T00:00:00Z')], now);
+    expect(g.overdue.map((i) => i.id)).toEqual(['b', 'c', 'a']);
+  });
+});

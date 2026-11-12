@@ -215,6 +215,7 @@ describe('buildDashboard — items', () => {
   it('submitted if any source submitted', () => {
     const i = twoSides('2026-11-06T23:59:00-05:00');
     i.snapshots.gradescope!.items[0]!.submitted = true;
+    i.snapshots.gradescope!.items[0]!.submissionKnown = true;
     expect(buildDashboard(i, now).items[0]!.submitted).toBe(true);
   });
 
@@ -226,13 +227,13 @@ describe('buildDashboard — items', () => {
     expect(it0.id).toBe('brightspace:7');
   });
 
-  it('window keeps items due after now-7d and items without due', () => {
+  it('window keeps events due after now-7d and items without due (work to hand in stays for the term)', () => {
     const d = buildDashboard(
       input({
         snapshots: {
           brightspace: snap([bsCourse('42', 'CS 18000', 'CS 18000')], [
-            item({ source: 'brightspace', sourceItemId: 'old', sourceCourseId: '42', title: 'Old', dueAt: iso('2026-10-27T12:00:00-05:00') }),
-            item({ source: 'brightspace', sourceItemId: 'late', sourceCourseId: '42', title: 'Late', dueAt: iso('2026-10-30T12:00:00-05:00') }),
+            item({ source: 'brightspace', sourceItemId: 'old', sourceCourseId: '42', title: 'Old', type: 'event', dueAt: iso('2026-10-27T12:00:00-05:00') }),
+            item({ source: 'brightspace', sourceItemId: 'late', sourceCourseId: '42', title: 'Late', type: 'event', dueAt: iso('2026-10-30T12:00:00-05:00') }),
             item({ source: 'brightspace', sourceItemId: 'none', sourceCourseId: '42', title: 'Reading', dueAt: null }),
           ]),
         },
@@ -288,7 +289,7 @@ describe('buildDashboard — items', () => {
           brightspace: snap([bsCourse('42', 'CS 18000', 'CS 18000')], [
             item({ source: 'brightspace', sourceItemId: '1', sourceCourseId: '42', title: 'Past', dueAt: iso('2026-11-03T12:00:00-05:00') }),
             item({ source: 'brightspace', sourceItemId: '2', sourceCourseId: '42', title: 'Done', dueAt: iso('2026-11-04T13:00:00-05:00') }),
-            item({ source: 'brightspace', sourceItemId: '3', sourceCourseId: '42', title: 'Sub', dueAt: iso('2026-11-04T14:00:00-05:00'), submitted: true }),
+            item({ source: 'brightspace', sourceItemId: '3', sourceCourseId: '42', title: 'Sub', dueAt: iso('2026-11-04T14:00:00-05:00'), submitted: true, submissionKnown: true }),
             item({ source: 'brightspace', sourceItemId: '4', sourceCourseId: '42', title: 'Next', dueAt: iso('2026-11-04T23:59:00-05:00') }),
           ]),
         },
@@ -616,8 +617,10 @@ describe('due dates written in the homework title', () => {
     expect(one('HW05_due_Sept_30 (6.1-6.6)', null, sept).dueAt).toBe(new Date(2026, 8, 30, 23, 59).toISOString());
   });
 
-  it('a title date more than 7 days past is dropped like any other old item, so it does not come back as overdue', () => {
-    expect(buildDashboard(chm('HW03_due_Sept_16 (4.1)'), now).items).toEqual([]);
+  it('a title date earlier in the term stays, as overdue work (1.5.0: every overdue item of the term)', () => {
+    const items = buildDashboard(chm('HW03_due_Sept_16 (4.1)'), now).items;
+    expect(items).toHaveLength(1);
+    expect(items[0]!.dueAt).toBe(new Date(2026, 8, 16, 23, 59).toISOString());
   });
 
   it('only with the word "due": a date alone in a title is not a deadline', () => {
@@ -629,5 +632,108 @@ describe('due dates written in the homework title', () => {
     const it11 = one('HW11 (10.3, 12.1)_due_Nov 11', iso('2026-11-12T23:59:00-05:00'));
     expect(it11.dueAt).toBe(iso('2026-11-12T23:59:00-05:00'));
     expect(it11.dueFrom).toBeUndefined();
+  });
+});
+
+describe('buildDashboard — every overdue item of the term (1.5.0)', () => {
+  const termCourse = (start: string | null, end: string | null): RawCourse => ({ ...bsCourse('42', 'CS 18000', 'CS 18000'), start, end });
+  const due = (daysAgo: number) => new Date(now.getTime() - daysAgo * 86_400_000).toISOString();
+  const run = (items: RawItem[], p: Partial<DashboardInput> = {}, course = termCourse('2026-08-20T04:00:00.000Z', '2026-12-20T04:59:00.000Z')) =>
+    buildDashboard(input({ snapshots: { brightspace: snap([course], items) }, ...p }), now).items;
+
+  it('an assignment due 5 weeks ago in a current course is shown; an event 5 weeks ago is not', () => {
+    const items = run([
+      item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(35) }),
+      item({ source: 'brightspace', sourceItemId: 'event:2', sourceCourseId: '42', title: 'Exam review', type: 'event', dueAt: due(35) }),
+      item({ source: 'brightspace', sourceItemId: 'quiz:3', sourceCourseId: '42', title: 'Quiz 1', type: 'quiz', dueAt: due(35) }),
+    ]);
+    expect(items.map((i) => i.id).sort()).toEqual(['brightspace:dropbox:1', 'brightspace:quiz:3']);
+  });
+
+  it('work due before the term started is not shown', () => {
+    expect(run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 0', dueAt: '2026-08-01T04:00:00.000Z' })])).toEqual([]);
+  });
+
+  it('course without start date uses the semester guess', () => {
+    const course = termCourse(null, null);
+    const items = run(
+      [
+        item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'July work', dueAt: '2026-07-20T04:00:00.000Z' }),
+        item({ source: 'brightspace', sourceItemId: 'dropbox:2', sourceCourseId: '42', title: 'September work', dueAt: '2026-09-20T04:00:00.000Z' }),
+      ],
+      {},
+      course,
+    );
+    expect(items.map((i) => i.title)).toEqual(['September work']);
+  });
+
+  it('a done record makes the item submitted with its score and doneBy', () => {
+    const score = { text: '18/25', earned: 18, possible: 25, from: 'Brightspace' };
+    const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(20) })], {
+      completion: { 'brightspace:dropbox:1': { state: 'done', by: 'score', source: 'Brightspace', score, checkedAt: 'x' } },
+    });
+    expect(it1).toMatchObject({ submitted: true, doneByUser: false, score, doneBy: { by: 'score', source: 'Brightspace' } });
+    expect(it1!.notSure).toBeFalsy();
+  });
+
+  it("an answer in this sync's snapshot counts before it is folded into the records", () => {
+    const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(20), submitted: true, submissionKnown: true })]);
+    expect(it1).toMatchObject({ submitted: true, doneBy: { by: 'submitted', source: 'Brightspace' } });
+  });
+
+  it('a past-due unknown assignment is notSure; a manual entry is not; a not_done one is not', () => {
+    const items = run(
+      [
+        item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'Unknown', dueAt: due(20) }),
+        item({ source: 'brightspace', sourceItemId: 'dropbox:2', sourceCourseId: '42', title: 'Missed', dueAt: due(20), submissionKnown: true }),
+      ],
+      { manualItems: [{ id: 'manual:1', courseId: 'brightspace:42', title: 'My essay', dueAt: due(20), url: '' }] },
+    );
+    const by = (t: string) => items.find((i) => i.title === t)!;
+    expect(by('Unknown').notSure).toBe(true);
+    expect(by('Missed').notSure).toBeFalsy();
+    expect(by('My essay').notSure).toBeFalsy();
+  });
+
+  it('a Pearson row marked submitted only because it closed is not done', () => {
+    const d = buildDashboard(
+      input({ snapshots: { brightspace: snap([termCourse('2026-08-20T04:00:00.000Z', '2026-12-20T04:59:00.000Z')]), pearson: snap([{ source: 'pearson', sourceCourseId: 'p', name: 'Pearson MyLab', code: null, url: 'x' }], [item({ source: 'pearson', sourceItemId: '100', sourceCourseId: 'p', title: 'Lesson 1', dueAt: due(20), submitted: true })]) } }),
+      now,
+      { includeHidden: true },
+    );
+    const p = d.items.find((i) => i.id === 'pearson:100');
+    expect(p?.submitted).toBe(false);
+  });
+
+  it('merged items combine their sources', () => {
+    const d = buildDashboard(
+      input({
+        snapshots: {
+          brightspace: snap([termCourse('2026-08-20T04:00:00.000Z', '2026-12-20T04:59:00.000Z')], [item({ source: 'brightspace', sourceItemId: 'topic:1', sourceCourseId: '42', title: 'Project 3', dueAt: due(10) })]),
+          gradescope: snap([gsCourse('9', 'CS 180', 'CS 18000')], [item({ source: 'gradescope', sourceItemId: '9', sourceCourseId: '9', title: 'Project 3', dueAt: due(10) })]),
+        },
+        completion: { 'brightspace:topic:1': { state: 'not_done', source: 'Brightspace', checkedAt: 'x' }, 'gradescope:9': { state: 'done', by: 'submitted', source: 'Gradescope', checkedAt: 'x' } },
+      }),
+      now,
+    );
+    expect(d.items).toHaveLength(1);
+    expect(d.items[0]).toMatchObject({ submitted: true, doneBy: { by: 'submitted', source: 'Gradescope' } });
+  });
+
+  it('a deadline moved into the future leaves Overdue', () => {
+    const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: new Date(now.getTime() + 2 * 86_400_000).toISOString() })], {
+      completion: { 'brightspace:dropbox:1': { state: 'not_done', source: 'Brightspace', checkedAt: 'x' } },
+    });
+    expect(it1).toMatchObject({ submitted: false });
+    expect(it1!.notSure).toBeFalsy();
+  });
+
+  it('un-ticked automatic done work is not done and not "Not sure"', () => {
+    const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(20) })], {
+      completion: { 'brightspace:dropbox:1': { state: 'done', by: 'submitted', source: 'Brightspace', checkedAt: 'x' } },
+      userState: { ...emptyUser(), notDone: { 'brightspace:dropbox:1': true } },
+    });
+    expect(it1).toMatchObject({ submitted: false, doneByUser: false });
+    expect(it1!.notSure).toBeFalsy();
   });
 });

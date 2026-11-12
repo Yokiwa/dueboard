@@ -53,8 +53,14 @@ describe('dueVisits', () => {
     expect(keys(store([topic(1, 'HW 1', { dueAt: '2026-11-10T04:59:00.000Z' }), topic(2, 'HW 2', { launchUrl: undefined })]))).toEqual([]);
   });
 
+  it('skips items a completion record says are done', () => {
+    const s = store([topic(1, 'HW 1')]);
+    s.completion = { 'brightspace:topic:1': { state: 'done', by: 'score', source: 'Brightspace', checkedAt: ago(1) } };
+    expect(keys(s)).toEqual([]);
+  });
+
   it('skips submitted and done items', () => {
-    const s = store([topic(1, 'HW 1', { submitted: true }), topic(2)]);
+    const s = store([topic(1, 'HW 1', { submitted: true, submissionKnown: true }), topic(2)]);
     s.userState.done['brightspace:topic:2'] = true;
     expect(keys(s)).toEqual([]);
   });

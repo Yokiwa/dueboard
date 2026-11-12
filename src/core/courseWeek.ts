@@ -67,7 +67,7 @@ export function detailGroups(items: Item[], now: Date): DetailGroups {
   const t = now.getTime();
   const open = items.filter((i) => !isDone(i));
   return {
-    overdue: open.filter((i) => i.dueAt && due(i) <= t).sort(soonestFirst),
+    overdue: open.filter((i) => i.dueAt && due(i) <= t).sort((a, b) => due(b) - due(a) || a.title.localeCompare(b.title)),
     upcoming: open.filter((i) => i.dueAt && due(i) > t).sort(soonestFirst),
     undated: open.filter((i) => !i.dueAt),
     completed: items.filter(isDone).sort((a, b) => (due(b) || 0) - (due(a) || 0)),

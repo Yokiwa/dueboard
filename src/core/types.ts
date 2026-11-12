@@ -147,6 +147,12 @@ export interface Item {
   duePlatform?: string;
   /** "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'" */
   dueEvidence?: string;
+  /** The score of done work, when a source shows one. */
+  score?: Score;
+  /** Why the item counts as done, when it does. */
+  doneBy?: { by: 'submitted' | 'score' | 'user'; source?: string };
+  /** Past due, and nothing has said whether it was handed in. */
+  notSure?: boolean;
 }
 export interface CourseLink {
   courseId: string;

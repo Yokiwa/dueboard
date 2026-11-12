@@ -1,4 +1,4 @@
-import type { CheckAnswer, CompletionRecord, RawItem, Score, UserState } from './types';
+import type { CheckAnswer, CompletionRecord, RawItem, Score, SourceId, StoreShape, UserState } from './types';
 
 /**
  * Whether work was handed in: what a source says (answerOf), how answers add up over syncs (foldAnswer), and an
@@ -68,4 +68,21 @@ export function itemState(keys: string[], completion: Record<string, CompletionR
 /** Drops undefined fields, so records stay small and compare cleanly. */
 function clean<T extends object>(o: T): T {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+}
+
+const SOURCE_LABEL: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope', pearson: 'Pearson' };
+
+/** The records after one sync: every raw item that answered "handed in or not" (or has a score) is folded in. */
+export function foldSnapshots(completion: Record<string, CompletionRecord>, snapshots: StoreShape['snapshots'], now: Date): Record<string, CompletionRecord> {
+  const out = { ...completion };
+  for (const source of Object.keys(snapshots) as SourceId[]) {
+    for (const raw of snapshots[source]?.items ?? []) {
+      const answer = answerOf(raw, SOURCE_LABEL[source]);
+      if (!answer) continue;
+      const key = `${raw.source}:${raw.sourceItemId}`;
+      const next = foldAnswer(out[key], answer, now);
+      if (next) out[key] = next;
+    }
+  }
+  return out;
 }
