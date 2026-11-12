@@ -1,7 +1,7 @@
 import { buildDashboard } from '../core/dashboard';
 import { syllabusDue } from '../syllabus/sources';
 import { launchLinks } from '../core/platforms';
-import { platformByHost, platformByTitle } from '../core/platformRegistry';
+import { platformByHost, platformById, platformByTitle } from '../core/platformRegistry';
 import { originAllowed } from '../core/permissions';
 
 export { originAllowed };
@@ -49,6 +49,9 @@ const MAX_TITLES = 40;
 /** When a captured entry is due for another visit; null = not now. Lower rank goes first. */
 function rank(c: CapturedDue | undefined, now: number, trigger: Trigger, granted: string[]): number | null {
   if (!c) return 0;
+  // It landed on a platform DueBoard reads on its own (Gradescope, Pearson), and that page shows no date: its dates
+  // come from that platform's own reading, so the link is not opened again.
+  if (!c.dueAt && platformById(c.platform)?.reader === 'fetch') return null;
   if (c.blocked) return originAllowed(granted, c.blocked) ? 0 : null;
   if (c.dueAt && Date.parse(c.dueAt) < now) return null;
   const age = now - Date.parse(c.checkedAt);

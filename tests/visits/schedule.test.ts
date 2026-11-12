@@ -258,3 +258,16 @@ describe('dueVisits titles', () => {
     expect(last.titles![0]).toEqual({ key: 'brightspace:topic:45', title: 'Homework set 45' });
   });
 });
+
+describe('dueVisits: links that land on a platform DueBoard reads directly', () => {
+  it('a Brightspace link that landed on Gradescope without a date is not visited again (Gradescope is read on its own)', () => {
+    const s = store([topic(1, 'Project #1')], cap(1, { platform: 'gradescope', dueAt: null, misses: 1, checkedAt: ago(48) }));
+    expect(keys(s)).toEqual([]);
+    expect(keys(s, 'manual')).toEqual([]);
+  });
+
+  it('one that landed on another platform without a date is still read again later', () => {
+    const s = store([topic(1, 'HW 1')], cap(1, { platform: 'aleks', dueAt: null, misses: 1, checkedAt: ago(48) }));
+    expect(keys(s)).toEqual(['brightspace:topic:1']);
+  });
+});

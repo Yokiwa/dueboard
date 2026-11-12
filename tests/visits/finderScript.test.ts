@@ -229,3 +229,25 @@ describe('runFinder on a sign-in visit (session mode)', () => {
     }
   });
 });
+
+describe('runFinder in a hidden frame', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+    document.body.innerHTML = '<h1>Project 1</h1><p>No submission yet.</p>';
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("a frame of DueBoard's hidden frames says nothing-here at the end like a top page does; a nested frame of a tab does not", async () => {
+    const sent: VisitMessage[] = [];
+    const w = fakeWindow(false) as FinderWindow & { __dueboardInFrame?: boolean };
+    w.__dueboardInFrame = true;
+    runFinder(w, (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(answers(sent)).toEqual([{ type: 'visitFound', found: null, frameUrl: 'https://www.aleks.com/hw7', top: false }]);
+    const sent2: VisitMessage[] = [];
+    runFinder(fakeWindow(false), (m) => sent2.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(answers(sent2)).toEqual([]);
+  });
+});

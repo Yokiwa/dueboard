@@ -355,3 +355,39 @@ describe('runVisitPass: progress', () => {
     expect(new Set(dones).size).toBe(dones.length);
   });
 });
+
+describe('runVisitPass: learning that only the window reads a platform', () => {
+  const memory = (s: StoreShape) => s.visitState.frame ?? {};
+  const week = new Date(now.getTime() + 7 * 86_400_000).toISOString();
+  const wiley = (n: number): VisitOutcome => ({ key: `brightspace:topic:${n}`, status: 'found', host: 'education.wiley.com', found: { title: `HW ${n}`, dueAt: '2026-11-10T04:59:00.000Z', evidence: 'Due Nov 9' } });
+
+  it('a page the frame could not date and the window could: its platform goes straight to the window for 7 days', async () => {
+    // A Wiley homework has no platform from its title; its key is learned from where the window read it.
+    const target = t(1, { platform: undefined });
+    const s = setup({ frames: scripted(() => [done(target, { key: 'brightspace:topic:1', status: 'none', host: 'education.wiley.com' }, true)]), windows: async () => [wiley(1)] });
+    await runVisitPass(s.deps, [target]);
+    expect(memory(s.store).wileyplus).toEqual({ blocked: 0, skipUntil: week });
+    // Next run: the captured platform names the key, so the frames are skipped.
+    const next = vi.fn(async () => [] as FrameVisitDone[]);
+    const windows = vi.fn(async () => [wiley(1)]);
+    const s2 = setup({ store: s.store, frames: next, windows });
+    await runVisitPass(s2.deps, [target]);
+    expect(next).toHaveBeenCalledWith([], expect.anything());
+    expect(windows).toHaveBeenCalledWith([expect.objectContaining({ key: 'brightspace:topic:1' })], expect.any(Function));
+  });
+
+  it('the same for a frame that failed and a window that found', async () => {
+    const s = setup({ frames: scripted(() => [done(t(1), blocked(1), true)]), windows: async () => [found(1)] });
+    await runVisitPass(s.deps, [t(1)]);
+    expect(memory(s.store).aleks).toEqual({ blocked: 0, skipUntil: week });
+  });
+
+  it('nothing is learned when the window found nothing either, or when the frame read the page itself', async () => {
+    const s = setup({ frames: scripted(() => [done(t(1), none(1), true)]), windows: async () => [none(1)] });
+    await runVisitPass(s.deps, [t(1)]);
+    expect(memory(s.store).aleks?.skipUntil).toBeUndefined();
+    const s2 = setup({ frames: scripted(() => [done(t(2), found(2))]) });
+    await runVisitPass(s2.deps, [t(2)]);
+    expect(memory(s2.store).aleks?.skipUntil).toBeUndefined();
+  });
+});

@@ -193,13 +193,12 @@ describe('frame host', () => {
     await expect(p).resolves.toMatchObject({ status: 'found', host: 'www.aleks.com', landed: 'https://www.aleks.com/outer' });
   });
 
-  it('none: only an empty answer, readMs after the first non-Brightspace hello', async () => {
-    const { host, child, hello, frame, send } = setup();
+  it('none: no answer at all, readMs after the first non-Brightspace hello', async () => {
+    const { host, child, hello, frame } = setup();
     const p = host.visit(req());
     hello(child(), n(1));
     await vi.advanceTimersByTimeAsync(5_000);
     frame(n(1), 'https://www.aleks.com/hw7');
-    send(n(1), { type: 'visitFound', found: null, frameUrl: 'https://www.aleks.com/hw7', top: false });
     await vi.advanceTimersByTimeAsync(21_999);
     let done = false;
     void p.then(() => (done = true));
@@ -383,5 +382,46 @@ describe('frame host', () => {
     expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toBeNull();
     hello(direct, n(1));
     expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).not.toBeNull();
+  });
+});
+
+describe('frame host: a page that says it has no date', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    holder.innerHTML = '';
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('ends none as soon as the landing page reports nothing, without waiting out the read time', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req());
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    frame(n(1), 'https://purdue.brightspace.com/d2l/lti/x/componentLaunch');
+    frame(n(2), 'https://www.gradescope.com/courses/1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    send(n(2), { type: 'visitFound', found: null, frameUrl: 'https://www.gradescope.com/courses/1?x=1', top: false });
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(p).resolves.toMatchObject({ status: 'none', host: 'www.gradescope.com' });
+  });
+
+  it('keeps waiting when the nothing comes from another frame, or after a button was pressed (the next page may come)', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req());
+    const direct = child();
+    hello(direct, n(1));
+    hello(win(direct), n(2));
+    frame(n(1), 'https://purdue.brightspace.com/d2l/lti/x/componentLaunch');
+    frame(n(2), 'https://education.wiley.com/launcher');
+    send(n(1), { type: 'visitFound', found: null, frameUrl: 'https://purdue.brightspace.com/d2l/lti/x/componentLaunch', top: false });
+    send(n(2), { type: 'visitClick', label: 'Open Assignment', frameUrl: 'https://education.wiley.com/launcher' });
+    send(n(2), { type: 'visitFound', found: null, frameUrl: 'https://education.wiley.com/launcher', top: false });
+    let done = false;
+    void p.then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(12_000);
+    await expect(p).resolves.toMatchObject({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] });
   });
 });

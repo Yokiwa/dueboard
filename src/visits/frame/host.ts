@@ -1,5 +1,5 @@
 import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN } from '../hosts';
-import { isVisitMessage, type VisitMessage } from '../messages';
+import { isVisitMessage, stripUrl, type VisitMessage } from '../messages';
 import type { PageSample } from '../runner';
 import {
   isHelloPost,
@@ -148,6 +148,9 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       }
       case 'visitFound':
         if (m.found && v.req.mode === 'due') v.finish('found', { found: m.found });
+        // The page the visit landed on read itself in full and has no date: no need to wait out the read time, unless a
+        // button was pressed (the page it opens may still come).
+        else if (!m.found && v.req.mode === 'due' && v.readStart !== undefined && v.clicked.length === 0 && stripUrl(m.frameUrl) === v.landed) v.finish('none');
         return;
       case 'visitText':
         if (v.req.mode === 'syllabus') v.finish('text', { lines: m.lines });

@@ -173,6 +173,8 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       log = await visitLog();
       const mine = log.filter((e) => e.key === 'brightspace:topic:22');
       check(mine.some((e) => e.mode === 'frame') && mine.some((e) => e.mode === 'window' && e.result === 'found'), `the log has a Background entry and a Window entry for it (${mine.map((e) => `${e.mode}:${e.result}`).join(', ')})`);
+      const remembered = (await local('visitState')).visitState?.frame?.aleks;
+      check(!!remembered?.skipUntil && Date.parse(remembered.skipUntil) > Date.now() + 6 * 86_400_000, `the platform the window read and the frame could not is remembered: straight to the window next time (${JSON.stringify(remembered)})`);
       await page.goto(`chrome-extension://${id}/diagnostics.html`);
       await page.getByRole('heading', { name: 'Platform visits' }).waitFor({ timeout: 10000 });
       check((await page.getByRole('cell', { name: 'Background', exact: true }).count()) > 0 && (await page.getByRole('cell', { name: 'Window', exact: true }).count()) > 0, 'Diagnostics shows both "Background" and "Window" in the Mode column');

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.7 — 2026-11 (trial build)
+
+- **Faster syncs**:
+  - A platform whose pages the background could not read but the minimized window could (WileyPLUS) now goes straight to the window for 7 days, instead of costing a background attempt of about 20 seconds per homework every time
+  - Brightspace links that land on Gradescope (or Pearson) and show no due date are not opened again: DueBoard reads those platforms' dates directly
+  - A page read in the background that shows no due date ends as soon as it has been read, instead of waiting out about 20 seconds
+
 ## 1.4.6 — 2026-11 (trial build)
 
 - **No page read in the background can open a tab or window any more**: the hidden frames are now sandboxed without permission to open new windows, so the browser itself refuses, whatever way a page tries (1.4.4 and 1.4.5 caught specific ways only; Brightspace's launch page for an "open in a new window" tool still got through). Pages DueBoard can move into the frame are still read in the background; the others are read by the minimized window

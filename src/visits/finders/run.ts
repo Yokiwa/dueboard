@@ -17,6 +17,8 @@ export interface FinderWindow {
   __dueboardAllowOpen?: boolean;
   /** Set by the frame reader for homework visits: titles whose dates may be listed on this page (see listed.ts). */
   __dueboardTitles?: ListedTitle[];
+  /** Set by the frame reader: this frame is in DueBoard's hidden frames, which have no top page of their own. */
+  __dueboardInFrame?: boolean;
 }
 
 const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
@@ -100,7 +102,9 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         sendListed();
         const text = pageLines(win.document).join(' / ').replace(/\s+/g, ' ').slice(0, 300);
         send({ type: 'visitSample', frameUrl: stripUrl(frameUrl), text, buttons: buttonLabels(win.document) });
-        if (top) send({ type: 'visitFound', found: null, frameUrl, top });
+        // The top page says "nothing here"; in DueBoard's hidden frames (no top page of their own) every frame does, and
+        // the frame host listens to the one the visit landed on.
+        if (top || win.__dueboardInFrame) send({ type: 'visitFound', found: null, frameUrl, top });
         return;
       }
     }

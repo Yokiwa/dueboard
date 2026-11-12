@@ -72,6 +72,7 @@ export function startFrameReader(win: Window, deps: FrameReaderDeps): void {
     if (config.platform) w.__dueboardPlatform = config.platform;
     w.__dueboardAllowOpen = config.allowOpen;
     w.__dueboardTitles = config.titles;
+    w.__dueboardInFrame = true;
     if (config.allowOpen) addOpenHere(win.document, deps.openHereUrl);
     runFinder(w, (message) => void deps.send({ type: 'frameMessage', nonce, message }).catch(() => undefined));
   };

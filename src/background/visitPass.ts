@@ -1,4 +1,5 @@
 import type { StoreShape } from '../core/types';
+import { platformByHost } from '../core/platformRegistry';
 import type { FrameRunOptions, FrameVisitDone } from '../visits/frameRunner';
 import type { VisitLogEntry } from '../visits/runner';
 import { applyOutcomes, WINDOW_MAX, type VisitOutcome, type VisitTarget } from '../visits/schedule';
@@ -138,6 +139,26 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
     saveOutcomes(outcomes).catch((e: unknown) => console.warn('DueBoard: could not save visit results', e));
   if (windowOutcomes.length > 0) await trySave(windowOutcomes);
   final.push(...windowOutcomes);
+
+  // A page the frame tried and could not read but the window could (WileyPLUS opens its assignment only in a real
+  // window): its platform goes straight to the window for a while instead of costing a frame visit every time. Keyed
+  // as the next run will key it (the platform the window read it on, now in the captured entry).
+  const tried = new Map(pending.map((d) => [d.target.key, d.target]));
+  const learned = new Set<string>();
+  for (const o of windowOutcomes) {
+    const target = tried.get(o.key);
+    if (!target || (o.status !== 'found' && o.status !== 'text')) continue;
+    learned.add(target.platform ?? platformByHost(o.host)?.id ?? o.host);
+  }
+  if (learned.size > 0) {
+    const skipUntil = new Date(nowMs + SKIP_DAYS * DAY).toISOString();
+    await serial(async () => {
+      const store = await deps.load();
+      const frame = { ...store.visitState.frame };
+      for (const k of learned) frame[k] = { blocked: 0, skipUntil };
+      await deps.save({ visitState: { ...store.visitState, frame } });
+    }).catch((e: unknown) => console.warn('DueBoard: could not save what the window read', e));
+  }
 
   // A page the frame could not read and the window did not get to (page limit, time, a failed window run): the frame's
   // own result counts, once.
