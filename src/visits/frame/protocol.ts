@@ -1,3 +1,4 @@
+import type { CheckAnswer } from '../../core/types';
 import type { FoundDue } from '../finders/types';
 import type { VisitMessage } from '../messages';
 import type { PageSample } from '../runner';
@@ -12,7 +13,7 @@ export interface ListedTitle {
 export interface FrameVisitRequest {
   token: string;
   url: string;
-  mode: 'due' | 'session' | 'syllabus';
+  mode: 'due' | 'session' | 'syllabus' | 'check';
   platform?: string;
   titles?: ListedTitle[];
   helloMs?: number;
@@ -33,10 +34,12 @@ export interface Listed {
 }
 
 export interface FrameResult {
-  status: 'found' | 'none' | 'text' | 'landed' | 'blocked' | 'signed_out';
+  status: 'found' | 'checked' | 'none' | 'text' | 'landed' | 'blocked' | 'signed_out';
   host?: string;
   landed?: string;
   found?: FoundDue;
+  /** Whether the page showed the work done (check mode; or found together with the date in due mode). */
+  check?: CheckAnswer;
   lines?: string[];
   listed: Listed[];
   frames: { url: string; top: boolean }[];

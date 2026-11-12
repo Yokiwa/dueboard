@@ -159,6 +159,7 @@ export default defineBackground({
       return isStale(syncMeta, new Date()) ? syncNow('auto') : null;
     },
     visitFound: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
+    visitCheck: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitText: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitFrame: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),
     visitClick: async (msg, sender) => isVisitMessage(msg) && deliverVisitMessage(msg, sender),

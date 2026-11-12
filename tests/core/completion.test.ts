@@ -12,6 +12,14 @@ describe('answerOf', () => {
   it('a score means done by score', () => {
     expect(answerOf(raw({ score, submitted: true }), 'Gradescope')).toEqual({ state: 'done', by: 'score', source: 'Gradescope', score });
   });
+  it('a zero score alone proves nothing (platforms give 0 for missing work); with a known submission it is done', () => {
+    const zero: Score = { text: '0/25', earned: 0, possible: 25, from: 'Brightspace' };
+    expect(answerOf(raw({ score: zero }), 'Brightspace')).toBeNull();
+    expect(answerOf(raw({ score: { text: '0%', from: 'Pearson' } }), 'Pearson')).toBeNull();
+    expect(answerOf(raw({ score: zero, submitted: false, submissionKnown: true }), 'Brightspace')).toEqual({ state: 'not_done', source: 'Brightspace' });
+    expect(answerOf(raw({ score: zero, submitted: true, submissionKnown: true }), 'Brightspace')).toEqual({ state: 'done', by: 'score', source: 'Brightspace', score: zero });
+  });
+
   it('submitted and known means done by submitted; known and not submitted means not_done; unknown means null', () => {
     expect(answerOf(raw({ submitted: true, submissionKnown: true }), 'Brightspace')).toEqual({ state: 'done', by: 'submitted', source: 'Brightspace' });
     expect(answerOf(raw({ submitted: false, submissionKnown: true }), 'Brightspace')).toEqual({ state: 'not_done', source: 'Brightspace' });

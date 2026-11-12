@@ -7,8 +7,10 @@ import type { CheckAnswer, CompletionRecord, RawItem, Score, SourceId, StoreShap
 
 /** What a raw item from a source says, or null when it says nothing (a "submitted: false" that was never asked). */
 export function answerOf(raw: RawItem, source: string): CheckAnswer | null {
-  if (raw.score) return { state: 'done', by: 'score', source, score: raw.score };
+  // A zero proves nothing on its own: platforms and gradebooks give 0 for missing work.
+  if (raw.score && !isZero(raw.score)) return { state: 'done', by: 'score', source, score: raw.score };
   if (!raw.submissionKnown) return null;
+  if (raw.score && raw.submitted) return { state: 'done', by: 'score', source, score: raw.score };
   return raw.submitted ? { state: 'done', by: 'submitted', source } : { state: 'not_done', source };
 }
 
@@ -63,6 +65,12 @@ export function itemState(keys: string[], completion: Record<string, CompletionR
     return out;
   }
   return { done: false, known: records.some((r) => r.state === 'not_done') ? 'not_done' : 'unknown' };
+}
+
+/** "0/25", "0%", "0": a score of zero. */
+export function isZero(s: Score): boolean {
+  if (typeof s.earned === 'number') return s.earned === 0;
+  return /^0+(?:\.0+)?\s*%?$/.test(s.text.trim());
 }
 
 /** Drops undefined fields, so records stay small and compare cleanly. */

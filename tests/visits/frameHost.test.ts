@@ -438,3 +438,90 @@ describe('frame host: a page that says it has no date', () => {
     await expect(p).resolves.toMatchObject({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] });
   });
 });
+
+describe('frame host: check mode', () => {
+  const check = { state: 'done', by: 'score', source: 'ALEKS', score: { text: '18/25', earned: 18, possible: 25, from: 'ALEKS' }, evidence: 'Score: 18/25' };
+  beforeEach(() => {
+    vi.useFakeTimers();
+    holder.innerHTML = '';
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('check mode ends checked with the answer', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ mode: 'check' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    send(n(1), { type: 'visitCheck', check, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    await expect(p).resolves.toMatchObject({ status: 'checked', check, host: 'www.aleks.com' });
+  });
+
+  it('check mode lets the page press its "open the assignment" button', () => {
+    const { host, child, hello } = setup();
+    void host.visit(req({ mode: 'check' }));
+    hello(child(), n(1));
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toMatchObject({ mode: 'check', allowOpen: true });
+  });
+
+  it('check mode with no answer ends none-like after the read time', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ mode: 'check' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    // A date means nothing in check mode.
+    send(n(1), { type: 'visitFound', found, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    let done = false;
+    void p.then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(21_000);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1_500);
+    const r = await p;
+    expect(r.status).toBe('none');
+    expect(r.check).toBeUndefined();
+  });
+
+  it('check mode ends none at once when the landing page reports nothing and nothing was pressed', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ mode: 'check' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    send(n(1), { type: 'visitCheck', check: null, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(p).resolves.toMatchObject({ status: 'none' });
+  });
+
+  it('a visitCheck in due mode is ignored; a visitFound with a check carries it', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req());
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    send(n(1), { type: 'visitCheck', check, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    send(n(1), { type: 'visitFound', found, check, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    await expect(p).resolves.toMatchObject({ status: 'found', found, check });
+  });
+
+  it('drops a malformed check (wrong state, no source, a score without text)', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ mode: 'check', readMs: 1_000 }));
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    send(n(1), { type: 'visitCheck', check: { state: 'maybe', source: 'x' }, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    send(n(1), { type: 'visitCheck', check: { state: 'done', by: 'score' }, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    send(n(1), { type: 'visitCheck', check: { state: 'done', by: 'score', source: 'x', score: { earned: 1 } }, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    send(n(1), { type: 'visitFound', found, check: { state: 'done', by: 'magic', source: 'x' }, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    await vi.advanceTimersByTimeAsync(1_000);
+    const r = await p;
+    expect(r.status).toBe('none');
+    expect(r.check).toBeUndefined();
+  });
+
+  it('a due-mode visitFound with a malformed check is dropped as a whole', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ readMs: 1_000 }));
+    hello(child(), n(1));
+    frame(n(1), 'https://www.aleks.com/hw7');
+    send(n(1), { type: 'visitFound', found, check: { state: 'done', by: 'magic', source: 'x' }, frameUrl: 'https://www.aleks.com/hw7', top: false });
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(p).resolves.toMatchObject({ status: 'none' });
+  });
+});

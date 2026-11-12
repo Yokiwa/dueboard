@@ -288,3 +288,76 @@ describe('runFinder on a sign-in visit that does not find its link', () => {
     expect(sent2.filter((m) => m.type === 'visitSample')).toEqual([{ type: 'visitSample', frameUrl: 'https://interop.pearson.com/launch', text: 'Something went wrong / Try again', buttons: ['Try again'] }]);
   });
 });
+
+describe('runFinder reads whether the work is done (check mode)', () => {
+  const checkWindow = (href = 'https://www.aleks.com/hw7', top = true): FinderWindow => {
+    const w = { document, location: { href }, __dueboardMode: 'check', __dueboardPlatform: 'ALEKS' } as FinderWindow;
+    w.top = top ? w : ({} as FinderWindow);
+    return w;
+  };
+  const checks = (sent: VisitMessage[]) => sent.filter((m) => m.type === 'visitCheck' || m.type === 'visitFound');
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+    document.body.innerHTML = '<h1>Homework 7</h1><div id="meta"></div>';
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('in check mode a page with "Score: 18/25" sends visitCheck at once', async () => {
+    const sent: VisitMessage[] = [];
+    runFinder(checkWindow(), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(1000);
+    document.getElementById('meta')!.textContent = 'Score: 18/25';
+    await vi.advanceTimersByTimeAsync(600);
+    const got = checks(sent);
+    expect(got).toHaveLength(1);
+    expect(got[0]).toMatchObject({ type: 'visitCheck', check: { state: 'done', by: 'score', source: 'ALEKS', score: { earned: 18, possible: 25 } }, frameUrl: 'https://www.aleks.com/hw7', top: true });
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(checks(sent)).toHaveLength(1);
+  });
+
+  it('a page with nothing sends visitCheck null at the time limit with a sample', async () => {
+    const sent: VisitMessage[] = [];
+    runFinder(checkWindow(), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(checks(sent)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(checks(sent)).toEqual([{ type: 'visitCheck', check: null, frameUrl: 'https://www.aleks.com/hw7', top: true }]);
+    expect(sent.some((m) => m.type === 'visitSample')).toBe(true);
+  });
+
+  it('check mode never reads a date (no visitFound)', async () => {
+    document.getElementById('meta')!.textContent = 'Due Date: 11/10/2026 11:59 PM';
+    const sent: VisitMessage[] = [];
+    runFinder(checkWindow(), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(sent.some((m) => m.type === 'visitFound')).toBe(false);
+  });
+
+  it('Brightspace pages are never read for completion (its topics say "Completed" once viewed)', async () => {
+    document.body.innerHTML = '<h1>Homework 7</h1><span>Completed</span>';
+    const sent: VisitMessage[] = [];
+    runFinder(checkWindow('https://purdue.brightspace.com/d2l/le/content/1/viewContent/2/View'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(checks(sent)).toEqual([{ type: 'visitCheck', check: null, frameUrl: 'https://purdue.brightspace.com/d2l/le/content/1/viewContent/2/View', top: true }]);
+  });
+
+  it('a due-mode visitFound carries the check when the page shows one', async () => {
+    document.getElementById('meta')!.innerHTML = '<p>Due Date: 11/10/2026 11:59 PM</p><p>Score: 18/25</p>';
+    const sent: VisitMessage[] = [];
+    runFinder(fakeWindow(true, 'due', 'ALEKS'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(600);
+    const found = sent.find((m) => m.type === 'visitFound');
+    expect(found).toMatchObject({ type: 'visitFound', check: { state: 'done', by: 'score', source: 'ALEKS' } });
+  });
+
+  it('a due-mode visitFound has no check when the page shows none', async () => {
+    document.getElementById('meta')!.textContent = 'Due Date: 11/10/2026 11:59 PM';
+    const sent: VisitMessage[] = [];
+    runFinder(fakeWindow(true, 'due', 'ALEKS'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(600);
+    const found = sent.find((m) => m.type === 'visitFound') as { check?: unknown };
+    expect(found).toBeDefined();
+    expect('check' in found).toBe(false);
+  });
+});

@@ -50,6 +50,19 @@ const isFoundShape = (v: unknown): boolean => {
   return !!o && typeof o === 'object' && isStr(o.title) && isStr(o.dueAt) && isStr(o.evidence);
 };
 
+const isScoreShape = (v: unknown): boolean => {
+  const o = v as { text?: unknown; from?: unknown; earned?: unknown; possible?: unknown; evidence?: unknown } | null;
+  const num = (x: unknown) => x === undefined || (typeof x === 'number' && Number.isFinite(x));
+  return !!o && typeof o === 'object' && isStr(o.text) && isStr(o.from) && num(o.earned) && num(o.possible) && (o.evidence === undefined || isStr(o.evidence));
+};
+/** A page's answer to "is this done": the state, who says so, and optional score and evidence, checked field by field. */
+const isCheckShape = (v: unknown): boolean => {
+  const o = v as { state?: unknown; by?: unknown; source?: unknown; score?: unknown; evidence?: unknown } | null;
+  if (!o || typeof o !== 'object' || !isStr(o.source) || (o.evidence !== undefined && !isStr(o.evidence))) return false;
+  if (o.state === 'not_done') return o.by === undefined && o.score === undefined;
+  return o.state === 'done' && (o.by === 'submitted' || o.by === 'score') && (o.score === undefined || isScoreShape(o.score));
+};
+
 /** The inner message of a frameMessage, checked field by field, or null when it is not one the host knows. */
 function checkInner(m: unknown): Inner | null {
   const o = m as Record<string, unknown> | null;
@@ -71,7 +84,9 @@ function checkInner(m: unknown): Inner | null {
     case 'visitClick':
       return isStr(o.label) && isStr(o.frameUrl) ? o : null;
     case 'visitFound':
-      return isStr(o.frameUrl) && typeof o.top === 'boolean' && (o.found === null || isFoundShape(o.found)) ? o : null;
+      return isStr(o.frameUrl) && typeof o.top === 'boolean' && (o.found === null || isFoundShape(o.found)) && (o.check === undefined || isCheckShape(o.check)) ? o : null;
+    case 'visitCheck':
+      return isStr(o.frameUrl) && typeof o.top === 'boolean' && (o.check === null || isCheckShape(o.check)) ? o : null;
     case 'visitText':
       return isStr(o.frameUrl) && isStrArray(o.lines) ? o : null;
   }
@@ -145,8 +160,14 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
         }
         return;
       }
+      case 'visitCheck':
+        if (v.req.mode !== 'check') return;
+        if (m.check) v.finish('checked', { check: m.check });
+        // As in due mode: the landing page read itself in full and shows nothing, and no button was pressed.
+        else if (v.readStart !== undefined && v.clicked.length === 0 && stripUrl(m.frameUrl) === v.landed) v.finish('none');
+        return;
       case 'visitFound':
-        if (m.found && v.req.mode === 'due') v.finish('found', { found: m.found });
+        if (m.found && v.req.mode === 'due') v.finish('found', { found: m.found, ...(m.check ? { check: m.check } : {}) });
         // The page the visit landed on read itself in full and has no date: no need to wait out the read time, unless a
         // button was pressed (the page it opens may still come).
         else if (!m.found && v.req.mode === 'due' && v.readStart !== undefined && v.clicked.length === 0 && stripUrl(m.frameUrl) === v.landed) v.finish('none');
@@ -243,7 +264,7 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       if (!v) return null;
       if (r.type === 'frameConfig') {
         // Sign-in visits may press one link too (Pearson's Assignments), which may open a new tab: it opens in the frame.
-        return { mode: v.req.mode, platform: v.req.platform, allowOpen: v.req.mode === 'due' || v.req.mode === 'session', titles: v.req.titles ?? [] };
+        return { mode: v.req.mode, platform: v.req.platform, allowOpen: v.req.mode === 'due' || v.req.mode === 'check' || v.req.mode === 'session', titles: v.req.titles ?? [] };
       }
       const inner = checkInner(r.message);
       if (inner) handle(v, v.nonces.get(r.nonce)!.direct, inner);

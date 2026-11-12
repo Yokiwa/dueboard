@@ -220,6 +220,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       const msg = await api.nextMessage(tabId, ROUND_MS);
       if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
+      if (msg.type === 'visitCheck') continue;
       if (msg.found) return { key: t.key, status: 'found', found: msg.found, host: frameHost(msg.frameUrl) ?? host };
       sawNothing = true;
     }
