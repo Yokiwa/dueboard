@@ -93,6 +93,7 @@ const launchPage = (target) =>
 const json = (body) => ({ status: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const html = (body, headers = {}) => ({ status: 200, headers: { 'content-type': 'text/html', ...headers }, body });
 const notFound = () => ({ status: 404, headers: {}, body: '' });
+const handOffAfter = (to, ms) => html(`<p>Signing you in…</p><script>setTimeout(() => location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))})), ${ms})</script>`);
 const handOff = (to) => html(`<script>location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))}))</script>`);
 
 function createMocks({ scenario = 'default' } = {}) {
@@ -246,12 +247,19 @@ function createMocks({ scenario = 'default' } = {}) {
         return gradescope(u);
       // Pearson's page for Brightspace: MyLab signs the student in only when its Assignments link is opened (new tab).
       case 'interop.pearson.com':
-        // The first stop hands off at once (the moment DueBoard may be putting its reader on it).
+        // The first stop hands off at once (the moment DueBoard may be putting its reader on it), then on to Pearson's
+        // course page.
         if (url.pathname === '/security/login') return handOff('https://interop.pearson.com/launch');
         if (via === 'server' && state.pearsonFrameBroken) return { status: 500, headers: { 'content-type': 'text/html' }, body: '' };
-        return html('<h1>Access Pearson for D2L Brightspace</h1><button>Open</button><ul><li><a href="https://mylab.pearson.com/Student/DoAssignments.aspx?view=all&from=launch" target="_blank" aria-label="Assignments, opens in a new window">Assignments</a></li><li><a href="https://mylab.pearson.com/Student/Results.aspx" target="_blank">Results</a></li><li><a href="#">eTextbook</a></li></ul>');
+        return handOff('https://console.pearson.com/courses/c1/dashboard?contextType=interop');
+      // Like Purdue's "Access Pearson for D2L Brightspace": a slow app whose Assignments link (href="#") opens an empty
+      // new tab and then sends it to MyLab's launch address.
+      case 'console.pearson.com':
+        return html(`<h1>Access Pearson for D2L Brightspace</h1><div id="app">Loading…</div><script>setTimeout(() => { document.getElementById('app').innerHTML = '<article><a href="#" aria-label="Open (opens in a new tab)">Open</a></article><ul aria-label="Course links"><li><a id="as" class="link-text" href="#" aria-label="Assignments, , opens in new tab"><span>Assignments</span></a></li><li><a href="#" aria-label="Results, , opens in new tab"><span>Results</span></a></li></ul>'; document.getElementById('as').addEventListener('click', (e) => { e.preventDefault(); const w = window.open('', '_blank'); setTimeout(() => { w.location = 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch'; }, 300); }); }, 3000);</script>`);
       case 'mylab.pearson.com': {
         state.hits.mylab++;
+        // MyLab's launch address hands off once more; the session exists only once the page it leads to has loaded.
+        if (url.pathname.startsWith('/api/')) return handOffAfter('https://mylab.pearson.com/Student/DoAssignments.aspx?view=all&from=launch', 1500);
         // Opening MyLab from Pearson's Brightspace page signs the student in; DueBoard's own request reads with that session.
         if (url.searchParams.get('from') === 'launch') state.mylabSignedIn = true;
         if (!state.mylabSignedIn) return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/login.html'), 'utf8'));

@@ -38,7 +38,7 @@ function fakeApi(s: Script) {
     },
     waitForLanding: async (_tab, _ms, o) => {
       if (o?.brightspacePage) calls.push('wait page');
-      if (o?.host) calls.push(`wait host ${o.host}`);
+      if (o?.session) calls.push(`wait session ${o.session}`);
       return landings.shift() ?? 'timeout';
     },
     launchHost: async (url) => {
@@ -136,7 +136,7 @@ describe('runVisits', () => {
     const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
     expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
     expect(f.calls.filter((c) => c === 'inject session pearson').length).toBe(2);
-    expect(f.calls.filter((c) => c === 'wait host mylab.pearson.com').length).toBe(2);
+    expect(f.calls.filter((c) => c === 'wait session pearson').length).toBe(2);
   });
 
   it('a sign-in page that moves on while the reader is being put on it does not end the visit', async () => {
@@ -152,6 +152,23 @@ describe('runVisits', () => {
     const out = await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
     expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'error' }]);
     expect(log[0]?.siteNote).toContain('No tab with id: 5');
+  });
+
+  it("a window sign-in keeps going past MyLab's launch address (/api/...) to the page the session belongs to", async () => {
+    const f = fakeApi({ landings: [at('https://interop.pearson.com/security/login'), at('https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch'), 'timeout', at('https://mylab.pearson.com/Student/DoAssignments.aspx')] });
+    const log: VisitLogEntry[] = [];
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api, { onLog: (e) => log.push(e) });
+    expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
+    expect(log[0]?.landed).toBe('https://mylab.pearson.com/Student/DoAssignments.aspx');
+  });
+
+  it('a window sign-in gets about a minute (Pearson\'s course page loads slowly), not one page\'s time', async () => {
+    const landings: Landing[] = [at('https://console.pearson.com/courses/c1/dashboard')];
+    for (let i = 0; i < 10; i++) landings.push('timeout');
+    landings.push(at('https://mylab.pearson.com/Student/DoAssignments.aspx'));
+    const f = fakeApi({ landings });
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
+    expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
   });
 
   it('a session visit that never reaches the session host ends as a timeout (the resync decides)', async () => {

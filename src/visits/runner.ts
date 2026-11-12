@@ -1,5 +1,5 @@
 import { stripUrl, type VisitMessage } from './messages';
-import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN } from './hosts';
+import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN, sessionDone } from './hosts';
 import { originAllowed, type VisitOutcome, type VisitTarget } from './schedule';
 
 export type Landing = { url: string } | 'closed' | 'timeout';
@@ -13,8 +13,11 @@ export interface VisitApi {
    * Resolves once the tab finished loading a page outside Brightspace, or a sign-in page. With brightspacePage, the
    * target is a Brightspace content page (the platform is embedded in it), so that page loading is the landing.
    */
-  /** `host`: wait until the tab reaches that host (a session visit's last step), not just until it leaves Brightspace. */
-  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean; host?: string }): Promise<Landing>;
+  /**
+   * `session`: wait until a sign-in for that platform reaches the page its session belongs to (see sessionDone), not just
+   * until the tab leaves Brightspace. Resolves at once when the tab is already there.
+   */
+  waitForLanding(tabId: number, timeoutMs: number, opts?: { brightspacePage?: boolean; session?: string }): Promise<Landing>;
   /**
    * The platform host a Brightspace launch goes to, read from the launch page: null when it can't be told (with a note
    * saying why, for the visit log); 'signed_out' when Brightspace asks to sign in.
@@ -177,7 +180,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     let landing = await api.waitForLanding(tabId, perPageMs);
     // A sign-in that stops on the way (Pearson's Brightspace page) needs its next link pressed before the platform's
     // own site loads: the reader is put on each page in turn until the tab reaches that site.
-    if (until && typeof landing !== 'string' && !SIGN_IN.test(landing.url) && hostOf(landing.url) !== until) landing = await signInSteps(t, until);
+    if (until && typeof landing !== 'string' && !SIGN_IN.test(landing.url) && !sessionDone(t.platform, landing.url)) landing = await signInSteps(t, until);
     trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
@@ -186,13 +189,15 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
   }
 
   async function signInSteps(t: VisitTarget, until: string): Promise<Landing> {
-    const rounds = Math.max(1, Math.ceil(perPageMs / SESSION_ROUND_MS));
+    // About a minute: Pearson's course page is a slow app, and MyLab's launch address hands off once more.
+    const rounds = Math.max(1, Math.ceil(Math.max(perPageMs, SESSION_MS) / SESSION_ROUND_MS));
     for (let i = 0; i < rounds; i++) {
       // A sign-in page may move on while the reader is being put on it (Pearson's first stop hands off at once): the
       // next page gets it in the next round.
       await settleWithin(api.inject(tabId, 'session', t.platform), injectMs).catch(() => undefined);
-      const l = await api.waitForLanding(tabId, SESSION_ROUND_MS, { host: until });
-      if (l !== 'timeout') return l;
+      const l = await api.waitForLanding(tabId, SESSION_ROUND_MS, { session: t.platform });
+      // On the session host but not yet the page the session belongs to (MyLab's /api/ launch address): keep going.
+      if (l !== 'timeout' && (typeof l === 'string' || SIGN_IN.test(l.url) || sessionDone(t.platform, l.url))) return l;
     }
     return 'timeout';
   }
@@ -224,6 +229,8 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 
 const ROUND_MS = 2_500;
 const SESSION_ROUND_MS = 5_000;
+/** The longest a window sign-in waits after leaving Brightspace. */
+const SESSION_MS = 60_000;
 
 function hostOf(url: string): string {
   try {

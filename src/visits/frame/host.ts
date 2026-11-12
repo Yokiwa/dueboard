@@ -1,4 +1,4 @@
-import { BRIGHTSPACE_HOST, SESSION_HOSTS, SIGN_IN } from '../hosts';
+import { BRIGHTSPACE_HOST, SIGN_IN, sessionDone } from '../hosts';
 import { isVisitMessage, stripUrl, type VisitMessage } from '../messages';
 import type { PageSample } from '../runner';
 import {
@@ -136,8 +136,7 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
         v.landed = m.frameUrl;
         if (direct) v.hostDirect = true;
         if (v.req.mode === 'session') {
-          const until = v.req.platform ? SESSION_HOSTS[v.req.platform] : undefined;
-          if (!until || host === until) return v.finish('landed');
+          if (sessionDone(v.req.platform, m.frameUrl)) return v.finish('landed');
           return;
         }
         if (v.readStart === undefined) {

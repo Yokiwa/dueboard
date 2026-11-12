@@ -73,7 +73,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         const req = r.request();
         return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers() }, 'route'));
       };
-      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'mylab.pearson.com'])
+      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'console.pearson.com', 'mylab.pearson.com'])
         await ctx.route(`https://${host}/**`, answer);
 
       const local = (keys) => page.evaluate((k) => chrome.storage.local.get(k), keys);

@@ -4,6 +4,7 @@ import { setVisitWindow } from '../storage/store';
 import { FINDER_FILE, stripUrl, type VisitMessage } from './messages';
 import { launchTargetHost, SIGN_IN, type Landing, type VisitApi } from './runner';
 import { installOpenHere } from './frame/openHere';
+import { sessionDone } from './hosts';
 
 const BASE = 'https://purdue.brightspace.com';
 const BRIGHTSPACE_HOST = new URL(BASE).hostname;
@@ -77,15 +78,10 @@ function landed(url: string | undefined): boolean {
   }
 }
 
-/** The tab is on `host` (a session visit's last step) or on a sign-in page (signed out: no point waiting). */
-export function onHost(url: string | undefined, host: string): boolean {
+/** A sign-in for `platform` has reached the page its session belongs to, or a sign-in page (signed out: no point waiting). */
+export function onSessionPage(url: string | undefined, platform: string): boolean {
   if (!url || url === 'about:blank') return false;
-  if (SIGN_IN.test(url)) return true;
-  try {
-    return new URL(url).hostname === host;
-  } catch {
-    return false;
-  }
+  return SIGN_IN.test(url) || sessionDone(platform, url);
 }
 
 function onPage(url: string | undefined): boolean {
@@ -134,7 +130,7 @@ export function createBrowserVisitApi(): VisitApi {
           if (id !== tabId) return;
           if (info.status !== 'complete' && tab.status !== 'complete') return;
           // A Brightspace content page is itself the landing (the platform is embedded in it); else wait to leave it.
-          const at = opts?.host ? onHost(tab.url, opts.host) : opts?.brightspacePage ? onPage(tab.url) : landed(tab.url);
+          const at = opts?.session ? onSessionPage(tab.url, opts.session) : opts?.brightspacePage ? onPage(tab.url) : landed(tab.url);
           if (at) finish({ url: tab.url! });
         };
         const onRemoved = (id: number) => {
@@ -143,6 +139,16 @@ export function createBrowserVisitApi(): VisitApi {
         const timer = setTimeout(() => finish('timeout'), timeoutMs);
         browser.tabs.onUpdated.addListener(onUpdated);
         browser.tabs.onRemoved.addListener(onRemoved);
+        // A sign-in may have reached its page between two waits: the tab already there counts.
+        if (opts?.session) {
+          const platform = opts.session;
+          void browser.tabs
+            .get(tabId)
+            .then((tab) => {
+              if (tab.status === 'complete' && onSessionPage(tab.url, platform)) finish({ url: tab.url! });
+            })
+            .catch(() => undefined);
+        }
       });
     },
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { createBrowserVisitApi, deliverVisitMessage, onHost, setVisitTab } from '../../src/visits/browserApi';
+import { createBrowserVisitApi, deliverVisitMessage, onSessionPage, setVisitTab } from '../../src/visits/browserApi';
 import type { VisitMessage } from '../../src/visits/messages';
 
 const msg: VisitMessage = { type: 'visitFound', found: null, frameUrl: 'https://www.aleks.com/x', top: true };
@@ -114,13 +114,25 @@ describe('page samples during a visit', () => {
   });
 });
 
-describe('onHost', () => {
-  it('is true on the host or a sign-in page, false on the steps before it', () => {
-    expect(onHost('https://mylab.pearson.com/Student/x', 'mylab.pearson.com')).toBe(true);
-    expect(onHost('https://login.purdue.edu/idp/profile/SAML2', 'mylab.pearson.com')).toBe(true);
-    expect(onHost('https://interop.pearson.com/security/login', 'mylab.pearson.com')).toBe(false);
-    expect(onHost('https://purdue.brightspace.com/d2l/lti/x', 'mylab.pearson.com')).toBe(false);
-    expect(onHost('about:blank', 'mylab.pearson.com')).toBe(false);
-    expect(onHost(undefined, 'mylab.pearson.com')).toBe(false);
+describe('sessionDone', () => {
+  it("Pearson: a MyLab page, not MyLab's launch address; others: their session host", async () => {
+    const { sessionDone } = await import('../../src/visits/hosts');
+    expect(sessionDone('pearson', 'https://mylab.pearson.com/Student/DoAssignments.aspx')).toBe(true);
+    expect(sessionDone('pearson', 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch')).toBe(false);
+    expect(sessionDone('pearson', 'https://console.pearson.com/courses/c1/dashboard')).toBe(false);
+    expect(sessionDone('gradescope', 'https://www.gradescope.com/account')).toBe(true);
+    expect(sessionDone('aleks', 'https://www.aleks.com/x')).toBe(true);
+  });
+});
+
+describe('onSessionPage', () => {
+  it("is true on the session's page or a sign-in page, false on the steps before it", () => {
+    expect(onSessionPage('https://mylab.pearson.com/Student/x', 'pearson')).toBe(true);
+    expect(onSessionPage('https://login.purdue.edu/idp/profile/SAML2', 'pearson')).toBe(true);
+    expect(onSessionPage('https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch', 'pearson')).toBe(false);
+    expect(onSessionPage('https://interop.pearson.com/security/login', 'pearson')).toBe(false);
+    expect(onSessionPage('https://purdue.brightspace.com/d2l/lti/x', 'pearson')).toBe(false);
+    expect(onSessionPage('about:blank', 'pearson')).toBe(false);
+    expect(onSessionPage(undefined, 'pearson')).toBe(false);
   });
 });

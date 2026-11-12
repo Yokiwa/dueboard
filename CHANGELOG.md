@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.9 — 2026-11 (trial build)
+
+- **Pearson signs back in by itself (for real this time)**: the visit log showed DueBoard pressing Assignments on Pearson's course page and then closing the window on MyLab's launch address, one step before MyLab had signed the student in. A sign-in now ends only on a MyLab page itself, and the minimized window gives Pearson's slow course page up to a minute
+
 ## 1.4.8 — 2026-11 (trial build)
 
 - **Pearson signs back in more reliably**: in the minimized window, a Pearson sign-in page that moves on to the next one while DueBoard is setting up no longer ends the attempt with an error; in the background, Pearson's page gets up to 35 seconds to show its Assignments link (the whole sign-in up to about a minute)

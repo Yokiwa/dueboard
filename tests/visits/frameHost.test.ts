@@ -273,6 +273,19 @@ describe('frame host', () => {
     await expect(p).resolves.toMatchObject({ status: 'landed', host: 'mylab.pearson.com' });
   });
 
+  it("session mode keeps waiting on MyLab's launch address (/api/...), which hands off once more", async () => {
+    const { host, child, hello, frame } = setup();
+    const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch');
+    let done = false;
+    void p.then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(done).toBe(false);
+    frame(n(1), 'https://mylab.pearson.com/Student/DoAssignments.aspx');
+    await expect(p).resolves.toMatchObject({ status: 'landed', landed: 'https://mylab.pearson.com/Student/DoAssignments.aspx' });
+  });
+
   it('session mode that never reaches the session host ends blocked (the window tries next)', async () => {
     const { host, child, hello, frame } = setup();
     const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
