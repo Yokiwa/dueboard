@@ -114,6 +114,13 @@ describe('frame host', () => {
     expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toMatchObject({ mode: 'syllabus', allowOpen: false, titles: [] });
   });
 
+  it('allowOpen is true on sign-in visits (Pearson opens MyLab from a link meant for a new tab)', () => {
+    const { host, child, hello } = setup();
+    void host.visit(req({ mode: 'session', platform: 'pearson', titles: undefined }));
+    hello(child(), n(1));
+    expect(host.onMessage({ type: 'frameConfig', nonce: n(1) })).toMatchObject({ mode: 'session', allowOpen: true });
+  });
+
   it('ends blocked when no hello arrives in 20 s', async () => {
     const { host, iframes } = setup();
     const p = host.visit(req());

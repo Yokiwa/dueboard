@@ -2,7 +2,7 @@ import { stripUrl, type VisitMessage } from '../messages';
 import type { ListedTitle } from '../frame/protocol';
 import { findDue, pageLines } from './index';
 import { findListed } from './listed';
-import { buttonLabels, openButton } from './open';
+import { buttonLabels, openButton, sessionStep } from './open';
 
 export interface FinderWindow {
   document: Document;
@@ -39,8 +39,21 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   const frameUrl = win.location.href;
   const started = Date.now();
   send({ type: 'visitFrame', frameUrl: stripUrl(frameUrl), top });
-  // A session visit only needs to know the page loaded and this frame is there.
-  if (win.__dueboardMode === 'session') return;
+  // A session visit only needs to know the page loaded, unless the platform needs one more step to sign in (Pearson's
+  // Assignments link): that link is pressed once, as soon as the page shows it.
+  if (win.__dueboardMode === 'session') {
+    const step = () => {
+      const link = sessionStep(win.document, win.__dueboardPlatform, hostOf(frameUrl));
+      if (link) {
+        send({ type: 'visitClick', label: link.label, frameUrl: stripUrl(frameUrl) });
+        link.press();
+        return;
+      }
+      if (Date.now() - started < maxMs) setTimeout(step, pollMs);
+    };
+    step();
+    return;
+  }
   let lastText = '';
   let pressed = false;
   let stableSince = started;

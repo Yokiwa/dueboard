@@ -124,10 +124,25 @@ describe('runVisits', () => {
     expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
   });
 
-  it("a session visit waits for the platform's session host, not the first page on the platform", async () => {
+  it("a session visit that lands on the platform's session host is done", async () => {
     const f = fakeApi({ landings: [at('https://mylab.pearson.com/home')] });
-    await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
-    expect(f.calls).toContain('wait host mylab.pearson.com');
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
+    expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
+    expect(f.calls.some((c) => c.startsWith('inject'))).toBe(false);
+  });
+
+  it("a session visit stopped on the way (Pearson's Brightspace page) reads it to press the next step, then waits for MyLab", async () => {
+    const f = fakeApi({ landings: [at('https://interop.pearson.com/launch'), 'timeout', at('https://mylab.pearson.com/Student/DoAssignments.aspx')] });
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
+    expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
+    expect(f.calls.filter((c) => c === 'inject session pearson').length).toBe(2);
+    expect(f.calls.filter((c) => c === 'wait host mylab.pearson.com').length).toBe(2);
+  });
+
+  it('a session visit that never reaches the session host ends as a timeout (the resync decides)', async () => {
+    const f = fakeApi({ landings: [at('https://interop.pearson.com/launch')] });
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api, { perPageMs: 10_000 });
+    expect(out).toEqual([{ key: 'pearson:session', status: 'failed', reason: 'timeout' }]);
   });
 
   it('syllabus visits return the page text', async () => {

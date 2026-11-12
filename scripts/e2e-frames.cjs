@@ -64,8 +64,8 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         windows: (await chrome.windows.getAll()).length,
         tabs: (await chrome.tabs.query({})).map((t) => t.id).sort(),
       }));
-    const probe = (token, url, headers) =>
-      page.evaluate(([t, u, h]) => chrome.runtime.sendMessage({ type: 'frameProbe', req: { token: t, url: u, mode: 'due' }, headers: h }), [token, url, headers]);
+    const probe = (token, url, headers, extra = { mode: 'due' }) =>
+      page.evaluate(([t, u, h, x]) => chrome.runtime.sendMessage({ type: 'frameProbe', req: { token: t, url: u, ...x }, headers: h }), [token, url, headers, extra]);
     async function fullSyncChecks() {
       // ---- Full syncs through the dashboard. The service worker's API calls and the hidden frames reach the local
       // server; tabs (the dashboard, the visit window) are answered by routes from the same respond().
@@ -229,6 +229,13 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     console.log(`  FrameResult: ${brief(blocked)}`);
     check(mocks.state.hits.framed > hitsMid, 'the server was reached again, so blocked comes from the refused frame and not the network');
     check(blocked?.status === 'blocked', `without the header rule the visit ends blocked (${blocked?.status})`);
+
+    console.log('e2e frames: Pearson sign-in through its Brightspace page');
+    const mylabBefore = mocks.state.hits.mylab;
+    const pearson = await probe('t3', 'https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=103&type=lti&rcode=S1', true, { mode: 'session', platform: 'pearson' });
+    console.log(`  FrameResult: ${brief(pearson)}`);
+    check(pearson?.clicked?.some((c) => c.startsWith('Assignments')), `the Assignments link was pressed (${pearson?.clicked?.join('; ')})`);
+    check(mocks.state.hits.mylab > mylabBefore && pearson?.status === 'landed' && pearson?.host === 'mylab.pearson.com', `the visit ended on MyLab, in the frame (${pearson?.status}, ${pearson?.host})`);
 
     const after = await layout();
     const created = await page.evaluate(() => window.__created);

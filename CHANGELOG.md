@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2 — 2026-11 (trial build)
+
+- **Pearson signs back in by itself**: Purdue's Pearson link first shows "Access Pearson for D2L Brightspace", and MyLab only signs you in once its **Assignments** link is opened. DueBoard now presses that link (the only one it presses there) and waits for MyLab, in the background and, if needed, in the minimized window
+- An "open in a new tab" link pressed in the minimized window opens in that window, also on pages that open an empty window first
+- On update, DueBoard again forgets which platforms it could not read in the background and how often Pearson's sign-in failed
+
 ## 1.4.1 — 2026-11 (trial build)
 
 - **Background reading works on Purdue's real launch pages**: Brightspace shows a platform inside its own launch page, and 1.4.0 only looked at the outer page, so every page fell back to the window. The hidden frame now reads the platform page inside it

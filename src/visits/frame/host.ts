@@ -236,7 +236,8 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       const v = byNonce.get(r.nonce);
       if (!v) return null;
       if (r.type === 'frameConfig') {
-        return { mode: v.req.mode, platform: v.req.platform, allowOpen: v.req.mode === 'due', titles: v.req.titles ?? [] };
+        // Sign-in visits may press one link too (Pearson's Assignments), which may open a new tab: it opens in the frame.
+        return { mode: v.req.mode, platform: v.req.platform, allowOpen: v.req.mode === 'due' || v.req.mode === 'session', titles: v.req.titles ?? [] };
       }
       const inner = checkInner(r.message);
       if (inner) handle(v, v.nonces.get(r.nonce)!.direct, inner);

@@ -26,7 +26,7 @@ export interface VisitApi {
   windowState(windowId: number): Promise<'minimized' | 'open' | 'gone'>;
   /** permissions.getAll().origins */
   granted(): Promise<string[]>;
-  inject(tabId: number, mode: 'due' | 'syllabus', platform?: string): Promise<void>;
+  inject(tabId: number, mode: 'due' | 'syllabus' | 'session', platform?: string): Promise<void>;
   nextMessage(tabId: number, timeoutMs: number): Promise<VisitMessage | 'timeout'>;
   closeWindow(windowId: number): Promise<void>;
   /** Frames that reported in since the last navigation (stripped addresses), for the visit log. */
@@ -169,12 +169,25 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
     }
     await api.navigate(tabId, t.launchUrl);
     const until = t.mode === 'session' && t.platform ? SESSION_HOSTS[t.platform] : undefined;
-    const landing = await api.waitForLanding(tabId, perPageMs, until ? { host: until } : undefined);
+    let landing = await api.waitForLanding(tabId, perPageMs);
+    // A sign-in that stops on the way (Pearson's Brightspace page) needs its next link pressed before the platform's
+    // own site loads: the reader is put on each page in turn until the tab reaches that site.
+    if (until && typeof landing !== 'string' && !SIGN_IN.test(landing.url) && hostOf(landing.url) !== until) landing = await signInSteps(t, until);
     trace.landed = typeof landing === 'string' ? landing : stripUrl(landing.url);
     if (landing === 'closed') return 'stop';
     if (landing === 'timeout') return (await api.signedIn()) ? { key: t.key, status: 'failed', reason: 'timeout' } : { key: t.key, status: 'signed_out' };
     if (SIGN_IN.test(landing.url)) return { key: t.key, status: 'signed_out' };
     return read(t, new URL(landing.url).hostname, site);
+  }
+
+  async function signInSteps(t: VisitTarget, until: string): Promise<Landing> {
+    const rounds = Math.max(1, Math.ceil(perPageMs / SESSION_ROUND_MS));
+    for (let i = 0; i < rounds; i++) {
+      await settleWithin(api.inject(tabId, 'session', t.platform), injectMs);
+      const l = await api.waitForLanding(tabId, SESSION_ROUND_MS, { host: until });
+      if (l !== 'timeout') return l;
+    }
+    return 'timeout';
   }
 
   async function read(t: VisitTarget, host: string, site: string | null): Promise<VisitOutcome> {
@@ -203,6 +216,15 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
 }
 
 const ROUND_MS = 2_500;
+const SESSION_ROUND_MS = 5_000;
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
 /** Waits for `work` (and passes on its error) for at most `ms`; after that, goes on as if it had finished. */
 function settleWithin(work: Promise<unknown>, ms: number): Promise<void> {

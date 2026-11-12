@@ -1,3 +1,5 @@
+import { SESSION_HOSTS } from '../hosts';
+
 /**
  * The one kind of button DueBoard may press on a platform page: "open the assignment" (Open, Launch, View
  * assignment, Go to assignment). Anything that could start, continue or submit work is never pressed, and long
@@ -24,21 +26,47 @@ function labelOf(el: Element): string {
   return raw.replace(/\s+/g, ' ').trim();
 }
 
+const CLICKABLE = 'button, a[href], [role="button"], [role="link"], input[type="button"]';
+
+function pressable(el: Element, label: string): OpenButton {
+  return {
+    label,
+    press() {
+      if (el instanceof HTMLAnchorElement) el.setAttribute('target', '_self');
+      const form = el.closest('form');
+      if (form) form.setAttribute('target', '_self');
+      (el as HTMLElement).click();
+    },
+  };
+}
+
 export function openButton(doc: Document): OpenButton | null {
-  const candidates = Array.from(doc.querySelectorAll('button, a[href], [role="button"], input[type="button"]'));
-  for (const el of candidates) {
+  for (const el of Array.from(doc.querySelectorAll(CLICKABLE))) {
     if (hidden(el) || (el as HTMLButtonElement).disabled) continue;
     const label = labelOf(el);
     if (!label || label.length > MAX_LABEL || !OPEN.test(label) || NEVER.test(label)) continue;
-    return {
-      label,
-      press() {
-        if (el instanceof HTMLAnchorElement) el.setAttribute('target', '_self');
-        const form = el.closest('form');
-        if (form) form.setAttribute('target', '_self');
-        (el as HTMLElement).click();
-      },
-    };
+    return pressable(el, label);
+  }
+  return null;
+}
+
+/**
+ * The step a platform's sign-in through Brightspace needs on the way to the site DueBoard reads. Pearson's Brightspace
+ * page ("Access Pearson for D2L Brightspace") signs the student in to MyLab only when its Assignments link is opened.
+ * Exact labels only.
+ */
+const SESSION_STEPS: Partial<Record<string, RegExp>> = { pearson: /^assignments\b(?!\s+\w)|^assignments\b[\s,(–-]+opens? in/i };
+
+/** On a sign-in visit's page (not on the session host itself): the link to press, if the page shows it. */
+export function sessionStep(doc: Document, platform: string | undefined, pageHost: string): OpenButton | null {
+  const label = platform ? SESSION_STEPS[platform] : undefined;
+  if (!label || !platform || pageHost === SESSION_HOSTS[platform]) return null;
+  for (const el of Array.from(doc.querySelectorAll(CLICKABLE))) {
+    if (hidden(el) || (el as HTMLButtonElement).disabled) continue;
+    // Its text or its accessible name ("Assignments, opens in a new window").
+    const texts = [labelOf(el), (el.textContent ?? '').replace(/\s+/g, ' ').trim()];
+    const text = texts.find((s) => s.length <= MAX_LABEL && label.test(s));
+    if (text) return pressable(el, text);
   }
   return null;
 }

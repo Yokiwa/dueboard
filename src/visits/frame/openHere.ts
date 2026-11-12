@@ -18,8 +18,9 @@ export function inExtensionFrame(win: Window): boolean {
 /**
  * Replaces window.open. An address loads in this frame. The returned stand-in takes what pages do with a popup they
  * opened empty (set its location, write a "loading" note, focus it), so an address given afterwards loads here too.
+ * Self-contained (no outside names), so it can also be injected as is into the visit window's pages.
  */
-export function installOpenHere(win: Window): void {
+export function installOpenHere(win: Window = window): void {
   const w = win as unknown as OpenWindow;
   if (w.__dueboardOpenHere) return;
   w.__dueboardOpenHere = true;

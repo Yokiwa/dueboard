@@ -99,7 +99,7 @@ function createMocks({ scenario = 'default' } = {}) {
     unknownSite2: false,
     frameless: false,
     frameless2: false,
-    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0 },
+    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0, mylab: 0 },
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
   };
@@ -115,7 +115,7 @@ function createMocks({ scenario = 'default' } = {}) {
       const rc = /rcode=(\w+)/.exec(u)?.[1];
       const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
       if (to) return html(launchPage(to));
-      const embedded = { E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
+      const embedded = { S1: 'https://interop.pearson.com/launch', E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
       if (embedded) return html(embedPage(embedded));
       // Signed in, the home page loads; signed out it goes to the sign-in page, like the real one.
       if (/\/d2l\/home\/?$/.test(new URL(u).pathname)) return state.signedOut ? { status: 302, headers: { location: `${B}/d2l/login?target=x` }, body: '' } : html('<h1>Home</h1>');
@@ -228,6 +228,12 @@ function createMocks({ scenario = 'default' } = {}) {
         return html('<p>Due Nov 22</p>');
       case 'www.gradescope.com':
         return gradescope(u);
+      // Pearson's page for Brightspace: MyLab signs the student in only when its Assignments link is opened (new tab).
+      case 'interop.pearson.com':
+        return html('<h1>Access Pearson for D2L Brightspace</h1><button>Open</button><ul><li><a href="https://mylab.pearson.com/Student/DoAssignments.aspx?view=all" target="_blank" aria-label="Assignments, opens in a new window">Assignments</a></li><li><a href="https://mylab.pearson.com/Student/Results.aspx" target="_blank">Results</a></li><li><a href="#">eTextbook</a></li></ul>');
+      case 'mylab.pearson.com':
+        state.hits.mylab++;
+        return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td>08/29/26 11:59pm</td><td>Lesson 1</td></tr></table>');
       default:
         return notFound();
     }
