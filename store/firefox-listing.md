@@ -20,7 +20,7 @@ Stop clicking through every course in Brightspace and opening platform after pla
 • Course cards with upcoming work and shortcuts to each course's platforms
 • Calendar (week and month) and a to-do list
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
-• Due dates from other homework platforms: when you click Refresh, DueBoard opens the homework link from Brightspace in a minimized window, reads the "Due" line, and closes it. You allow each platform once.
+• Due dates from other homework platforms: DueBoard opens the homework link from Brightspace in a hidden frame inside the extension, reads the "Due" line and closes it, automatically and without opening a window. Pages that can't be read that way use a small minimized window, which you can turn off in Settings.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own entries for anything else
 
@@ -50,3 +50,6 @@ https://yokiwa.github.io/dueboard/privacy.html
 Build: `npm ci && npm run zip:firefox` (Node 20+). Output: `.output/firefox-mv3/`.
 The UNSAFE_VAR_ASSIGNMENT warnings are in bundled React DOM and pdf.js (pdf.worker.min.mjs ships unmodified from pdfjs-dist); DueBoard never writes innerHTML.
 Optional host permission `https://*/*` is requested one site at a time, only after a click on an "Allow" button that names the homework platform found in the student's courses. It lets DueBoard read the due date on that platform's assignment pages, in a minimized window DueBoard opens and closes itself. In that window only, DueBoard may press the page's one "open the assignment" button, and `window.open` is redirected to the same tab so an assignment meant for a new tab opens there.
+Hidden-frame reading: DueBoard embeds the student's own homework pages (reached through their Brightspace links) in hidden frames inside its background page, and reads the due date. Homework platforms forbid embedding, so while a page is read, one `declarativeNetRequestWithHostAccess` session rule removes the `X-Frame-Options` and `Content-Security-Policy: frame-ancestors` response headers from that request. The rule is limited to requests that belong to no tab (`tabIds: [-1]`), so it applies only to DueBoard's own hidden requests and never to the student's tabs or windows, and it is removed when reading ends.
+Access to the known platform sites is declared in `host_permissions` (granted at install); any other site uses the optional permission above. The due-date reader is a content script on those sites that stays silent in a normal tab and only answers the extension's own frame host. Pages that cannot be read in a frame fall back to a minimized window (a Settings checkbox turns this off).
+Firefox: background reading is unverified until a tester has run it; the visit log in Settings → Diagnostics shows whether each page was read in "Background" or "Window" mode.

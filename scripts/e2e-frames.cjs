@@ -16,7 +16,9 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
 
 (async () => {
   if (!fs.existsSync(path.join(BUILT, 'manifest.json'))) throw new Error('build first (npm run build)');
-  const mocks = createMocks();
+  const mocks = createMocks({ scenario: 'background' });
+  // Installing runs an automatic sync. Signed out at first, so it stops at Brightspace and leaves the first run to the checks.
+  mocks.state.signedOut = true;
   let server;
   let ext;
   let profile;
@@ -45,10 +47,12 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     let [sw] = ctx.serviceWorkers();
     if (!sw) sw = await ctx.waitForEvent('serviceworker', { timeout: 15000 });
     const logs = [];
+    globalThis.__e2eLogs = logs;
     sw.on('console', (m) => logs.push(`[sw] ${m.text()}`));
     ctx.on('console', (m) => logs.push(`[page] ${m.text()}`));
     const id = new URL(sw.url()).host;
     const page = await ctx.newPage();
+    globalThis.__e2ePage = page;
     await page.goto(`chrome-extension://${id}/dashboard.html`);
     // Record every tab and window created from here on, so one opened and closed in between cannot go unseen.
     await page.evaluate(() => {
@@ -64,6 +68,134 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       }));
     const probe = (token, url, headers) =>
       page.evaluate(([t, u, h]) => chrome.runtime.sendMessage({ type: 'frameProbe', req: { token: t, url: u, mode: 'due' }, headers: h }), [token, url, headers]);
+    async function fullSyncChecks() {
+      // ---- Full syncs through the dashboard. The service worker's API calls and the hidden frames reach the local
+      // server; tabs (the dashboard, the visit window) are answered by routes from the same respond().
+      const answer = (r) => {
+        const req = r.request();
+        return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers() }, 'route'));
+      };
+      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'www.gradescope.com'])
+        await ctx.route(`https://${host}/**`, answer);
+  
+      const local = (keys) => page.evaluate((k) => chrome.storage.local.get(k), keys);
+      const captured = async () => (await local('captured')).captured ?? {};
+      const visitLog = async () => (await local('visitLog')).visitLog ?? [];
+      const noWindow = () => page.evaluate(async () => (await chrome.storage.session.get('visitWindowId')).visitWindowId == null);
+      const progressNull = async () => (await local('visitProgress')).visitProgress == null;
+      const watchCreated = () =>
+        page.evaluate(() => {
+          window.__created = [];
+          chrome.tabs.onCreated.addListener((t) => window.__created.push(`tab ${t.id}`));
+          chrome.windows.onCreated.addListener((w) => window.__created.push(`window ${w.id}`));
+        });
+      const created = () => page.evaluate(() => window.__created);
+      /** Waits for `done()`, then until the run is over: no progress line and no visit window for 3 s. */
+      const settle = async (done, what) => {
+        let waited = 0;
+        while (!(await done())) {
+          if ((waited += 500) > 150000) throw new Error(`timed out waiting for ${what}`);
+          await page.waitForTimeout(500);
+        }
+        for (let quiet = 0; quiet < 3000; ) {
+          quiet = (await noWindow()) && (await progressNull()) ? quiet + 500 : 0;
+          await page.waitForTimeout(500);
+        }
+      };
+      const local20 = (d) => page.evaluate((x) => new Date(2026, 10, x[0], 23, 59).toISOString(), [d]);
+  
+      console.log('e2e frames: first run, "Log in to Brightspace" while signed in starts the sync (no window, no tab)');
+      for (let waited = 0; waited < 30000; waited += 500) {
+        if ((await local('syncMeta')).syncMeta?.brightspace?.lastError) break; // the install-time sync has ended
+        await page.waitForTimeout(500);
+      }
+      mocks.state.signedOut = false;
+      await page.reload();
+      await watchCreated();
+      await page.getByRole('button', { name: 'Log in to Brightspace' }).click();
+      await settle(async () => {
+        const c = await captured();
+        return ['21', '23', '24', '25'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
+      }, 'the first automatic sync to date the homeworks');
+      let c = await captured();
+      check(c['brightspace:topic:21'].dueAt === (await local20(20)), `a page that refuses framing was dated in the sync (${c['brightspace:topic:21'].dueAt})`);
+      check(mocks.state.hits.framed > 0, 'its page came from the hidden frame server');
+      if (process.env.E2E_DEBUG) console.log(JSON.stringify((await visitLog()).map((e) => ({ k: e.key, m: e.mode, r: e.result, d: e.detail, s: e.site, o: e.opened, sn: e.siteNote, f: e.frames?.length }))));
+      check((await created()).length === 0, `no window or tab opened during the automatic sync (${(await created()).join('; ') || 'none'})`);
+      let log = await visitLog();
+      check(log.length > 0 && log.every((e) => e.mode === 'frame'), `every visit ran in the background (${log.map((e) => e.mode).join(',')})`);
+      const ps = [23, 24, 25].map((n) => c[`brightspace:topic:${n}`]);
+      check(ps[0].dueAt === '2026-11-22T04:59:00.000Z' && ps[1].dueAt === '2026-11-29T04:59:00.000Z' && ps[2].dueAt === '2026-12-06T04:59:00.000Z', `a list page dated three homeworks (${ps.map((x) => x.dueAt).join(', ')})`);
+      const psLog = log.filter((e) => [23, 24, 25].some((n) => e.key === `brightspace:topic:${n}`));
+      const psVisits = psLog.filter((e) => e.detail !== 'listed');
+      check(psVisits.length === 1 && psLog.length === 3, `one frame visit served all three (${psVisits.length} visit, ${psLog.length} entries)`);
+  
+      // A homework on a site that is not a known platform: DueBoard learns the site, never reads it, and asks for access.
+      mocks.state.unknownSite = true;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => ((await local('visitState')).visitState?.needsPermission ?? []).includes('example-unknown.com'), 'the unknown site to be noted');
+      // The banner for an unknown site, and none for a registry platform (ALEKS and Norton are granted at install).
+      await page.reload();
+      await page.getByRole('tab', { name: 'To-do' }).click();
+      await page.getByText('DueBoard found example-unknown.com in your courses').waitFor({ timeout: 10000 });
+      check((await page.getByRole('button', { name: 'Allow', exact: true }).count()) === 1, 'one "Allow" banner, for the unknown site');
+      const banner = await page.getByText(/DueBoard found .* in your courses/).allTextContents();
+      check(banner.length === 1 && !/ALEKS|Norton/.test(banner[0]), `no "Allow" banner for a registry platform (the only banner: ${banner[0]})`);
+      check(!(await captured())['brightspace:topic:26']?.dueAt, 'no date was taken from the unknown site');
+  
+      console.log('e2e frames: a page the frames cannot read goes to the minimized window in the same run');
+      await watchCreated();
+      const windowsBefore = (await layout()).windows;
+      mocks.state.frameless = true;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => !!(await captured())['brightspace:topic:22']?.dueAt, 'the windowed homework to be dated');
+      c = await captured();
+      check(c['brightspace:topic:22'].dueAt === (await local20(19)), `dated in the window (${c['brightspace:topic:22'].dueAt})`);
+      const made = await created();
+      check(made.filter((x) => x.startsWith('window')).length === 1, `one window was opened (${made.join('; ')})`);
+      check((await layout()).windows === windowsBefore && (await noWindow()), 'the window closed afterwards');
+      log = await visitLog();
+      const mine = log.filter((e) => e.key === 'brightspace:topic:22');
+      check(mine.some((e) => e.mode === 'frame') && mine.some((e) => e.mode === 'window' && e.result === 'found'), `the log has a Background entry and a Window entry for it (${mine.map((e) => `${e.mode}:${e.result}`).join(', ')})`);
+      await page.goto(`chrome-extension://${id}/diagnostics.html`);
+      await page.getByRole('heading', { name: 'Platform visits' }).waitFor({ timeout: 10000 });
+      check((await page.getByRole('cell', { name: 'Background', exact: true }).count()) > 0 && (await page.getByRole('cell', { name: 'Window', exact: true }).count()) > 0, 'Diagnostics shows both "Background" and "Window" in the Mode column');
+      await page.goto(`chrome-extension://${id}/dashboard.html`);
+  
+      console.log('e2e frames: window fallback turned off');
+      await page.evaluate(async () => {
+        const { settings } = await chrome.storage.local.get('settings');
+        await chrome.storage.local.set({ settings: { ...settings, windowFallback: false } });
+      });
+      await watchCreated();
+      mocks.state.frameless2 = true;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => (await visitLog()).some((e) => e.key === 'brightspace:topic:27'), 'the visit of the second windowed homework');
+      check(!(await created()).some((x) => x.startsWith('window')), `no window opened (${(await created()).join('; ') || 'none'})`);
+      check(!(await captured())['brightspace:topic:27']?.dueAt, 'the item the frames cannot read stays undated');
+      await page.evaluate(async () => {
+        const { settings } = await chrome.storage.local.get('settings');
+        await chrome.storage.local.set({ settings: { ...settings, windowFallback: true } });
+      });
+  
+      console.log('e2e frames: first run while signed out');
+      await page.evaluate(async () => {
+        await chrome.storage.local.clear();
+        await chrome.storage.session.clear();
+      });
+      mocks.state.signedOut = true;
+      await page.goto(`chrome-extension://${id}/dashboard.html`);
+      await page.getByRole('button', { name: 'Log in to Brightspace' }).click();
+      await page.waitForURL(/purdue\.brightspace\.com\/d2l\/login/, { timeout: 15000 });
+      check(true, `the tab went to Brightspace's sign-in page (${page.url()})`);
+      mocks.state.signedOut = false; // the student signs in
+      await page.goto('https://purdue.brightspace.com/d2l/home');
+      await page.waitForURL(/chrome-extension:\/\/.*\/dashboard\.html/, { timeout: 15000 });
+      check(true, `the tab came back to the dashboard (${page.url()})`);
+      await settle(async () => !!(await captured())['brightspace:topic:21']?.dueAt, 'the sync after signing in');
+      check(!!(await captured())['brightspace:topic:21']?.dueAt, 'the sync started by itself and dated a homework');
+      check(!page.url().includes('start='), 'the address no longer carries ?start=1');
+    }
     const target = 'https://www.aleks.com/framed/hw7';
     const before = await layout();
 
@@ -87,10 +219,13 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     const created = await page.evaluate(() => window.__created);
     check(created.length === 0, `no tab or window was created during the run (${created.join('; ') || 'none'})`);
     check(JSON.stringify(after) === JSON.stringify(before), `windows and tabs are the same (${before.windows} windows, ${before.tabs.length} tabs, before and after)`);
+    await fullSyncChecks();
     if (process.env.E2E_DEBUG) console.log(logs.join('\n'));
     await cleanup();
     console.log('e2e frames: all checks passed');
   } catch (e) {
+    if (process.env.E2E_DEBUG) console.error(`page: ${globalThis.__e2ePage?.url()}`);
+    if (process.env.E2E_DEBUG) console.error((globalThis.__e2eLogs ?? []).join('\n'));
     await cleanup();
     console.error(`e2e frames: FAILED — ${e.stack || e}`);
     process.exit(1);

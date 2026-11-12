@@ -1,6 +1,6 @@
 # DueBoard: background reading, zero-prompt setup, faster sync — design
 
-Date: 2026-11-10 · Status: draft for review · Target version: 1.4.0
+Date: 2026-11-10 · Status: implemented in 1.4.0 (trial build) · Target version: 1.4.0
 
 ## 1. Goal
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 — 2026-11 (trial build)
+
+- **Homework pages are read in the background**: DueBoard opens your Brightspace homework links in hidden frames inside the extension, three at a time, reads each due date and shows it as soon as it arrives. No window or tab opens
+- **A small minimized window only as a fallback**: pages that can't be read in a hidden frame are read in the minimized window in the same run, which then closes. Settings has a new checkbox to turn the window off
+- **Automatic by default**: "Automatically, in the background" is the new default for reading platforms (existing "Only when I click Refresh" choices move to it once; "Never" stays)
+- **No more "Allow" prompts for known platforms**: access to every platform site DueBoard knows is part of the install, so the banner now appears only for a site DueBoard doesn't know. The platform list covers more sites (Achieve, Connect, WebAssign, Top Hat, Perusall, Sapling and others)
+- **"Log in to Brightspace" on the first-run page**: one button signs you in (or starts the sync if you already are) and brings you back to the dashboard, where the first sync starts
+- **Faster**: a page that lists several homeworks with their dates (a course page with "HW11 … Due Nov 11") dates all of them from one visit
+- Settings → Diagnostics shows a Mode column (Background or Window) in the visit log
+- While a page is read in a hidden frame, DueBoard removes the "do not embed" headers from that one hidden request; your own tabs are never affected
+- This trial build does not include the scores feature, which is still on its own branch. Firefox support for background reading is untested
+
 ## 1.2.4 — 2026-11
 
 - **Course cards keep their place**: courses are sorted by code instead of by their next deadline, so ticking off work no longer reshuffles the page

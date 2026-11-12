@@ -32,7 +32,7 @@ function syllabusPdf(now = new Date()) {
   out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return Buffer.from(out, 'latin1');
 }
-const ql = (r) => `/d2l/common/dialogs/quickLink/quickLink.d2l?ou=102&type=lti&rcode=${r}`;
+const ql = (r, ou = 102) => `/d2l/common/dialogs/quickLink/quickLink.d2l?ou=${ou}&type=lti&rcode=${r}`;
 
 const toc = {
   Modules: [
@@ -62,6 +62,21 @@ const toc = {
     { Title: 'Start Here', Modules: [], Topics: [{ TopicId: 9, Title: 'Course Syllabus', Url: '/content/enforced/102-MA/syllabus.pdf', TypeIdentifier: 'File' }] },
   ],
 };
+// The background-reading course (createMocks({ scenario: 'background' })): one course, every kind of page the hidden
+// frames and the window fallback have to deal with. `frameless` and `frameless2` are switched on by the script.
+const backgroundToc = (state) => {
+  const link = (id, title, r) => ({ TopicId: id, Title: title, Url: ql(r, 103), TypeIdentifier: 'Link' });
+  const topics = [
+    link(21, 'Framed Homework', 'F1'), // refuses framing; the header rule lets the hidden frame read it
+    link(23, 'Problem Set 1', 'P1'), // three homeworks listed on one page
+    link(24, 'Problem Set 2', 'P2'),
+    link(25, 'Problem Set 3', 'P3'),
+  ];
+  if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
+  if (state.frameless) topics.push(link(22, 'Windowed Homework', 'X1')); // a page no hidden frame can read
+  if (state.frameless2) topics.push(link(27, 'Windowed Homework Two', 'X2'));
+  return { Modules: [{ Title: 'Homework', Modules: [], Topics: topics }] };
+};
 const launchPage = (target) =>
   `<html><body><form id="f" action="${target}" method="get"></form><script>document.getElementById('f').submit()</script></body></html>`;
 
@@ -70,8 +85,12 @@ const html = (body, headers = {}) => ({ status: 200, headers: { 'content-type': 
 const notFound = () => ({ status: 404, headers: {}, body: '' });
 const handOff = (to) => html(`<script>location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))}))</script>`);
 
-function createMocks() {
+function createMocks({ scenario = 'default' } = {}) {
+  const background = scenario === 'background';
   const state = {
+    unknownSite: false,
+    frameless: false,
+    frameless2: false,
     hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0 },
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
@@ -80,6 +99,17 @@ function createMocks() {
   function brightspace(u) {
     if (u.includes('/users/whoami')) return state.signedOut ? { status: 401, headers: {}, body: '' } : json({ Identifier: '1', FirstName: 'Test' });
     if (u.endsWith('/d2l/api/versions/')) return json([{ ProductCode: 'lp', LatestVersion: '1.47' }, { ProductCode: 'le', LatestVersion: '1.80' }]);
+    if (background && state.signedOut && u.includes('/d2l/api/')) return { status: 401, headers: {}, body: '' };
+    if (background && u.includes('myenrollments'))
+      return json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 103, Name: 'CS 18000 Problem Solving', Code: 'CS-18000' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] });
+    if (background && u.startsWith(`${LE}/103/content/toc`)) return json(backgroundToc(state));
+    if (background) {
+      const rc = /rcode=(\w+)/.exec(u)?.[1];
+      const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3' }[rc];
+      if (to) return html(launchPage(to));
+      // Signed in, the home page loads; signed out it goes to the sign-in page, like the real one.
+      if (/\/d2l\/home\/?$/.test(new URL(u).pathname)) return state.signedOut ? { status: 302, headers: { location: `${B}/d2l/login?target=x` }, body: '' } : html('<h1>Home</h1>');
+    }
     if (u.includes('myenrollments'))
       return json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 102, Name: 'MA 26100 Multivariate Calculus', Code: 'MA-26100' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] });
     if (u.startsWith(`${LE}/102/content/toc`)) return json(toc);
@@ -142,7 +172,7 @@ function createMocks() {
   }
 
   /** @param {{ url: string, method?: string, headers?: Record<string, string> }} req */
-  function respond(req) {
+  function respond(req, via = 'route') {
     const url = new URL(req.url);
     const u = req.url;
     switch (url.host) {
@@ -159,9 +189,17 @@ function createMocks() {
             'content-security-policy': "frame-ancestors 'none'",
           });
         }
+        // A page no hidden frame can read (the local server answers frames with an error) that the window tab reads fine.
+        if (url.pathname.startsWith('/frameless/')) {
+          if (via === 'server') return { status: 500, headers: { 'content-type': 'text/html' }, body: '' };
+          const day = url.pathname.endsWith('hw9') ? '11/18/2026' : '11/19/2026';
+          return html(`<h1>Homework</h1><div class="meta"><span>Due Date:</span> <span>${day} 11:59 PM</span></div>`);
+        }
         state.hits.aleks++;
         return html('<h1>Homework 7</h1><div class="meta"><span>Due Date:</span> <span>11/20/2026 11:59 PM</span></div>');
       case 'digital.wwnorton.com':
+        if (url.pathname.startsWith('/list/'))
+          return html('<h1>Problem sets</h1><ul><li>Problem Set 1 Due: November 21, 2026, 11:59 PM EST</li><li>Problem Set 2 Due: November 28, 2026, 11:59 PM EST</li><li>Problem Set 3 Due: December 5, 2026, 11:59 PM EST</li></ul>');
         state.hits.norton++;
         return html('<div id="app"></div><script>setTimeout(()=>{document.getElementById("app").innerHTML="<h1>Ch 5: Culture</h1><p>Due: November 21, 2026, 11:59 PM EST</p>"},1500)</script>');
       case 'example-unknown.com':
@@ -186,7 +224,7 @@ async function startServer(mocks, { port = 0 } = {}) {
     execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=dueboard-e2e'], { stdio: 'ignore' });
     const server = https.createServer({ key: fs.readFileSync(key), cert: fs.readFileSync(cert) }, (req, res) => {
       const host = String(req.headers.host ?? '').replace(/:\d+$/, '');
-      const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers });
+      const out = mocks.respond({ url: `https://${host}${req.url}`, method: req.method, headers: req.headers }, 'server');
       res.writeHead(out.status, out.headers);
       res.end(out.body);
     });

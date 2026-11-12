@@ -23,7 +23,7 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 • Calendar: week and month views show which days pile up
 • To-do list: tick work off; submitted work is ticked automatically where the platform reports it
 • Due dates from Brightspace, Gradescope and Pearson MyLab, read in the background
-• Due dates from other homework platforms: when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the "Due" line and closes it. You allow each platform once.
+• Due dates from other homework platforms: DueBoard opens your Brightspace homework link in a hidden frame inside the extension, reads the "Due" line and closes it, automatically and without opening a window. Pages that can't be read that way use a small minimized window, which you can turn off in Settings.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own: anything DueBoard can't read can be added by hand
 • Syncs every 30 minutes using the sessions already in your browser
@@ -44,14 +44,16 @@ Show the student's own assignments, deadlines and course resource links from Bri
 ### Permission justifications
 - storage: keep synced assignments, the user's own entries and choices on this device.
 - alarms: re-sync assignments and deadlines in the background every 30 minutes.
-- offscreen: parse Gradescope, Pearson and syllabus pages and PDFs in the background (service workers cannot parse HTML or run the PDF reader's worker).
+- offscreen: parse Gradescope, Pearson and syllabus pages and PDFs in the background (service workers cannot parse HTML or run the PDF reader's worker). Reason DOM_SCRAPING: the offscreen page also embeds the student's own assignment pages, reached through their Brightspace homework links, in hidden frames, to read the due date; the pages are only read, never changed, and the frames are removed afterwards.
+- declarativeNetRequestWithHostAccess: while DueBoard reads a page in a hidden frame, one session rule removes the X-Frame-Options and Content-Security-Policy frame-ancestors response headers from that request, because homework platforms forbid being embedded. The rule is limited to requests that belong to no tab (tabId -1), so it applies only to DueBoard's own hidden requests and never to the student's tabs or windows, and it is removed when reading ends.
 - activeTab, scripting: only when the user clicks “Export this page” in the popup, read the current tab and save it as a local file to help add support for another homework platform.
 - Host permission https://purdue.brightspace.com/*: read the user's own courses, assignments, quizzes, calendar and course content listing.
 - Host permission https://www.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
 - Host permission https://mylab.pearson.com/*: only when one of the user's courses links to Pearson MyLab, read the assignment list and due dates.
+- Host permissions, one per homework platform site (https://*.aleks.com/*, https://*.wileyplus.com/*, https://*.wwnorton.com/*, https://*.webassign.com/*, https://*.macmillanlearning.com/*, https://*.mheducation.com/*, https://*.cengage.com/*, https://*.zybooks.com/* and the other platform sites listed in the extension's permissions): read the due date on the student's own assignment pages. The same permissions let the due-date reader run in the hidden frames that show these pages.
 - Content script on https://education.wiley.com/*: when the user opens a WileyPLUS assignment, read only its title and due-date line so the dashboard can show that deadline; never clicks or changes anything.
-- Optional host permission https://*/*: never granted at install. When DueBoard finds a homework platform in the user's Brightspace courses, it names the platform and asks for access to that platform's site only, on the user's click ("Allow"). With it, DueBoard opens the user's own Brightspace homework link in a minimized window, reads the assignment page's heading and due-date line, and closes the window. On a platform page that waits for a click, it may press that page's one "open the assignment" button (Open, Launch, View assignment); it never types, and never presses anything that starts, continues or submits work. Access can be removed in DueBoard's Settings.
-- scripting (with the optional access above): inject the read-only due-date reader into those assignment pages.
+- Optional host permission https://*/*: never granted at install. When DueBoard finds a homework platform in the user's Brightspace courses that is not in the list above, it names the site and asks for access to that site only, on the user's click ("Allow"). With it, DueBoard reads the assignment page's heading and due-date line the same way, in a hidden frame or, when a page cannot be read there, in a minimized window it opens and closes itself (the student can turn the window off in Settings). On a platform page that waits for a click, it may press that page's one "open the assignment" button (Open, Launch, View assignment); it never types, and never presses anything that starts, continues or submits work. Access can be removed in DueBoard's Settings.
+- scripting (with the site access above): inject the read-only due-date reader into those assignment pages when a minimized window is used.
 
 ### Remote code
 No remote code. All code ships inside the extension package.
