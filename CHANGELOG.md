@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6 — 2026-11 (trial build)
+
+- **No page read in the background can open a tab or window any more**: the hidden frames are now sandboxed without permission to open new windows, so the browser itself refuses, whatever way a page tries (1.4.4 and 1.4.5 caught specific ways only; Brightspace's launch page for an "open in a new window" tool still got through). Pages DueBoard can move into the frame are still read in the background; the others are read by the minimized window
+
 ## 1.4.5 — 2026-11 (trial build)
 
 - **No more stray tabs, second part**: a launch page whose script clicks a link it never adds to the page (or one inside a web component, or sends it a click event) still opened a real tab in 1.4.4. The click itself is now caught, so the page opens inside the hidden frame

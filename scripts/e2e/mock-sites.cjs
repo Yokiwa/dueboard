@@ -119,6 +119,9 @@ function createMocks({ scenario = 'default' } = {}) {
       if (to) return html(launchPage(to));
       const embedded = { S1: 'https://interop.pearson.com/launch', E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
       if (embedded) return html(embedPage(embedded));
+      // A way out that DueBoard's page scripts do not catch: window.open called through a blank child frame.
+      if (rc === 'E6')
+        return html(`<h1>Brightspace</h1><script>const f = document.createElement('iframe'); document.body.append(f); f.contentWindow.open('https://www.aleks.com/framed/hw13', '_blank');</script>`);
       if (rc === 'E5')
         return html(`<h1>Brightspace</h1><script>const a = document.createElement('a'); a.href = 'https://www.aleks.com/framed/hw12'; a.target = '_blank'; a.click();</script>`);
       if (rc === 'E4')

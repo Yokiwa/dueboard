@@ -175,6 +175,10 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       return new Promise<FrameResult>((resolve) => {
         const iframe = doc.createElement('iframe');
         iframe.name = `dueboard-${req.token}`;
+        // No page in a hidden frame may open a tab or window, whatever way it tries (the browser enforces it for nested
+        // frames too): one that only works in a new tab is left to the minimized window instead of appearing in front
+        // of the student. Same origin kept, so scripts, forms, cookies and DueBoard's handshake work as usual.
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
         iframe.src = req.url;
         const v: Visit = {
           req,

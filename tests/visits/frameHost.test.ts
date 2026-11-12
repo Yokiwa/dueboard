@@ -48,7 +48,9 @@ describe('frame host', () => {
     expect(iframes().length).toBe(1);
     expect(iframes()[0]!.src).toBe('https://www.aleks.com/hw');
     expect(iframes()[0]!.name).toBe('dueboard-t1');
-    expect(iframes()[0]!.hasAttribute('sandbox')).toBe(false);
+    // Sandboxed so that no page in it can open a tab or window, whatever way it tries; it keeps its own origin
+    // (scripts, forms and cookies work as usual) and may not navigate the extension page.
+    expect(iframes()[0]!.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-forms');
     hello(child(), n(1));
     send(n(1), { type: 'visitFound', found, frameUrl: 'https://www.aleks.com/hw', top: false });
     await p;

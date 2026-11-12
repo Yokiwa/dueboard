@@ -2,7 +2,7 @@
   "name": "dueboard",
   "description": "Every deadline from Brightspace and the homework platforms your courses use, on one page.",
   "private": true,
-  "version": "1.4.5",
+  "version": "1.4.6",
   "type": "module",
   "scripts": {
     "dev": "wxt",

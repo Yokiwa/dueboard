@@ -239,6 +239,12 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     check(pearson?.clicked?.some((c) => c.startsWith('Assignments')), `the Assignments link was pressed (${pearson?.clicked?.join('; ')})`);
     check(mocks.state.hits.mylab > mylabBefore && pearson?.status === 'landed' && pearson?.host === 'mylab.pearson.com', `the visit ended on MyLab, in the frame (${pearson?.status}, ${pearson?.host})`);
 
+    console.log('e2e frames: a page that opens a tab in a way no page script catches');
+    const escape = await probe('t4', 'https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=103&type=lti&rcode=E6', true);
+    console.log(`  FrameResult: ${brief(escape)}`);
+    await page.waitForTimeout(1500);
+    check(escape?.status === 'blocked', `the visit ends blocked, for the minimized window to read (${escape?.status})`);
+
     const after = await layout();
     const created = await page.evaluate(() => window.__created);
     check(created.length === 0, `no tab or window was created during the run (${created.join('; ') || 'none'})`);
