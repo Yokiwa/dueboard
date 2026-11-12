@@ -14,7 +14,7 @@
     </header>
     <main class="doc">
       <h1>Privacy Policy</h1>
-      <p class="lang">Last updated: November 2026 (version 1.4.0)</p>
+      <p class="lang">Last updated: November 2026 (version 1.4.9)</p>
 
       <h2>In short</h2>
       <p>DueBoard does not collect, transmit or sell any personal data. Your data stays in your own browser.</p>
@@ -32,7 +32,7 @@
       <p>DueBoard's own requests only read. It never changes, submits or deletes anything on these sites, and it never sees or stores your password.</p>
 
       <h2>Reading platform pages</h2>
-      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link in a hidden frame inside the extension itself, in the background and without opening any window or tab. Brightspace signs you in to the platform as it always does when you click the link. DueBoard reads the page's heading and its “Due …” line and removes the frame. It never types or submits anything.</p>
+      <p>Many courses keep due dates on the homework platform, which you reach through a link in Brightspace. When a homework item has no date, DueBoard opens that Brightspace link in a hidden frame inside the extension itself, in the background and without opening any window or tab. Brightspace signs you in to the platform as it always does when you click the link. DueBoard reads the page's heading and its “Due …” line and removes the frame. It never types or submits anything. These hidden frames are not allowed to open windows or tabs: a link or form on such a page that would open a new tab opens inside the hidden frame instead.</p>
       <p>Platforms usually forbid being shown inside another page by sending “do not embed” headers (<code>X-Frame-Options</code> and <code>Content-Security-Policy</code>). While DueBoard is reading, one session rule removes the <code>X-Frame-Options</code> and <code>Content-Security-Policy</code> response headers from page loads inside DueBoard's own hidden frames (requests that belong to no browser tab) on the homework sites it has access to. It never applies to your own tabs, and it is removed when reading ends.</p>
       <p>Pages that cannot be read in a hidden frame are opened in a small minimized browser window instead, like “Open in new window”, read, and closed. A homework on a site DueBoard doesn't know yet is also opened once in that small window to find out which site it is; DueBoard then asks you to allow that site. You can turn this window off in Settings, and the pages that need it then stay without a date.</p>
       <p>Some platforms first show a launcher that waits for a click (WileyPLUS, for example). There DueBoard may press that one button, and only buttons that open the assignment (labels such as “Open”, “Launch” or “View assignment”). It never presses anything that starts, continues, retries or submits work (“Start”, “Begin”, “Continue”, “Resume”, “Attempt”, “Take”, “Submit” and similar).</p>
@@ -41,7 +41,7 @@
         <li>Quizzes, tests and exams are never opened this way, so DueBoard can't start a timed or proctored attempt.</li>
         <li>Because DueBoard opens the link as you, a platform (and your instructor, if the platform reports it) may see these visits as you opening the assignment page.</li>
         <li>If you open or click into the window while it works, DueBoard stops and leaves the window to you.</li>
-        <li>When Gradescope or Pearson MyLab says you are signed out, DueBoard opens that platform's entry in one of your Brightspace courses once, so Brightspace signs you back in, and then reads it as before.</li>
+        <li>When Gradescope or Pearson MyLab says you are signed out, DueBoard opens that platform's entry in one of your Brightspace courses once, so Brightspace signs you back in, and then reads it as before. Pearson's entry first shows its course page (“Access Pearson for D2L Brightspace”); there DueBoard presses only its “Assignments” link, which is what signs you in to MyLab. This happens at most every 6 hours on its own, or when you click Refresh.</li>
         <li>Settings → Diagnostics keeps a log of these visits on your computer: where each link went and, when no date was found, a short piece of the page's text and its button labels. It is never sent anywhere; you can download it to share it.</li>
         <li>These pages appear in your browser history, like pages you open yourself.</li>
         <li>What DueBoard reads stays in your browser like everything else.</li>
