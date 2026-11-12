@@ -12,7 +12,7 @@ You do not need to know anything about programming. If a step does not match wha
 - If a page cannot be read that way, DueBoard falls back to a small minimized window, as older versions did. A homework on a site DueBoard doesn't know yet is opened once in that small window to find out which site it is; DueBoard then asks you to allow that site.
 - Reading happens automatically, not only when you click Refresh.
 - The first-run page has one button, **Log in to Brightspace**.
-- This test build does not include the scores feature.
+- New in 1.5.0: work you handed in is ticked off automatically, with its score, when Brightspace, Gradescope, Pearson or the homework page shows it. **Overdue** lists every past-due item of the term (the first 3, then "Show all"), and work DueBoard could not check carries a **Not sure** tag: tick it if you did it. If DueBoard ticked something you did not hand in, untick it and it stays unticked.
 
 ## Before you start
 
@@ -21,7 +21,7 @@ You do not need to know anything about programming. If a step does not match wha
 
 ## Updating from an earlier 1.4 trial
 
-If an earlier 1.4 trial build is installed with **Load unpacked**, unzip `dueboard-1.4.9-chrome.zip` into the same folder,
+If an earlier 1.4 trial build is installed with **Load unpacked**, unzip `dueboard-1.5.0-chrome.zip` into the same folder,
 replacing the files, then click the round arrow (reload) on DueBoard's card on `chrome://extensions`. Your courses and
 settings stay, and DueBoard tries background reading again for every platform. Then continue from step 3 below
 (click **Refresh** on the dashboard to start a sync).
@@ -29,8 +29,8 @@ settings stay, and DueBoard tries background reading again for every platform. T
 ## Checklist
 
 1. **Install the trial build.**
-   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.9-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
-   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.9-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
+   - Chrome: unzip the Chrome file you were given (`dueboard-1.5.0-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
+   - Firefox: unzip the Firefox file you were given (`dueboard-1.5.0-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
 2. **Sign in.** DueBoard's first-run page opens. Click **Log in to Brightspace**.
    - If you were already signed in to Brightspace, the first sync starts straight away.
    - If not, this tab goes to the Brightspace sign-in page. Sign in as usual. When Brightspace's home page loads, the tab comes back to DueBoard by itself and the sync starts.
