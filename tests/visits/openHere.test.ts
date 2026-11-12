@@ -116,3 +116,53 @@ describe('open here: forms and links meant for another window', () => {
     expect(document.getElementById('l')!.getAttribute('target')).toBe('_self');
   });
 });
+
+describe('open here: links clicked by a script', () => {
+  const setup = () => {
+    const opened: string[] = [];
+    class Anchor {}
+    (Anchor.prototype as { click: () => void }).click = function (this: HTMLAnchorElement) {
+      opened.push(`click:${this.getAttribute('target') ?? ''}`);
+    };
+    class Target {}
+    (Target.prototype as { dispatchEvent: (e: Event) => boolean }).dispatchEvent = function (this: HTMLAnchorElement, e: Event) {
+      opened.push(`${e.type}:${this.getAttribute('target') ?? ''}`);
+      return true;
+    };
+    const w = { ...fake(), document, HTMLAnchorElement: Anchor, EventTarget: Target };
+    installOpenHere(w as unknown as Window);
+    return { opened, click: (Anchor.prototype as { click: () => void }).click, dispatch: (Target.prototype as { dispatchEvent: (e: Event) => boolean }).dispatchEvent };
+  };
+
+  it('a link the page never added, clicked by its script, opens here', () => {
+    const { opened, click } = setup();
+    const a = document.createElement('a');
+    a.href = 'https://integration-hub.macmillanlearning.com/x';
+    a.target = '_blank';
+    click.call(a);
+    expect(opened).toEqual(['click:_self']);
+  });
+
+  it('a click event sent to such a link opens here too; other events and elements are left alone', () => {
+    const { opened, dispatch } = setup();
+    const a = document.createElement('a');
+    a.target = '_blank';
+    dispatch.call(a, new MouseEvent('click'));
+    const b = document.createElement('a');
+    b.target = '_blank';
+    dispatch.call(b, new Event('focus'));
+    dispatch.call(document.createElement('div'), new MouseEvent('click'));
+    expect(opened).toEqual(['click:_self', 'focus:_blank', 'click:']);
+  });
+
+  it('a link inside a web component (shadow DOM) clicked by the student-facing code opens here', () => {
+    setup();
+    const host = document.createElement('div');
+    document.body.innerHTML = '';
+    document.body.append(host);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<a id="l" href="#y" target="_blank"><span>Launch</span></a>';
+    root.querySelector('span')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true }));
+    expect(root.getElementById('l')!.getAttribute('target')).toBe('_self');
+  });
+});

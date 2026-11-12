@@ -84,8 +84,29 @@ export function installOpenHere(win: Window = window): void {
         return requestSubmit.call(this, submitter);
       };
   }
+  // A link clicked from a script: often one the page never added to the document (its click reaches no listener), or one
+  // inside a web component. The click itself is caught, as a call and as a sent event.
+  const linkOf = (el: unknown): Element | null => {
+    const e = el as { closest?: (s: string) => Element | null } | null;
+    return e && typeof e.closest === 'function' ? e.closest('a[target], area[target]') : null;
+  };
+  const Anchor = (win as unknown as { HTMLAnchorElement?: { prototype: { click?: () => void } } }).HTMLAnchorElement;
+  const click = Anchor?.prototype.click;
+  if (Anchor && click)
+    Anchor.prototype.click = function (this: Element) {
+      keepHere(this);
+      return click.call(this);
+    };
+  const Target = (win as unknown as { EventTarget?: { prototype: { dispatchEvent?: (e: Event) => boolean } } }).EventTarget;
+  const dispatch = Target?.prototype.dispatchEvent;
+  if (Target && dispatch)
+    Target.prototype.dispatchEvent = function (this: unknown, e: Event) {
+      if (e && e.type === 'click') keepHere(linkOf(this));
+      return dispatch.call(this, e);
+    };
   if (doc) {
-    doc.addEventListener('submit', (e) => keepHere(e.target as Element), true);
-    doc.addEventListener('click', (e) => keepHere((e.target as Element | null)?.closest?.('a[target], area[target]') ?? null), true);
+    const first = (e: Event) => (typeof e.composedPath === 'function' ? e.composedPath()[0] : e.target);
+    doc.addEventListener('submit', (e) => keepHere(first(e) as Element), true);
+    doc.addEventListener('click', (e) => keepHere(linkOf(first(e))), true);
   }
 }

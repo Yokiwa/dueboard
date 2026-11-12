@@ -119,7 +119,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       await page.getByRole('button', { name: 'Log in to Brightspace' }).click();
       await settle(async () => {
         const c = await captured();
-        return ['21', '23', '24', '25', '29', '30', '32'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
+        return ['21', '23', '24', '25', '29', '30', '32', '33'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
       }, 'the first automatic sync to date the homeworks');
       let c = await captured();
       check(c['brightspace:topic:21'].dueAt === (await local20(20)), `a page that refuses framing was dated in the sync (${c['brightspace:topic:21'].dueAt})`);
@@ -128,6 +128,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       check(c['brightspace:topic:29'].dueAt === (await local20(24)), `a page Brightspace shows inside its own launch page was dated in the background (${c['brightspace:topic:29'].dueAt})`);
       check(c['brightspace:topic:30'].dueAt === '2026-11-24T04:59:00.000Z', `a launcher with its own window.open and an empty new window opened the assignment in the frame (${c['brightspace:topic:30'].dueAt})`);
       check(c['brightspace:topic:32'].dueAt === (await local20(25)), `a tool Brightspace opens "in a new window" was read in the frame (${c['brightspace:topic:32'].dueAt})`);
+      check(c['brightspace:topic:33'].dueAt === (await local20(26)), `a link the launch page's script clicked without adding it to the page opened in the frame (${c['brightspace:topic:33'].dueAt})`);
       check(mocks.state.hits.nodate > 0 && !c['brightspace:topic:31']?.dueAt, `an embedded page without a date was read and left undated (${mocks.state.hits.nodate} hits)`);
       let log = await visitLog();
       check(log.length > 0 && log.every((e) => e.mode === 'frame'), `every visit ran in the background (${log.map((e) => e.mode).join(',')})`);

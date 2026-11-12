@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.5 — 2026-11 (trial build)
+
+- **No more stray tabs, second part**: a launch page whose script clicks a link it never adds to the page (or one inside a web component, or sends it a click event) still opened a real tab in 1.4.4. The click itself is now caught, so the page opens inside the hidden frame
+
 ## 1.4.4 — 2026-11 (trial build)
 
 - **No more stray tabs during a sync**: a tool your instructor set to "open in a new window" (for example Achieve / Macmillan) made Brightspace's launch page open a real tab in front of you while DueBoard read it in the background. Forms and links meant for a new window now open inside DueBoard's hidden frame, where the page is read without a window
