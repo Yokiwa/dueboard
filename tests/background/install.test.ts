@@ -33,6 +33,10 @@ describe('settingsAfterUpdate', () => {
     expect(settingsAfterUpdate({ ...base, visits: 'manual' }, '1.4.1').visits).toBe('manual');
     expect(settingsAfterUpdate({ ...base, visits: 'manual' }, '1.10.0').visits).toBe('manual');
   });
+  it('never switches on a version it cannot read', () => {
+    expect(settingsAfterUpdate({ ...base, visits: 'manual' }, '1.4').visits).toBe('manual');
+    expect(settingsAfterUpdate({ ...base, visits: 'manual' }, 'abc').visits).toBe('manual');
+  });
   it('leaves settings unchanged without a previous version', () => {
     const s = { ...base, visits: 'manual' as const };
     expect(settingsAfterUpdate(s, undefined)).toEqual(s);

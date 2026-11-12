@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { dueVisits, originAllowed, MAX_VISITS, WINDOW_MAX } from '../../src/visits/schedule';
 import { migrate } from '../../src/storage/store';
+import { DEFAULT_SETTINGS } from '../../src/core/types';
 import type { CapturedDue, RawItem, StoreShape } from '../../src/core/types';
 
 const now = new Date('2026-11-07T12:00:00-05:00');
@@ -32,6 +33,11 @@ const cap = (n: number, p: Partial<CapturedDue>): Record<string, CapturedDue> =>
 const keys = (s: StoreShape, trigger: 'auto' | 'manual' = 'auto', granted: string[] = ['https://*/*']) => dueVisits(s, now, trigger, granted).map((t) => t.key);
 
 describe('dueVisits', () => {
+  it('a fresh install (default settings) reads an undated homework on the automatic trigger', () => {
+    const s = store([topic(1)], {}, { settings: undefined });
+    expect(s.settings).toEqual(DEFAULT_SETTINGS);
+    expect(keys(s, 'auto')).toEqual(['brightspace:topic:1']);
+  });
   it('never opens proctoring launches', () => {
     expect(keys(store([topic(1, 'Honorlock practice'), topic(2, 'ExamSoft setup')]))).toEqual([]);
   });

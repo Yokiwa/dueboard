@@ -144,8 +144,9 @@ const messages = {
   'access.missing': (v: Vars) => `DueBoard can't reach ${v.names}. Allow access to keep syncing.`,
   'settings.reading': 'Reading platforms',
   'settings.readingHint':
-    'DueBoard opens homework links from Brightspace in a minimized window, reads the due date and closes it. It never clicks or submits anything.',
-  'settings.visits': 'Read platforms in a minimized window',
+    "DueBoard opens your homework links from Brightspace in a hidden page inside the extension, reads the due date and closes it. If a page can't be read that way, it can use a small minimized window instead. It never clicks submit or changes anything.",
+  'settings.visits': 'Read homework pages from your platforms',
+  'settings.windowFallbackOff': 'Off while reading is set to Never.',
   'settings.visits.auto': 'Automatically, in the background',
   'settings.windowFallback': "Use a small minimized window for pages that can't be read in the background",
   'settings.visits.manual': 'Only when I click Refresh',

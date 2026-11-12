@@ -2,6 +2,7 @@ import type { Settings } from '../core/types';
 
 /** True when dotted numeric version a is lower than b ("1.10.0" is above "1.4.0"). */
 function versionBelow(a: string, b: string): boolean {
+  if (!/^\d+(\.\d+)*/.test(a)) return false;
   const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
   const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {

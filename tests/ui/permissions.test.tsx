@@ -92,7 +92,7 @@ describe('Settings: reading platforms', () => {
 
   it('saves when to read platforms', async () => {
     render(<Settings />);
-    const select = await screen.findByLabelText('Read platforms in a minimized window');
+    const select = await screen.findByLabelText('Read homework pages from your platforms');
     fireEvent.change(select, { target: { value: 'manual' } });
     await waitFor(async () => expect((await loadStore()).settings.visits).toBe('manual'));
     expect(screen.getByRole('option', { name: 'Only when I click Refresh' })).toBeTruthy();

@@ -139,7 +139,7 @@ export interface UserState {
 }
 export type VisitMode = 'auto' | 'manual' | 'off';
 export interface Settings {
-  /** When to read platforms in a minimized window. */
+  /** When to read platform pages (in the background, with a window fallback). */
   visits: VisitMode;
   /** Show dates found in syllabi as suggestions. */
   syllabus: boolean;
