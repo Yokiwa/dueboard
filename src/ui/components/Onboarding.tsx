@@ -12,6 +12,7 @@ const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope
 /** First-run guide, shown until the first platform has synced successfully. */
 export function Onboarding() {
   const t = useT();
+  const [signingIn, setSigningIn] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [report, setReport] = useState<SyncReport | null>(null);
 
@@ -19,18 +20,22 @@ export function Onboarding() {
     setSyncing(true);
     try {
       setReport(await sendToBackground<SyncReport>({ type: 'sync', trigger: 'manual' }));
+    } catch {
+      setReport({ brightspace: 'network' });
     } finally {
       setSyncing(false);
     }
   };
 
   const login = async () => {
-    setSyncing(true);
+    setSigningIn(true);
     try {
       const res = await sendToBackground<{ signedIn?: boolean } | null>({ type: 'beginLogin' });
       if (res?.signedIn) await start();
+    } catch {
+      setReport({ brightspace: 'network' });
     } finally {
-      setSyncing(false);
+      setSigningIn(false);
     }
   };
 
@@ -57,8 +62,8 @@ export function Onboarding() {
           <p className="m-0 body-3 text-db-muted">{t('onb.intro')}</p>
         </div>
         <div className="flex flex-col items-start gap-2">
-          <button type="button" className={primaryBtn} onClick={login} disabled={syncing}>
-            {syncing ? t('onb.signingIn') : t('onb.login')}
+          <button type="button" className={primaryBtn} onClick={login} disabled={signingIn || syncing}>
+            {syncing ? t('onb.reading') : signingIn ? t('onb.signingIn') : t('onb.login')}
           </button>
           <p className="m-0 caption-5 text-db-faint">{t('onb.already')}</p>
         </div>

@@ -81,6 +81,17 @@ describe('dashboard App', () => {
     vi.mocked(sendToBackground).mockImplementation(async () => null);
   });
 
+  it('?start=1: the button reads "Reading your courses…" while syncing, and a failed sync shows an error', async () => {
+    history.replaceState(null, '', '/dashboard.html?start=1');
+    let reject!: (e: Error) => void;
+    vi.mocked(sendToBackground).mockImplementation((m) => (m.type === 'sync' ? new Promise((_, rj) => (reject = rj)) : Promise.resolve(null)) as never);
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reading your courses…' })).toBeTruthy());
+    reject(new Error('boom'));
+    await waitFor(() => expect(screen.getByText('Brightspace: failed (network)')).toBeTruthy());
+    vi.mocked(sendToBackground).mockImplementation(async () => null);
+  });
+
   it('onboarding mentions another platform only when it was found and read', async () => {
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));

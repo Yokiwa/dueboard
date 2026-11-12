@@ -107,6 +107,7 @@ const messages = {
   'onb.intro': 'Sign in to Brightspace. DueBoard finds the homework platforms your courses use on its own.',
   'onb.login': 'Log in to Brightspace',
   'onb.signingIn': 'Signing you in…',
+  'onb.reading': 'Reading your courses…',
   'onb.already': 'Already signed in? This starts reading your courses right away.',
   'onb.ok': (v: Vars) => `${v.name}: read`,
   'onb.notLoggedIn': (v: Vars) => `${v.name}: not signed in yet`,
