@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { closeLeftover, launchTargetHost, runVisits, type Landing, type VisitApi } from '../../src/visits/runner';
+import { closeLeftover, launchTargetHost, runVisits, type Landing, type VisitApi, type VisitLogEntry } from '../../src/visits/runner';
 import type { VisitTarget } from '../../src/visits/schedule';
 import type { VisitMessage } from '../../src/visits/messages';
 
@@ -137,6 +137,21 @@ describe('runVisits', () => {
     expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
     expect(f.calls.filter((c) => c === 'inject session pearson').length).toBe(2);
     expect(f.calls.filter((c) => c === 'wait host mylab.pearson.com').length).toBe(2);
+  });
+
+  it('a sign-in page that moves on while the reader is being put on it does not end the visit', async () => {
+    // Pearson's first stop hands off at once: putting the reader on it can fail ("frame removed"); the next page follows.
+    const f = fakeApi({ landings: [at('https://interop.pearson.com/security/login'), 'timeout', at('https://mylab.pearson.com/Student/DoAssignments.aspx')], injectThrows: true });
+    const out = await runVisits([{ ...target(1, 'session'), key: 'pearson:session', platform: 'pearson' }], f.api);
+    expect(out).toEqual([{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
+  });
+
+  it('a visit that fails with an error says which error in the visit log', async () => {
+    const f = fakeApi({ navigateThrows: true });
+    const log: VisitLogEntry[] = [];
+    const out = await runVisits([target(1)], f.api, { onLog: (e) => log.push(e) });
+    expect(out).toEqual([{ key: 'brightspace:topic:1', status: 'failed', reason: 'error' }]);
+    expect(log[0]?.siteNote).toContain('No tab with id: 5');
   });
 
   it('a session visit that never reaches the session host ends as a timeout (the resync decides)', async () => {

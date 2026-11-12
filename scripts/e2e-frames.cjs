@@ -73,7 +73,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         const req = r.request();
         return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers() }, 'route'));
       };
-      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com'])
+      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'mylab.pearson.com'])
         await ctx.route(`https://${host}/**`, answer);
 
       const local = (keys) => page.evaluate((k) => chrome.storage.local.get(k), keys);
@@ -179,6 +179,26 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       await page.getByRole('heading', { name: 'Platform visits' }).waitFor({ timeout: 10000 });
       check((await page.getByRole('cell', { name: 'Background', exact: true }).count()) > 0 && (await page.getByRole('cell', { name: 'Window', exact: true }).count()) > 0, 'Diagnostics shows both "Background" and "Window" in the Mode column');
       await page.goto(`chrome-extension://${id}/dashboard.html`);
+
+      console.log('e2e frames: Pearson signs back in through the minimized window (its first stop hands off at once)');
+      mocks.state.pearson = true;
+      mocks.state.pearsonFrameBroken = true;
+      mocks.state.mylabSignedIn = false;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => {
+        const meta = (await local('syncMeta')).syncMeta?.pearson;
+        return !!meta?.lastSuccess || (await visitLog()).some((e) => e.key === 'pearson:session' && e.mode === 'window');
+      }, 'Pearson to be signed back in');
+      log = await visitLog();
+      const sessionLog = log.filter((e) => e.key === 'pearson:session');
+      console.log(`  pearson:session: ${sessionLog.map((e) => `${e.mode}:${e.result}${e.detail ? `:${e.detail}` : ''} ${e.landed ?? ''} ${e.clicked?.join(',') ?? ''} ${e.siteNote ?? ''}`).join(' | ')}`);
+      check(sessionLog.some((e) => e.mode === 'window' && e.result === 'landed' && e.clicked?.some((c) => c.startsWith('Assignments'))), 'the window pressed Assignments and landed on MyLab');
+      const pmeta = (await local('syncMeta')).syncMeta?.pearson;
+      check(!!pmeta?.lastSuccess && (!pmeta.lastError || Date.parse(pmeta.lastSuccess) >= Date.parse(pmeta.lastError.at)), `Pearson was read after signing back in (${JSON.stringify(pmeta)})`);
+      await page.reload();
+      await page.getByRole('heading', { level: 1 }).waitFor();
+      check((await page.getByText(/Pearson session expired/).count()) === 0, 'no "Pearson session expired" line on the dashboard');
+      mocks.state.pearson = false;
 
       console.log('e2e frames: window fallback turned off');
       await page.evaluate(async () => {

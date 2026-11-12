@@ -219,6 +219,12 @@ describe('dueVisits: signing back in to Gradescope through any course', () => {
     expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(7), failures: 1 } }))).toEqual(['gradescope:session']);
   });
 
+  it('Refresh tries again at once, even within 6 hours or after 3 attempts that did not help', () => {
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(0.2), failures: 1 } }), 'manual')).toEqual(['gradescope:session']);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(0.2), failures: 3 } }), 'manual')).toEqual(['gradescope:session']);
+    expect(keys(withGradescope({ lastError: { at: ago(0.1), reason: 'not_logged_in' } }, { gradescope: { at: ago(7), failures: 3 } }), 'auto')).toEqual([]);
+  });
+
   it('a course without a Gradescope entry adds nothing', () => {
     const s = store([]);
     s.syncMeta.gradescope = { lastError: { at: ago(0.1), reason: 'not_logged_in' } };

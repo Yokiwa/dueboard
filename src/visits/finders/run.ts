@@ -24,6 +24,8 @@ export interface FinderWindow {
 const BRIGHTSPACE_HOST = 'purdue.brightspace.com';
 /** How long a platform page gets to show its date before its "open the assignment" button is pressed. */
 const OPEN_AFTER_MS = 4_000;
+/** How long a sign-in visit's page gets to show the link to its next step (Pearson's portal loads slowly). */
+const SESSION_STEP_MS = 35_000;
 
 /**
  * Runs in every frame of a visited page. Platforms are mostly single-page apps that render late, so the page is
@@ -51,7 +53,15 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
         link.press();
         return;
       }
-      if (Date.now() - started < maxMs) setTimeout(step, pollMs);
+      if (Date.now() - started < Math.max(maxMs, SESSION_STEP_MS)) {
+        setTimeout(step, pollMs);
+        return;
+      }
+      // Not found: describe the page for the visit log, so a stuck sign-in can be seen and fixed.
+      if (hostOf(frameUrl) !== BRIGHTSPACE_HOST) {
+        const text = pageLines(win.document).join(' / ').replace(/\s+/g, ' ').slice(0, 300);
+        send({ type: 'visitSample', frameUrl: stripUrl(frameUrl), text, buttons: buttonLabels(win.document) });
+      }
     };
     step();
     return;

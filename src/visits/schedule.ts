@@ -73,14 +73,15 @@ const LABEL: Record<(typeof SESSION_SOURCES)[number], string> = { gradescope: 'G
 /**
  * Platforms DueBoard reads in the background (Gradescope, Pearson) sign the student in through Brightspace. When one
  * reports "signed out" and any course has its Brightspace entry, that entry is opened once to sign back in: at most
- * every 6 h; after 3 attempts that didn't help, on Refresh only.
+ * every 6 h automatically, at once on Refresh; after 3 attempts that didn't help, on Refresh only.
  */
 function sessionTargets(store: StoreShape, now: Date, trigger: Trigger): VisitTarget[] {
   const links = launchLinks(store);
   const out: VisitTarget[] = [];
   for (const src of SESSION_SOURCES) {
     const last = store.visitState.sessions?.[src];
-    if (last && now.getTime() - Date.parse(last.at) < 6 * H) continue;
+    // Automatic syncs try at most every 6 hours; Refresh (the student asking) tries at once.
+    if (last && trigger !== 'manual' && now.getTime() - Date.parse(last.at) < 6 * H) continue;
     if (last && last.failures >= 3 && trigger !== 'manual') continue;
     const meta = store.syncMeta[src];
     const err = meta?.lastError;

@@ -78,6 +78,7 @@ const backgroundToc = (state) => {
     link(32, 'New Window Homework', 'E4'), // a tool set to "open in a new window": Brightspace posts its form to a new tab
     link(33, 'Script Link Homework', 'E5'), // the launch page's script clicks a link it never added to the page (target=_blank)
   ];
+  if (state.pearson) topics.push(link(40, 'Access Pearson', 'S2')); // the course's Pearson entry (signs in to MyLab)
   if (state.unknownSite) topics.push(link(26, 'Lab Report', 'U1')); // an unknown site: DueBoard asks for access, never reads it
   if (state.unknownSite2) topics.push(link(28, 'Lab Report Two', 'U2'));
   if (state.frameless) topics.push(link(22, 'Windowed Homework', 'X1')); // a page no hidden frame can read
@@ -102,6 +103,9 @@ function createMocks({ scenario = 'default' } = {}) {
     frameless: false,
     frameless2: false,
     hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0, mylab: 0 },
+    pearson: false, // the course links to Pearson
+    pearsonFrameBroken: false, // Pearson's page can't be read in a hidden frame, so signing in needs the window
+    mylabSignedIn: false, // a MyLab page has been opened (the session the Pearson connector reads with)
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
   };
@@ -117,6 +121,9 @@ function createMocks({ scenario = 'default' } = {}) {
       const rc = /rcode=(\w+)/.exec(u)?.[1];
       const to = { F1: 'https://www.aleks.com/framed/hw7', X1: 'https://www.aleks.com/frameless/hw8', X2: 'https://www.aleks.com/frameless/hw9', P1: 'https://digital.wwnorton.com/list/ps', P2: 'https://digital.wwnorton.com/list/ps', P3: 'https://digital.wwnorton.com/list/ps', U1: 'https://example-unknown.com/a3', U2: 'https://example-unknown2.com/a4' }[rc];
       if (to) return html(launchPage(to));
+      // Like Purdue's Pearson entry: in a tab it goes to Pearson; inside a frame, Brightspace shows Pearson in a frame.
+      if (rc === 'S2')
+        return html(`<script>const to = 'https://interop.pearson.com/security/login'; if (window.top === window) location.assign(to); else document.write('<iframe src="' + to + '"></iframe>');</script>`);
       const embedded = { S1: 'https://interop.pearson.com/launch', E1: 'https://www.aleks.com/framed/hw10', E2: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=L7', E3: 'https://www.aleks.com/nodate/course' }[rc];
       if (embedded) return html(embedPage(embedded));
       // A way out that DueBoard's page scripts do not catch: window.open called through a blank child frame.
@@ -239,10 +246,18 @@ function createMocks({ scenario = 'default' } = {}) {
         return gradescope(u);
       // Pearson's page for Brightspace: MyLab signs the student in only when its Assignments link is opened (new tab).
       case 'interop.pearson.com':
-        return html('<h1>Access Pearson for D2L Brightspace</h1><button>Open</button><ul><li><a href="https://mylab.pearson.com/Student/DoAssignments.aspx?view=all" target="_blank" aria-label="Assignments, opens in a new window">Assignments</a></li><li><a href="https://mylab.pearson.com/Student/Results.aspx" target="_blank">Results</a></li><li><a href="#">eTextbook</a></li></ul>');
-      case 'mylab.pearson.com':
+        // The first stop hands off at once (the moment DueBoard may be putting its reader on it).
+        if (url.pathname === '/security/login') return handOff('https://interop.pearson.com/launch');
+        if (via === 'server' && state.pearsonFrameBroken) return { status: 500, headers: { 'content-type': 'text/html' }, body: '' };
+        return html('<h1>Access Pearson for D2L Brightspace</h1><button>Open</button><ul><li><a href="https://mylab.pearson.com/Student/DoAssignments.aspx?view=all&from=launch" target="_blank" aria-label="Assignments, opens in a new window">Assignments</a></li><li><a href="https://mylab.pearson.com/Student/Results.aspx" target="_blank">Results</a></li><li><a href="#">eTextbook</a></li></ul>');
+      case 'mylab.pearson.com': {
         state.hits.mylab++;
-        return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td>08/29/26 11:59pm</td><td>Lesson 1</td></tr></table>');
+        // Opening MyLab from Pearson's Brightspace page signs the student in; DueBoard's own request reads with that session.
+        if (url.searchParams.get('from') === 'launch') state.mylabSignedIn = true;
+        if (!state.mylabSignedIn) return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/login.html'), 'utf8'));
+        if (!state.pearson) return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td>08/29/26 11:59pm</td><td>Lesson 1</td></tr></table>');
+        return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/assignments.html'), 'utf8'));
+      }
       default:
         return notFound();
     }

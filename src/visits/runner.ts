@@ -115,7 +115,12 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
         break;
       }
       const trace: Partial<VisitLogEntry> = {};
-      const outcome = await visit(t, granted, trace).catch(async (): Promise<VisitOutcome | 'stop'> => ((await api.windowState(windowId)) === 'gone' ? 'stop' : { key: t.key, status: 'failed', reason: 'error' }));
+      const outcome = await visit(t, granted, trace).catch(async (e: unknown): Promise<VisitOutcome | 'stop'> => {
+        if ((await api.windowState(windowId)) === 'gone') return 'stop';
+        // Which error, for the visit log (the browser's message names no page content).
+        trace.siteNote = `error: ${e instanceof Error ? e.message : String(e)}`.slice(0, 200);
+        return { key: t.key, status: 'failed', reason: 'error' };
+      });
       if (outcome === 'stop') break;
       out.push(outcome);
       if (opts.onLog) {
@@ -183,7 +188,9 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
   async function signInSteps(t: VisitTarget, until: string): Promise<Landing> {
     const rounds = Math.max(1, Math.ceil(perPageMs / SESSION_ROUND_MS));
     for (let i = 0; i < rounds; i++) {
-      await settleWithin(api.inject(tabId, 'session', t.platform), injectMs);
+      // A sign-in page may move on while the reader is being put on it (Pearson's first stop hands off at once): the
+      // next page gets it in the next round.
+      await settleWithin(api.inject(tabId, 'session', t.platform), injectMs).catch(() => undefined);
       const l = await api.waitForLanding(tabId, SESSION_ROUND_MS, { host: until });
       if (l !== 'timeout') return l;
     }

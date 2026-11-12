@@ -251,3 +251,40 @@ describe('runFinder in a hidden frame', () => {
     expect(answers(sent2)).toEqual([]);
   });
 });
+
+describe('runFinder on a sign-in visit that does not find its link', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 7, 12, 0));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('keeps looking for 35 s (a slow page), then describes the page for the visit log', async () => {
+    document.body.innerHTML = '<h1>Loading your course</h1>';
+    const w = fakeWindow(false);
+    w.__dueboardMode = 'session';
+    w.__dueboardPlatform = 'pearson';
+    w.location = { href: 'https://interop.pearson.com/launch?token=SECRET' };
+    const sent: VisitMessage[] = [];
+    runFinder(w, (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(20_000);
+    document.body.innerHTML = '<h1>Access Pearson for D2L Brightspace</h1><a id="a" href="#">Assignments</a>';
+    let pressed = 0;
+    document.getElementById('a')!.addEventListener('click', (e) => {
+      e.preventDefault();
+      pressed++;
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(pressed).toBe(1);
+
+    document.body.innerHTML = '<h1>Something went wrong</h1><button>Try again</button>';
+    const w2 = fakeWindow(false);
+    w2.__dueboardMode = 'session';
+    w2.__dueboardPlatform = 'pearson';
+    w2.location = { href: 'https://interop.pearson.com/launch?token=SECRET' };
+    const sent2: VisitMessage[] = [];
+    runFinder(w2, (m) => sent2.push(m));
+    await vi.advanceTimersByTimeAsync(36_000);
+    expect(sent2.filter((m) => m.type === 'visitSample')).toEqual([{ type: 'visitSample', frameUrl: 'https://interop.pearson.com/launch', text: 'Something went wrong / Try again', buttons: ['Try again'] }]);
+  });
+});
