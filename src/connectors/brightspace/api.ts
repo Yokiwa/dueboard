@@ -5,9 +5,16 @@ export interface Enrollment {
   Access: { IsActive: boolean; CanAccess: boolean; StartDate: string | null; EndDate: string | null };
 }
 export interface EnrollmentPage { PagingInfo: { Bookmark: string; HasMoreItems: boolean }; Items: Enrollment[] }
-export interface DropboxFolder { Id: number; Name: string; DueDate: string | null; IsHidden: boolean; Availability?: { StartDate: string | null; EndDate: string | null } | null }
+export interface DropboxFolder { Id: number; GradeItemId?: number | null; Name: string; DueDate: string | null; IsHidden: boolean; Availability?: { StartDate: string | null; EndDate: string | null } | null }
+export interface GradeValue {
+  GradeObjectIdentifier: string;
+  GradeObjectName: string;
+  PointsNumerator: number | null;
+  PointsDenominator: number | null;
+  DisplayedGrade: string | null;
+}
 export interface MySubmission { Submissions: unknown[]; CompletionDate?: string | null }
-export interface Quiz { QuizId: number; Name: string; IsActive: boolean; DueDate: string | null; EndDate?: string | null }
+export interface Quiz { QuizId: number; GradeItemId?: number | null; Name: string; IsActive: boolean; DueDate: string | null; EndDate?: string | null }
 export interface CalendarEvent {
   CalendarEventId: number;
   OrgUnitId: number;
@@ -28,6 +35,7 @@ export function urls(base: string, lp: string, le: string) {
       `${base}/d2l/api/lp/${lp}/enrollments/myenrollments/?orgUnitTypeId=3${bookmark ? `&bookmark=${encodeURIComponent(bookmark)}` : ''}`,
     dropbox: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/dropbox/folders/`,
     mySubmissions: (ou: string, folder: number) => `${base}/d2l/api/le/${le}/${ou}/dropbox/folders/${folder}/submissions/mysubmissions/`,
+    grades: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/grades/values/myGradeValues/`,
     quizzes: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/quizzes/`,
     toc: (ou: string) => `${base}/d2l/api/le/${le}/${ou}/content/toc`,
     calendar: (ous: string[], start: string, end: string) =>

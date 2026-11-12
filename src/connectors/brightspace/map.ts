@@ -1,6 +1,7 @@
-import { extractCourseCode } from '../../core/courseCode';
-import type { RawCourse, RawItem, RawLink } from '../../core/types';
-import type { CalendarEvent, DropboxFolder, Enrollment, Quiz, Toc, TocModule } from './api';
+import { extractCourseCode, normalizeTitle } from '../../core/courseCode';
+import { formatPoints } from '../../core/scoreText';
+import type { RawCourse, RawItem, RawLink, Score } from '../../core/types';
+import type { CalendarEvent, DropboxFolder, Enrollment, GradeValue, Quiz, Toc, TocModule } from './api';
 
 const DAY = 86_400_000;
 
@@ -31,8 +32,9 @@ export function folderDue(f: DropboxFolder): string | null {
   return f.DueDate ?? f.Availability?.EndDate ?? null;
 }
 
-export function toDropboxItem(f: DropboxFolder, ou: string, base: string, submitted: boolean): RawItem {
-  return {
+/** `submitted`: the answer to "did I submit?", or null when the folder was not asked (or the request failed). */
+export function toDropboxItem(f: DropboxFolder, ou: string, base: string, submitted: boolean | null): RawItem {
+  const item: RawItem = {
     source: 'brightspace',
     sourceItemId: `dropbox:${f.Id}`,
     sourceCourseId: ou,
@@ -40,8 +42,10 @@ export function toDropboxItem(f: DropboxFolder, ou: string, base: string, submit
     type: 'assignment',
     dueAt: folderDue(f),
     url: `${base}/d2l/lms/dropbox/user/folder_submit_files.d2l?ou=${ou}&db=${f.Id}`,
-    submitted,
+    submitted: submitted === true,
   };
+  if (submitted !== null) item.submissionKnown = true;
+  return item;
 }
 
 export function toQuizItem(q: Quiz, ou: string, base: string): RawItem {
@@ -156,4 +160,68 @@ export function tocItems(toc: Toc, ou: string, base: string): RawItem[] {
   };
   for (const m of toc.Modules ?? []) walk(m, false);
   return out;
+}
+
+function gradeScore(g: GradeValue): Score | null {
+  const { PointsNumerator: n, PointsDenominator: d } = g;
+  if (typeof n === 'number' && typeof d === 'number' && Number.isFinite(n) && Number.isFinite(d) && d > 0) {
+    return { text: formatPoints(n, d), earned: n, possible: d, from: 'Brightspace' };
+  }
+  return displayedScore(g.DisplayedGrade?.trim() ?? '');
+}
+
+/** A displayed grade is used only as a percentage, a letter grade or "x / y"; "-" or free text gives no score. */
+function displayedScore(shown: string): Score | null {
+  const pct = /^(\d+(?:\.\d+)?)\s*%$/.exec(shown);
+  if (pct) return { text: `${Number(Number(pct[1]).toFixed(2))}%`, from: 'Brightspace' };
+  if (/^[A-F][+-]?$/.test(shown)) return { text: shown, from: 'Brightspace' };
+  const frac = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(shown);
+  if (frac && Number(frac[2]) > 0) {
+    const earned = Number(frac[1]);
+    const possible = Number(frac[2]);
+    return { text: formatPoints(earned, possible), earned, possible, from: 'Brightspace' };
+  }
+  return null;
+}
+
+/**
+ * Sets `score` on items of ONE course from its gradebook. A grade matches by grade item id first
+ * (gradeIdOf: sourceItemId -> grade item id), else by normalized name when exactly one item and one
+ * grade carry that name. Anything ambiguous gets no score.
+ */
+export function attachGrades(items: RawItem[], grades: GradeValue[], gradeIdOf: Map<string, string>): void {
+  const idCount = new Map<string, number>();
+  for (const g of grades) idCount.set(g.GradeObjectIdentifier, (idCount.get(g.GradeObjectIdentifier) ?? 0) + 1);
+
+  // Pass 1: ids. An id-bearing item never falls back to its name; a claimed grade is not offered to name matching.
+  const claimed = new Set<string>();
+  for (const it of items) {
+    const gid = gradeIdOf.get(it.sourceItemId);
+    if (gid === undefined || idCount.get(gid) !== 1) continue;
+    const match = grades.find((g) => g.GradeObjectIdentifier === gid);
+    const score = match ? gradeScore(match) : null;
+    if (score) it.score = score;
+    claimed.add(gid);
+  }
+
+  // Pass 2: names, among unclaimed grades and items without a grade id.
+  const nameCount = new Map<string, number>();
+  for (const g of grades) {
+    if (claimed.has(g.GradeObjectIdentifier)) continue;
+    const k = normalizeTitle(g.GradeObjectName);
+    if (k) nameCount.set(k, (nameCount.get(k) ?? 0) + 1);
+  }
+  const itemCount = new Map<string, number>();
+  for (const it of items) {
+    const k = normalizeTitle(it.title);
+    if (k) itemCount.set(k, (itemCount.get(k) ?? 0) + 1);
+  }
+  for (const it of items) {
+    if (gradeIdOf.has(it.sourceItemId)) continue;
+    const k = normalizeTitle(it.title);
+    if (!k || itemCount.get(k) !== 1 || nameCount.get(k) !== 1) continue;
+    const match = grades.find((g) => !claimed.has(g.GradeObjectIdentifier) && normalizeTitle(g.GradeObjectName) === k);
+    const score = match ? gradeScore(match) : null;
+    if (score) it.score = score;
+  }
 }

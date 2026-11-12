@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createBrightspaceConnector } from '../../src/connectors/brightspace';
+import { attachGrades } from '../../src/connectors/brightspace/map';
+import type { CompletionRecord, RawItem } from '../../src/core/types';
 import { createLimiter } from '../../src/connectors/limit';
 import { fakeFetch, type FakeRoute } from '../helpers/fakeFetch';
 import versions from '../fixtures/brightspace/versions.json';
@@ -69,6 +71,7 @@ describe('brightspace connector', () => {
       dueAt: '2026-11-05T04:59:00.000Z',
       url: `${B}/d2l/lms/dropbox/user/folder_submit_files.d2l?ou=101&db=7`,
       submitted: true,
+      submissionKnown: true,
     });
     expect(result.items.find((i) => i.sourceItemId === 'dropbox:8')?.submitted).toBe(false);
     expect(calls.some((c) => c.includes('/folders/8/submissions'))).toBe(false); // due beyond 30 days
@@ -204,10 +207,12 @@ describe('final review regressions (brightspace)', () => {
     expect(result.partial).toEqual(['101']);
   });
 
-  it('a failing submissions check just means not submitted (I1)', async () => {
+  it('a failed mySubmissions request records nothing (I1)', async () => {
     const { result } = await run(routes({ [`${LE}/101/dropbox/folders/7/submissions/mysubmissions/`]: { status: 404, body: '' } }));
     if (!result.ok) throw new Error('expected ok');
-    expect(result.items.find((i) => i.sourceItemId === 'dropbox:7')?.submitted).toBe(false);
+    const it7 = result.items.find((i) => i.sourceItemId === 'dropbox:7');
+    expect(it7?.submitted).toBe(false);
+    expect(it7?.submissionKnown).toBeUndefined();
     expect(result.partial).toEqual([]);
   });
 
@@ -358,5 +363,146 @@ describe('syllabus sources in course content', () => {
       { ou: '101', kind: 'pdf', url: `${B}/content/enforced/101-CS18000/syllabus.pdf`, title: 'Syllabus', modified: null },
       { ou: '102', kind: 'pdf', url: `${B}/content/enforced/102-MA/syllabus.pdf`, title: 'Course Syllabus', modified: '2026-08-20T00:00:00.000Z' },
     ]);
+  });
+});
+
+describe('brightspace gradebook scores', () => {
+  const item = (id: string, title: string): RawItem => ({ source: 'brightspace', sourceItemId: id, sourceCourseId: '101', title, type: 'assignment', dueAt: null, url: 'u', submitted: true });
+  const grade = (id: string, name: string, n: number | null, d: number | null, shown: string | null = null) =>
+    ({ GradeObjectIdentifier: id, GradeObjectName: name, PointsNumerator: n, PointsDenominator: d, DisplayedGrade: shown });
+  const pts = { text: '18/20', earned: 18, possible: 20, from: 'Brightspace' };
+
+  it('matches by grade item id even when names differ', () => {
+    const items = [item('dropbox:7', 'Project 3')];
+    attachGrades(items, [grade('55', 'Unit project', 18, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toEqual(pts);
+  });
+  it('matches a unique normalized name', () => {
+    const items = [item('quiz:1', 'hw3')];
+    attachGrades(items, [grade('9', 'HW 3', 18, 20)], new Map());
+    expect(items[0]!.score).toEqual(pts);
+  });
+  it('gives no score for ambiguous names', () => {
+    const items = [item('a', 'Homework 1'), item('b', 'Homework 1')];
+    attachGrades(items, [grade('9', 'Homework 1', 18, 20)], new Map());
+    expect(items.every((i) => !i.score)).toBe(true);
+    const one = [item('a', 'Homework 1')];
+    attachGrades(one, [grade('9', 'Homework 1', 18, 20), grade('10', 'Homework 1', 5, 20)], new Map());
+    expect(one[0]!.score).toBeUndefined();
+  });
+  it('uses the displayed grade when there are no points, and ignores empty grades', () => {
+    const items = [item('a', 'Essay'), item('b', 'Lab')];
+    attachGrades(items, [grade('1', 'Essay', null, null, 'A-'), grade('2', 'Lab', null, null, null)], new Map());
+    expect(items[0]!.score).toEqual({ text: 'A-', from: 'Brightspace' });
+    expect(items[1]!.score).toBeUndefined();
+  });
+
+  it('uses a displayed grade only as a percentage, a letter or x / y', () => {
+    const shownAs = (shown: string) => {
+      const items = [item('a', 'Essay')];
+      attachGrades(items, [grade('1', 'Essay', null, null, shown)], new Map());
+      return items[0]!.score;
+    };
+    expect(shownAs('92 %')).toEqual({ text: '92%', from: 'Brightspace' });
+    expect(shownAs('92%')).toEqual({ text: '92%', from: 'Brightspace' });
+    expect(shownAs('87.50 %')?.text).toBe('87.5%');
+    expect(shownAs('B+')).toEqual({ text: 'B+', from: 'Brightspace' });
+    expect(shownAs('F')?.text).toBe('F');
+    expect(shownAs('18 / 20')).toEqual({ text: '18/20', earned: 18, possible: 20, from: 'Brightspace' });
+    for (const bad of ['-', '--', 'Excellent work', 'Pass', 'G', 'A+-', '18 / 0', '92% late']) expect(shownAs(bad)).toBeUndefined();
+  });
+
+  it('an id-matched grade is not also attached to a same-named item', () => {
+    const items = [item('dropbox:7', 'Project 3'), item('quiz:1', 'Unit project')];
+    attachGrades(items, [grade('55', 'Unit project', 18, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toEqual(pts);
+    expect(items[1]!.score).toBeUndefined();
+  });
+  it('an ambiguous grade id gives no score and no name fallback', () => {
+    const items = [item('dropbox:7', 'Project 3')];
+    attachGrades(items, [grade('55', 'Project 3', 18, 20), grade('55', 'Other', 1, 20)], new Map([['dropbox:7', '55']]));
+    expect(items[0]!.score).toBeUndefined();
+  });
+  it('keeps a real zero score', () => {
+    const items = [item('a', 'Lab 1')];
+    attachGrades(items, [grade('1', 'Lab 1', 0, 20)], new Map());
+    expect(items[0]!.score).toEqual({ text: '0/20', earned: 0, possible: 20, from: 'Brightspace' });
+  });
+  it('a 404 on the grades request behaves like a 403', async () => {
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { status: 404, body: {} } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.partial).toEqual([]);
+    expect(result.items.some((i) => i.score)).toBe(false);
+  });
+  it('a failing grades request leaves items alone and the course not partial', async () => {
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { status: 403, body: {} } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.partial).toEqual([]);
+    expect(result.items.some((i) => i.score)).toBe(false);
+  });
+  it('attaches fetched grades to the connector items', async () => {
+    const g = [grade('55', 'Anything', 18, 20)];
+    const { result } = await run(routes({ [`${LE}/101/grades/values/myGradeValues/`]: { body: g } }));
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:7')?.score?.text).toBe('18/20');
+  });
+});
+
+describe('brightspace submissions for the whole term', () => {
+  const DAY = 86_400_000;
+  const folder = (id: number, daysAgo: number) => ({ Id: id, Name: `HW ${id}`, DueDate: new Date(now().getTime() - daysAgo * DAY).toISOString(), IsHidden: false });
+  // Course 101: folders 1..30, due 10..39 days ago; course 102: folders 101..120, due 10.5..29.5 days ago.
+  const f101 = Array.from({ length: 30 }, (_, i) => folder(i + 1, 10 + i));
+  const f102 = Array.from({ length: 20 }, (_, i) => folder(101 + i, 10.5 + i));
+  const doneIds = [1, 2, 3, 101, 102];
+  const completion: Record<string, CompletionRecord> = Object.fromEntries(doneIds.map((id) => [`brightspace:dropbox:${id}`, { state: 'done', checkedAt: 'x' }]));
+  const askedIds = (calls: string[]) => calls.filter((c) => c.includes('/mysubmissions/')).map((c) => Number(/folders\/(\d+)\//.exec(c)![1]));
+
+  it('asks mySubmissions for past-due folders not known done, most recently due first, at most 40 beyond the usual window', async () => {
+    const f = fakeFetch(routes({ [`${LE}/101/dropbox/folders/`]: { body: f101 }, [`${LE}/102/dropbox/folders/`]: { body: f102 } }));
+    await createBrightspaceConnector({ fetchImpl: f.impl, now, completion: async () => completion }).fetchAll();
+    const asked = askedIds(f.calls);
+    const expected = [...f101, ...f102]
+      .filter((x) => !doneIds.includes(x.Id))
+      .sort((a, b) => Date.parse(b.DueDate) - Date.parse(a.DueDate))
+      .slice(0, 40)
+      .map((x) => x.Id);
+    expect(asked.length).toBe(40);
+    expect(new Set(asked)).toEqual(new Set(expected));
+  });
+
+  it('without completion records it still asks at most 40 past-due folders', async () => {
+    const f = fakeFetch(routes({ [`${LE}/101/dropbox/folders/`]: { body: f101 }, [`${LE}/102/dropbox/folders/`]: { body: f102 } }));
+    await createBrightspaceConnector({ fetchImpl: f.impl, now }).fetchAll();
+    expect(askedIds(f.calls).length).toBe(40);
+  });
+
+  it('a folder asked and answered with no submission is submissionKnown and not submitted; one with a submission is submitted', async () => {
+    const r = routes({
+      [`${LE}/101/dropbox/folders/`]: { body: [folder(1, 12), folder(2, 13)] },
+      [`${LE}/101/dropbox/folders/1/submissions/mysubmissions/`]: { body: [] },
+      [`${LE}/101/dropbox/folders/2/submissions/mysubmissions/`]: { body: [{ Submissions: [{ Id: 1 }], CompletionDate: null }] },
+    });
+    const { result } = await run(r);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:1')).toMatchObject({ submitted: false, submissionKnown: true });
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:2')).toMatchObject({ submitted: true, submissionKnown: true });
+  });
+
+  it('a folder not asked carries no answer', async () => {
+    const f = fakeFetch(routes({ [`${LE}/101/dropbox/folders/`]: { body: [folder(1, 12)] } }));
+    const result = await createBrightspaceConnector({ fetchImpl: f.impl, now, completion: async () => ({ 'brightspace:dropbox:1': { state: 'done', checkedAt: 'x' } }) }).fetchAll();
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'dropbox:1')?.submissionKnown).toBeUndefined();
+  });
+
+  it('gradebook: a quiz gets its score by GradeItemId', async () => {
+    const r = routes({
+      [`${LE}/101/quizzes/`]: { body: { Objects: [{ QuizId: 31, Name: 'Quiz 6', IsActive: true, DueDate: '2026-11-01T04:59:00.000Z', GradeItemId: 77 }], Next: null } },
+      [`${LE}/101/grades/values/myGradeValues/`]: { body: [{ GradeObjectIdentifier: '77', GradeObjectName: 'Chapter quiz', PointsNumerator: 9, PointsDenominator: 10, DisplayedGrade: null }] },
+    });
+    const { result } = await run(r);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.items.find((i) => i.sourceItemId === 'quiz:31')?.score).toEqual({ text: '9/10', earned: 9, possible: 10, from: 'Brightspace' });
   });
 });
