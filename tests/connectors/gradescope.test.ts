@@ -32,6 +32,7 @@ describe('gradescope parser', () => {
       dueAt: '2026-11-05T04:59:00.000Z',
       url: `${G}/courses/123456/assignments/789/submissions/111`,
       submitted: true,
+      submissionKnown: true,
     });
     expect(items[1]).toMatchObject({ sourceItemId: '790', title: 'Lab 09 & Writeup', url: `${G}/courses/123456/assignments/790`, submitted: false });
   });
@@ -49,6 +50,34 @@ describe('gradescope parser', () => {
   it('submitted when status cell is Submitted or shows a score', () => {
     const items = domGradescopeParser.course(course, '123456');
     expect(items.map((i) => i.submitted)).toEqual([true, false, true, false]);
+  });
+
+  it('every row with a status answers "submitted or not": "Submitted", a score and "No Submission"', () => {
+    const items = domGradescopeParser.course(course, '123456');
+    expect(items.map((i) => i.submissionKnown)).toEqual([true, true, true, true]);
+    expect(items.map((i) => i.submitted)).toEqual([true, false, true, false]);
+  });
+
+  it('a row without a status says nothing', () => {
+    const html = course.replace('<div class="submissionStatus--text">Submitted', '<div class="other">');
+    expect(domGradescopeParser.course(html, '123456')[0]!.submissionKnown).toBeUndefined();
+  });
+
+  it('reads the score from .submissionStatus--score, none when absent', () => {
+    const items = domGradescopeParser.course(course, '123456');
+    const hw = items.find((i) => i.title === 'Homework 1')!;
+    expect(hw.score).toEqual({ text: '18/20', earned: 18, possible: 20, from: 'Gradescope', evidence: '18.0 / 20.0' });
+    expect(items.find((i) => i.title === 'Participation')!.score).toBeUndefined();
+  });
+
+  it('no score when possible is zero', () => {
+    const html = course.replace('18.0 / 20.0', '5 / 0');
+    expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();
+  });
+
+  it.each(['- / 20.0', '1,000 / 2,000', 'Graded 11/5'])('no score for non-plain cell "%s"', (cell) => {
+    const html = course.replace('18.0 / 20.0', cell);
+    expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();
   });
 
   it('course page without the table throws', () => {

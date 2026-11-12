@@ -10,6 +10,7 @@ import { parsers } from '../sync/parsers';
 import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
 import { onBackgroundStart } from '../background/start';
+import { recordCompletion } from '../background/completion';
 import { runVisitPass } from '../background/visitPass';
 import { runFrameVisits } from '../visits/frameRunner';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
@@ -28,10 +29,13 @@ import type { FrameVisitRequest } from '../visits/frame/protocol';
 
 const ALARM = 'dueboard-sync';
 
+/** What DueBoard already knows about each item, so connectors skip work known done. */
+const knownCompletion = () => loadStore().then((s) => s.completion);
+
 const CONNECTORS: Record<SourceId, () => Connector> = {
-  brightspace: () => createBrightspaceConnector(),
+  brightspace: () => createBrightspaceConnector({ completion: knownCompletion }),
   gradescope: () => createGradescopeConnector({ parser: parsers.gradescope }),
-  pearson: () => createPearsonConnector({ parse: parsers.pearson }),
+  pearson: () => createPearsonConnector({ parse: parsers.pearson, completion: knownCompletion }),
 };
 const visitApi = createBrowserVisitApi();
 const frameApi = createFrameApi();
@@ -45,7 +49,12 @@ const syncNow = (trigger: Trigger = 'auto') => {
   const run = startSync(
       {
         load: loadStore,
-        sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
+        sync: async () => {
+          const report = await syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs));
+          // What the sources said about each item is kept across syncs.
+          await recordCompletion(loadStore, patchStore, new Date()).catch((e: unknown) => console.warn('DueBoard: could not keep completion', e));
+          return report;
+        },
         // The dashboard's status line for the whole run, also for a run it didn't start (install, alarm, sign-in).
         status: (p) => setVisitProgress(p),
         granted: () => visitApi.granted(),
@@ -74,7 +83,11 @@ const syncNow = (trigger: Trigger = 'auto') => {
           }
         },
         save: (patch) => patchStore(patch),
-        resync: (src) => runSync([CONNECTORS[src]()]),
+        resync: async (src) => {
+          const report = await runSync([CONNECTORS[src]()]);
+          await recordCompletion(loadStore, patchStore, new Date()).catch(() => undefined);
+          return report;
+        },
         syllabus: (store) => refreshSyllabi(store, new Date(), fetch.bind(globalThis), parsers.syllabus),
         now: () => new Date(),
       },

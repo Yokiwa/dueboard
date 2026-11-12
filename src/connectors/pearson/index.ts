@@ -1,11 +1,20 @@
-import type { Connector, ConnectorResult } from '../../core/types';
-import { PEARSON_ASSIGNMENTS_URL, type PearsonPage } from './parse';
+import type { CompletionRecord, Connector, ConnectorResult } from '../../core/types';
+import { PEARSON_ASSIGNMENTS_URL, parseScoreAnswer, type PearsonPage } from './parse';
+import { createLimiter } from '../limit';
 
 export interface PearsonOptions {
   /** Runs parsePearson where a DOM exists (offscreen document in the service worker). */
   parse(html: string): Promise<PearsonPage>;
   fetchImpl?: typeof fetch;
+  now?: () => Date;
+  /** What is already known, so rows known done are asked again only for regrades (see addScores). */
+  completion?: () => Promise<Record<string, CompletionRecord>>;
 }
+
+const DAY = 86_400_000;
+const MAX_SCORE_REQUESTS = 10;
+/** Done work due within this many days is asked for its score again once a day. */
+const REGRADE_DAYS = 14;
 
 const SIGN_IN = /sign\s*in|log\s*in|session (has )?expired|signin|piapi\/login/i;
 
@@ -15,6 +24,47 @@ const SIGN_IN = /sign\s*in|log\s*in|session (has )?expired|signin|piapi\/login/i
  */
 export function createPearsonConnector(opts: PearsonOptions): Connector {
   const fetchImpl = opts.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  /** The same read-only callback the "see score" link sends. Failures leave the row without a score. */
+  async function addScores(page: PearsonPage) {
+    // Rows not known done, of any date; rows known done only when due in the last 14 days and not checked for a day
+    // (a regrade). The most recently due first.
+    const now = (opts.now?.() ?? new Date()).getTime();
+    const known = (await opts.completion?.().catch(() => undefined)) ?? {};
+    const wanted = (c: { itemId: string; dueAt: string }) => {
+      const r = known[`pearson:${c.itemId}`];
+      if (r?.state !== 'done') return true;
+      const due = Date.parse(c.dueAt);
+      return due <= now && due > now - REGRADE_DAYS * DAY && now - Date.parse(r.checkedAt) > DAY;
+    };
+    const targets = (page.scoreCells ?? [])
+      .filter(wanted)
+      .sort((a, b) => Date.parse(b.dueAt) - Date.parse(a.dueAt))
+      .slice(0, MAX_SCORE_REQUESTS);
+    if (!targets.length || !Object.keys(page.form ?? {}).length) return;
+    const url = new URL('./DoAssignments.aspx?view=all', PEARSON_ASSIGNMENTS_URL).href;
+    const limit = createLimiter(2);
+    await Promise.all(
+      targets.map((t) =>
+        limit(async () => {
+          try {
+            const res = await fetchImpl(url, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+              body: new URLSearchParams({ ...page.form, __CALLBACKID: '__Page', __CALLBACKPARAM: t.cellId }).toString(),
+              signal: AbortSignal.timeout(10_000),
+            });
+            if (!res.ok) return;
+            const score = parseScoreAnswer(await res.text(), t.cellId);
+            const item = page.items.find((i) => i.sourceItemId === t.itemId);
+            if (score && item) item.score = { text: score, from: 'Pearson' };
+          } catch {
+            /* no score; the sync still succeeds */
+          }
+        }),
+      ),
+    );
+  }
   async function fetchAll(): Promise<ConnectorResult> {
     let res: Response;
     try {
@@ -38,6 +88,7 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
     }
     try {
       const page = await opts.parse(html);
+      await addScores(page);
       return {
         ok: true,
         courses: [{ source: 'pearson', sourceCourseId: page.courseId, name: 'Pearson MyLab', code: null, url: PEARSON_ASSIGNMENTS_URL }],
