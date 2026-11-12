@@ -11,6 +11,7 @@
 - Settings → Diagnostics shows a Mode column (Background or Window) in the visit log
 - A homework on a site DueBoard doesn't know yet is opened once in a small minimized window to find out which site it is; DueBoard then asks you to allow that site (as in 1.2.4)
 - While a page is read in a hidden frame, DueBoard removes the "do not embed" headers from that one hidden request; your own tabs are never affected
+- On update, Chrome asks once to accept the new list of homework sites (DueBoard stays off until you accept); Firefox may ask in a similar way
 - This trial build does not include the scores feature, which is still on its own branch. Firefox support for background reading is untested
 
 ## 1.2.4 — 2026-11

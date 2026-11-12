@@ -73,6 +73,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   const final: VisitOutcome[] = [];
   const pending: FrameVisitDone[] = []; // fallback results, in the order their frame visits finished
   let signedOut = false;
+  /** Frame visits in a row that ended blocked, per key, in this pass. */
+  const blockedNow = new Map<string, number>();
+  const skipNow = (k: string) => (blockedNow.get(k) ?? 0) >= BLOCKED_LIMIT;
 
   const remember = (store: StoreShape, d: FrameVisitDone): StoreShape['visitState'] => {
     const frame = { ...store.visitState.frame };
@@ -93,6 +96,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
     if (hold) pending.push(d);
     else final.push(d.outcome);
     if (d.outcome.status === 'signed_out') signedOut = true;
+    const bk = keyOf(d.target);
+    if (d.outcome.status === 'failed' && d.outcome.reason === 'frame') blockedNow.set(bk, (blockedNow.get(bk) ?? 0) + 1);
+    else if (d.outcome.status !== 'failed' && d.outcome.status !== 'signed_out') blockedNow.delete(bk);
     deps.log(d.log);
     return serial(async () => {
       const store = await deps.load();
@@ -104,15 +110,19 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   };
 
   try {
-    await deps.frames(viaFrame, { keyOf, signedIn: deps.signedIn, onDone });
+    await deps.frames(viaFrame, { keyOf, signedIn: deps.signedIn, onDone, skipKey: skipNow });
   } catch (e) {
     console.warn('DueBoard: background reading stopped early', e);
   }
 
   if (signedOut) return [...final, ...pending.map((d) => d.outcome)];
 
+  // Targets the frames never started because their key hit the blocked limit in this pass go to the window.
+  const reached = new Set(pending.map((d) => d.target.key));
+  for (const d of final) reached.add(d.key);
+  const dropped = viaFrame.filter((t) => skipNow(keyOf(t)) && !reached.has(t.key));
   let windowTargets: VisitTarget[] = [];
-  if (windowFallback) windowTargets = [...direct, ...pending.map((d) => d.target)].slice(0, WINDOW_MAX);
+  if (windowFallback) windowTargets = [...direct, ...pending.map((d) => d.target), ...dropped].slice(0, WINDOW_MAX);
   let windowOutcomes: VisitOutcome[] = [];
   if (windowTargets.length > 0) {
     try {

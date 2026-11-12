@@ -9,6 +9,7 @@ import { isStale, runSync } from '../sync/runSync';
 import { parsers } from '../sync/parsers';
 import { refreshSyllabi } from '../syllabus/refresh';
 import { createPearsonConnector } from '../connectors/pearson';
+import { onBackgroundStart } from '../background/start';
 import { runVisitPass } from '../background/visitPass';
 import { runFrameVisits } from '../visits/frameRunner';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
@@ -81,22 +82,18 @@ const syncNow = (trigger: Trigger = 'auto') => {
   return run.report;
 };
 
-/** A visit window a dead run left open (worker restart, update) is closed whenever the background starts. */
-const closeOldVisitWindow = async () => {
-  const id = await getVisitWindow();
-  if (id === undefined) return;
-  await closeLeftover(id, visitApi);
-  await setVisitProgress(null);
-};
-
 export default defineBackground({
   // Firefox's event page can load modules on demand, so pdf.js stays out of it until a syllabus PDF is read.
   // Chrome's service worker stays a classic script (it has no dynamic imports to split).
   type: import.meta.env.FIREFOX ? 'module' : undefined,
   main: () => {
-  void closeOldVisitWindow();
-  // Frames a dead run left in the frame host, and the header rule it left on, are cleared whenever the background starts.
-  void frameApi.reset().then(() => frameApi.end()).catch(() => undefined);
+  // What a dead run left behind (progress line, visit window, frames, header rule) is cleared whenever the background starts.
+  void onBackgroundStart({
+    getVisitWindow,
+    closeLeftover: (id) => closeLeftover(id, visitApi),
+    setVisitProgress,
+    resetFrames: () => frameApi.reset(),
+  });
   const ensureAlarm = async () => {
     if (!(await browser.alarms.get(ALARM))) await browser.alarms.create(ALARM, { periodInMinutes: 30 });
   };

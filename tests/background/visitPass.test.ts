@@ -263,6 +263,52 @@ describe('runVisitPass: signed out', () => {
 
 describe('runVisitPass: platform memory', () => {
   const memory = (store: StoreShape) => store.visitState.frame;
+  it('once a key has 3 blocked results in this pass, its waiting targets go to the window, not the frames', async () => {
+    const targets = [1, 2, 3, 4, 5].map((n) => t(n));
+    const started: string[] = [];
+    let windowed: string[] = [];
+    const s = setup({
+      frames: async (ts, opts) => {
+        const out: FrameVisitDone[] = [];
+        for (const x of ts) {
+          if (opts.skipKey?.(opts.keyOf(x))) continue;
+          started.push(x.key);
+          const d = done(x, blocked(x.key.split(':')[2]!), true);
+          out.push(d);
+          await opts.onDone(d);
+        }
+        return out;
+      },
+      windows: async (ts) => {
+        windowed = ts.map((x) => x.key);
+        return ts.map((x) => found(x.key.split(':')[2]!));
+      },
+    });
+    await runVisitPass(s.deps, targets);
+    expect(started).toEqual(['1', '2', '3'].map((n) => `brightspace:topic:${n}`));
+    expect(windowed).toEqual([1, 2, 3, 4, 5].map((n) => `brightspace:topic:${n}`));
+  });
+
+  it('dropped targets are not sent to the window when the window fallback is off', async () => {
+    const targets = [1, 2, 3, 4].map((n) => t(n));
+    let windowCalled = false;
+    const store = migrate({});
+    store.settings.windowFallback = false;
+    const s = setup({
+      store,
+      frames: async (ts, opts) => {
+        for (const x of ts) {
+          if (opts.skipKey?.(opts.keyOf(x))) continue;
+          await opts.onDone(done(x, blocked(x.key.split(':')[2]!), true));
+        }
+        return [];
+      },
+      windows: async () => ((windowCalled = true), []),
+    });
+    await runVisitPass(s.deps, targets);
+    expect(windowCalled).toBe(false);
+  });
+
   it('3 blocked in a row set skipUntil to now + 7 days and reset the count', async () => {
     const s = setup({ frames: scripted(() => [1, 2, 3].map((n) => done(t(n), blocked(n), true))) });
     await runVisitPass(s.deps, [t(1), t(2), t(3)]);

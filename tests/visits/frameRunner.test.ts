@@ -196,8 +196,13 @@ describe('runFrameVisits', () => {
       expect(d.outcome).toEqual({ key, status: 'signed_out' });
       expect(d.fallback).toBe(false);
     });
-    it('signed_out', async () => {
+    it('signed_out while the browser says signed in is a failed frame, with fallback', async () => {
       const d = await run(res({ status: 'signed_out', host: undefined }));
+      expect(d.outcome).toEqual({ key, status: 'failed', reason: 'frame' });
+      expect(d.fallback).toBe(true);
+    });
+    it('signed_out while the browser says signed out', async () => {
+      const d = await run(res({ status: 'signed_out', host: undefined }), { signedIn: false });
       expect(d.outcome).toEqual({ key, status: 'signed_out' });
       expect(d.fallback).toBe(false);
     });
@@ -222,7 +227,7 @@ describe('runFrameVisits', () => {
   it('starts no new visit after signed_out, and reports visits in flight normally', async () => {
     const f = fake();
     const done: FrameVisitDone[] = [];
-    const p = runFrameVisits([1, 2, 3, 4].map((n) => target(n)), f.api, base({ done }));
+    const p = runFrameVisits([1, 2, 3, 4].map((n) => target(n)), f.api, base({ done, signedIn: false }));
     await tick();
     f.pending.find((x) => urlN(x.req) === 2)!.resolve(res({ status: 'signed_out', host: undefined }));
     await tick();
@@ -232,6 +237,14 @@ describe('runFrameVisits', () => {
     expect(f.calls.filter((c) => c.startsWith('visit'))).toEqual(['visit 1', 'visit 2', 'visit 3']);
     expect(out.map((d) => d.outcome.status)).toEqual(['signed_out', 'found', 'none']);
     expect(done).toHaveLength(3);
+  });
+
+  it('does not start targets whose key skipKey reports, and leaves them out of the result', async () => {
+    const f = fake(() => res());
+    const done: FrameVisitDone[] = [];
+    const out = await runFrameVisits([1, 2, 3].map((n) => target(n, { platform: 'p' })), f.api, { ...base({ done }), skipKey: () => done.length >= 1 });
+    expect(f.calls.filter((c) => c.startsWith('visit'))).toEqual(['visit 1']);
+    expect(out).toHaveLength(1);
   });
 
   describe('listed', () => {

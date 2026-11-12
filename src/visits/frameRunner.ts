@@ -18,6 +18,8 @@ export interface FrameRunOptions {
   /** Targets with the same key never run at the same time (one platform = one key). */
   keyOf(t: VisitTarget): string;
   signedIn(): Promise<boolean>;
+  /** True when no more targets of this key should start (they stay unstarted and are not in the result). */
+  skipKey?(key: string): boolean;
   onDone(d: FrameVisitDone): Promise<void> | void;
   concurrency?: number;
   maxPages?: number;
@@ -33,7 +35,7 @@ const blockedResult = (): FrameResult => ({ status: 'blocked', listed: [], frame
 /**
  * Reads many targets in hidden frames: at most `concurrency` at once and never two with the same keyOf. Each frame
  * result becomes the outcome the rest of the app knows. Titles a page lists date other waiting targets, which are then
- * not visited. After "signed out" no new visit starts; visits in flight finish. Targets never started (page limit,
+ * not visited. Targets whose key `skipKey` reports are never started. After "signed out" no new visit starts; visits in flight finish. Targets never started (page limit,
  * time budget, signed out) are not in the result.
  */
 export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts: FrameRunOptions): Promise<FrameVisitDone[]> {
@@ -65,7 +67,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
     await new Promise<void>((resolve) => {
       const pump = () => {
         while (!signedOut && inflight < concurrency && started < maxPages && now() < deadline) {
-          const i = waiting.findIndex((t) => !active.has(opts.keyOf(t)));
+          const i = waiting.findIndex((t) => !active.has(opts.keyOf(t)) && !opts.skipKey?.(opts.keyOf(t)));
           if (i < 0) break;
           const t = waiting.splice(i, 1)[0]!;
           const group = opts.keyOf(t);
@@ -144,8 +146,8 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
         ? { outcome: { key, status: 'failed', reason: 'frame' }, fallback: true }
         : { outcome: { key, status: 'signed_out' }, fallback: false };
     switch (r.status) {
+      // A hidden frame on a sign-in page is not proof the student is signed out (it may lack cookies): ask the browser.
       case 'signed_out':
-        return { outcome: { key, status: 'signed_out' }, fallback: false };
       case 'blocked':
         return failed();
       default:

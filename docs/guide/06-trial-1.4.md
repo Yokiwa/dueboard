@@ -17,19 +17,18 @@ You do not need to know anything about programming. If a step does not match wha
 ## Before you start
 
 - Use the computer and the browser where you normally do your coursework, signed in to the same accounts. A different account will not show the same platforms.
-- If an older DueBoard is installed, remove it first (Chrome: `chrome://extensions`, **Remove**; Firefox: `about:addons`, **Remove**), so you start from a clean first run.
+- If an older DueBoard is installed, turn it off with its toggle on the extensions page (Chrome: `chrome://extensions`; Firefox: `about:addons`). Do not remove it: turning it off keeps its data and avoids two copies running. Turn it back on after the trial if you go back to it.
 
 ## Checklist
 
 1. **Install the trial build.**
-   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.0-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this.
-   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.0-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt about the add-on's access, and it forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
-   - Your browser lists the sites DueBoard may read when you install it. That is expected: it is the list of homework platform sites. Accept it.
+   - Chrome: unzip the Chrome file you were given (`dueboard-1.4.0-chrome.zip`) into a folder you will keep. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked** and choose the folder. Chrome shows no prompt for this (Load unpacked).
+   - Firefox: unzip the Firefox file you were given (`dueboard-1.4.0-firefox.zip`), open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose `manifest.json` in the folder. (Firefox may show a prompt listing the sites the add-on can access; if it does, accept it. Firefox also forgets a temporary add-on when it closes, so do the whole trial in one sitting.)
 2. **Sign in.** DueBoard's first-run page opens. Click **Log in to Brightspace**.
    - If you were already signed in to Brightspace, the first sync starts straight away.
    - If not, this tab goes to the Brightspace sign-in page. Sign in as usual. When Brightspace's home page loads, the tab comes back to DueBoard by itself and the sync starts.
    - Note anything that looks wrong (for example, the tab does not come back).
-3. **Wait for the first sync.** Courses and Brightspace dates appear first. A line such as "Reading 3 of 22 platform pages…" shows while platform pages are read, and due dates fill in one by one. Leave the browser open for about 5 minutes, or until that line disappears.
+3. **Wait for the first sync.** Courses and Brightspace dates appear first. A line such as "Reading 3 of 22 platform pages…" shows while platform pages are read, and due dates fill in one by one. The first sync can take up to about 15 minutes, and the dashboard fills in as dates arrive. Leave the browser open until that line disappears.
    - Watch for any window that pops up or any new tab. A small minimized window that appears and closes is the fallback working. Note which homework was being read if you can.
 4. **Open the visit log.** Click the gear icon (**Settings**), then **Diagnostics**. Scroll to **Platform visits**.
 5. **Download the log.** Click **Download visit log**. A file called `dueboard-visit-log.json` is saved to your Downloads folder.
@@ -80,4 +79,4 @@ To stop DueBoard reading platform pages altogether, set **Read homework pages fr
 ## When you are done
 
 Nothing is sent anywhere unless you send the file yourself. To remove the trial build, remove it on `chrome://extensions`
-(or `about:addons` in Firefox). Your data goes with it.
+(or `about:addons` in Firefox). Its data goes with it. If you turned your old DueBoard off, turn it back on there.

@@ -34,6 +34,21 @@ describe('findListed', () => {
     expect(out.map((l) => [l.key, l.found.dueAt])).toEqual([['a', local(11, 11)], ['b', local(11, 18)]]);
   });
 
+  it('takes the date only from the title onward: an earlier cell\'s date is not this title\'s', () => {
+    const d = page('<table><tr><td>HW 3</td><td>Due Nov 10</td><td>HW 4</td><td>not posted</td></tr></table>');
+    expect(findListed(d, [t('b', 'HW 4')], now)).toEqual([]);
+    const real = page('<table><tr><td>HW11 (10.3, 12.1)</td><td>Due Nov 11 at 11:59 PM</td><td>10 pts</td></tr></table>');
+    expect(findListed(real, [t('a', 'HW11 (10.3, 12.1)')], now).map((l) => l.found.dueAt)).toEqual([local(11, 11)]);
+    expect(findListed(real, [t('a', 'HW11')], now).map((l) => l.found.dueAt)).toEqual([local(11, 11)]);
+  });
+
+  it('gives no date when many words sit between a block title and its due label', () => {
+    const d = page('<div><div>HW 5 (see pages one two three four five)</div><div>Due Nov 12</div></div>');
+    expect(findListed(d, [t('a', 'HW 5')], now)).toEqual([]);
+    const near = page('<div><div>HW 5 (pages one two)</div><div>Due Nov 12</div></div>');
+    expect(findListed(near, [t('a', 'HW 5')], now)).toHaveLength(1);
+  });
+
   it('matches whole words in order: "HW 1" is not "HW 11"', () => {
     const d = page('<table><tr><td>HW 11</td><td>Due Nov 11 at 11:59 PM</td></tr></table>');
     expect(findListed(d, [t('a', 'HW 1')], now)).toEqual([]);

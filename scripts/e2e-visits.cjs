@@ -76,7 +76,9 @@ const check = (ok, msg) => {
   const vlog = await page.evaluate(async () => (await chrome.storage.local.get('visitLog')).visitLog ?? []);
   // Each page now has a frame entry first (the hidden frame could not read these mocks) and then its window entry.
   const windowLog = vlog.filter((e) => e.mode === 'window');
-  check(vlog.some((e) => e.key === 'brightspace:topic:5' && e.mode === 'frame') && windowLog.some((e) => e.key === 'brightspace:topic:5'), 'a page the hidden frame could not read was read in the window in the same run');
+  if (process.env.E2E_DEBUG) console.log(JSON.stringify(vlog.map((e) => [e.key, e.mode, e.result, e.detail])));
+  check(vlog.some((e) => e.key === 'brightspace:topic:6' && e.mode === 'frame') && windowLog.some((e) => e.key === 'brightspace:topic:6'), 'a page the hidden frame could not read was read in the window in the same run');
+  check(!vlog.some((e) => e.key === 'brightspace:topic:5' && e.mode === 'frame') && windowLog.some((e) => e.key === 'brightspace:topic:5'), 'once a platform was blocked 3 times in the pass, its waiting page went straight to the window');
   const hw11Log = windowLog.find((e) => e.key === 'brightspace:topic:5');
   check(hw11Log?.siteNote?.startsWith('no launch target on') && !hw11Log.site, `visit log says why the site wasn't known (${hw11Log?.siteNote})`);
   check(windowLog.find((e) => e.key === 'brightspace:topic:6')?.clicked?.[0] === 'Launch (education.wiley.com)', 'HW10\'s "Launch" link (meant for a new tab) was followed in the hidden tab');
