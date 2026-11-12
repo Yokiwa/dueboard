@@ -57,6 +57,13 @@ describe('applyOutcomes', () => {
     expect(r.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 0 });
   });
 
+  it('keeps the frame mark of a session across a visit', () => {
+    const session: VisitTarget = { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: 'x', platform: 'pearson', mode: 'session' };
+    const store = migrate({ visitState: { sessions: { pearson: { at: 'old', failures: 1, frame: 'failed' } } } });
+    const r = applyOutcomes(store, [session], [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], now);
+    expect(r.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 1, frame: 'failed' });
+  });
+
   it('clears the block once a visit gets through', () => {
     const r = run([{ key: 'brightspace:topic:1', status: 'none', host: 'learn.example.com' }], { 'brightspace:topic:1': prev({ blocked: 'learn.example.com' }) });
     expect(r.captured['brightspace:topic:1']!.blocked).toBeUndefined();

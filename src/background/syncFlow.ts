@@ -115,7 +115,9 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
     const ok = again[src] === 'ok';
     const failures = ok ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
     // A hidden frame that "signed in" without the platform noticing: next time go straight to the window.
-    const entry = !ok && session.status === 'landed' && session.via === 'frame' ? { at, failures, frame: 'failed' as const } : { at, failures };
+    // The mark is cleared only by a successful resync; otherwise a window attempt leaves it as it was.
+    const frame = ok ? undefined : session.status === 'landed' && session.via === 'frame' ? ('failed' as const) : prev?.frame;
+    const entry = frame ? { at, failures, frame } : { at, failures };
     await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: entry } } });
   }
   return report;

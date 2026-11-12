@@ -22,7 +22,7 @@ export function applyOutcomes(
     if (target?.mode === 'session') {
       // Landing is not yet success (re-reading the platform decides that); anything else is a failed attempt.
       const src = target.platform as 'gradescope' | 'pearson';
-      sessions[src] = { at, failures: (sessions[src]?.failures ?? 0) + (o.status === 'landed' ? 0 : 1) };
+      sessions[src] = { ...sessions[src], at, failures: (sessions[src]?.failures ?? 0) + (o.status === 'landed' ? 0 : 1) };
       continue;
     }
     if (target?.mode === 'syllabus') {

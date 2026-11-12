@@ -46,7 +46,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   const viaFrame: VisitTarget[] = [];
   for (const t of targets) {
     const sessionFailed = t.mode === 'session' && start.visitState.sessions?.[t.platform as 'gradescope' | 'pearson']?.frame === 'failed';
-    (sessionFailed || skipped(keyOf(t)) ? direct : viaFrame).push(t);
+    // Without the window, a frame-failed session still goes to the frames (so it can recover); a skipped key waits.
+    if (sessionFailed && !windowFallback) viaFrame.push(t);
+    else (sessionFailed || skipped(keyOf(t)) ? direct : viaFrame).push(t);
   }
 
   let done = 0;
@@ -122,7 +124,9 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
       console.warn('DueBoard: window visits stopped early', e);
     }
   }
-  if (windowOutcomes.length > 0) await saveOutcomes(windowOutcomes);
+  const trySave = (outcomes: VisitOutcome[]) =>
+    saveOutcomes(outcomes).catch((e: unknown) => console.warn('DueBoard: could not save visit results', e));
+  if (windowOutcomes.length > 0) await trySave(windowOutcomes);
   final.push(...windowOutcomes);
 
   // A page the frame could not read and the window did not get to (page limit, time, a failed window run): the frame's
@@ -130,7 +134,7 @@ export async function runVisitPass(deps: VisitPassDeps, targets: VisitTarget[]):
   const got = new Set(windowOutcomes.map((o) => o.key));
   const left = pending.filter((d) => !got.has(d.target.key));
   if (left.length > 0) {
-    await saveOutcomes(left.map((d) => d.outcome));
+    await trySave(left.map((d) => d.outcome));
     final.push(...left.map((d) => d.outcome));
   }
   done = Math.min(total, final.length);

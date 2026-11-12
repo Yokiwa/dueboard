@@ -138,17 +138,18 @@ describe('runVisitPass: window fallback', () => {
     expect(s.store.captured['brightspace:topic:2']?.failures).toBe(1);
   });
 
-  it('with windowFallback off, skipped keys and frame-failed sessions are not visited at all', async () => {
+  it('with windowFallback off, a skipped key is dropped but a frame-failed session goes to the frame runner', async () => {
     const store = migrate({
       settings: { windowFallback: false },
       visitState: { frame: { aleks: { blocked: 0, skipUntil: '2026-11-10T00:00:00Z' } }, sessions: { pearson: { at: '2026-11-01T00:00:00Z', failures: 0, frame: 'failed' } } },
     });
-    const frames = vi.fn(async () => [] as FrameVisitDone[]);
+    const session: VisitTarget = { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: `${B}/p`, platform: 'pearson', mode: 'session' };
+    const frames = vi.fn(async (_ts: VisitTarget[], _o: FrameRunOptions) => [] as FrameVisitDone[]);
     const windows = vi.fn(async () => [] as VisitOutcome[]);
     const s = setup({ store, frames, windows });
-    await runVisitPass(s.deps, [t(1), { key: 'pearson:session', title: 'Pearson', courseId: '', launchUrl: `${B}/p`, platform: 'pearson', mode: 'session' }]);
+    await runVisitPass(s.deps, [t(1), session]);
     expect(windows).not.toHaveBeenCalled();
-    expect(frames).toHaveBeenCalledWith([], expect.anything());
+    expect(frames.mock.calls[0]![0].map((x) => x.key)).toEqual(['pearson:session']);
   });
 
   it('window targets: direct ones first (sessions, skipped keys), then fallbacks in finish order', async () => {
@@ -196,6 +197,31 @@ describe('runVisitPass: window fallback', () => {
     expect(s.store.captured['brightspace:topic:1']?.misses).toBe(1);
   });
 
+  it('a window run that stops early: held frame results without a window outcome are applied exactly once', async () => {
+    const s = setup({ frames: scripted(() => [done(t(1), none(1), true), done(t(2), none(2), true), done(t(3), blocked(3), true)]), windows: async () => [none(1)] });
+    const out = await runVisitPass(s.deps, [t(1), t(2), t(3)]);
+    expect(s.store.captured['brightspace:topic:1']?.misses).toBe(1);
+    expect(s.store.captured['brightspace:topic:2']?.misses).toBe(1);
+    expect(s.store.captured['brightspace:topic:3']?.failures).toBe(1);
+    expect(out.map((o) => o.key).sort()).toEqual(['brightspace:topic:1', 'brightspace:topic:2', 'brightspace:topic:3']);
+  });
+
+  it('a failing window save does not reject the pass; what can be applied still is', async () => {
+    const s = setup({ frames: scripted(() => [done(t(1), none(1), true), done(t(2), none(2), true)]), windows: async () => [found(1)] });
+    const save = s.deps.save;
+    let windowSave = true;
+    s.deps.save = async (p) => {
+      if (windowSave && p.captured?.['brightspace:topic:1']?.dueAt) {
+        windowSave = false;
+        throw new Error('disk full');
+      }
+      await save(p);
+    };
+    const out = await runVisitPass(s.deps, [t(1), t(2)]);
+    expect(out.map((o) => o.key).sort()).toEqual(['brightspace:topic:1', 'brightspace:topic:2']);
+    expect(s.store.captured['brightspace:topic:2']?.misses).toBe(1);
+  });
+
   it('window log entries and progress pass through', async () => {
     const s = setup({
       frames: scripted(() => [done(t(1), none(1), true)]),
@@ -206,6 +232,20 @@ describe('runVisitPass: window fallback', () => {
     });
     await runVisitPass(s.deps, [t(1)]);
     expect(s.logs.map((l) => l.mode)).toEqual(['frame', 'window']);
+  });
+});
+
+describe('runVisitPass: listed outcomes', () => {
+  it('a target dated from another page is applied once and counted in progress', async () => {
+    const windows = vi.fn(async () => [] as VisitOutcome[]);
+    const listed = done(t(2, { platform: 'aleks' }), found(2));
+    listed.log = { ...listed.log, detail: 'listed' };
+    const s = setup({ frames: scripted(() => [done(t(1), found(1)), listed]), windows });
+    const out = await runVisitPass(s.deps, [t(1), t(2)]);
+    expect(out.map((o) => o.key)).toEqual(['brightspace:topic:1', 'brightspace:topic:2']);
+    expect(s.store.captured['brightspace:topic:2']).toMatchObject({ dueAt: '2026-11-10T04:59:00.000Z', misses: 0 });
+    expect(s.progress.at(-1)).toEqual([2, 2]);
+    expect(windows).not.toHaveBeenCalled();
   });
 });
 
@@ -225,7 +265,7 @@ describe('runVisitPass: platform memory', () => {
   const memory = (store: StoreShape) => store.visitState.frame;
   it('3 blocked in a row set skipUntil to now + 7 days and reset the count', async () => {
     const s = setup({ frames: scripted(() => [1, 2, 3].map((n) => done(t(n), blocked(n), true))) });
-    await runVisitPass(s.deps, [t(1), t(2), t(3)].map((x, i) => ({ ...x, platform: 'aleks', key: x.key + (i ? '' : '') })));
+    await runVisitPass(s.deps, [t(1), t(2), t(3)]);
     expect(memory(s.store).aleks).toEqual({ blocked: 0, skipUntil: new Date(now.getTime() + 7 * 86_400_000).toISOString() });
   });
 

@@ -228,6 +228,16 @@ describe('frame memory of a session', () => {
     const last = saved.at(-1) as Pick<StoreShape, 'visitState'>;
     expect(last.visitState.sessions?.pearson).toEqual({ at: now.toISOString(), failures: 1, frame: 'failed' });
   });
+  it('a marked session that went to the window and is still signed out keeps the mark; a later success clears it', async () => {
+    const store = pearsonStore();
+    store.visitState.sessions = { pearson: { at: '2026-11-01T00:00:00Z', failures: 1, frame: 'failed' } };
+    const still = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }], { resync: vi.fn(async () => ({ pearson: 'not_logged_in' as const })) });
+    await syncAndVisit(still.d, 'auto');
+    expect((still.saved.at(-1) as Pick<StoreShape, 'visitState'>).visitState.sessions?.pearson).toEqual({ at: '2026-11-01T00:00:00Z', failures: 2, frame: 'failed' });
+    const ok = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com' }]);
+    await syncAndVisit(ok.d, 'auto');
+    expect((ok.saved.at(-1) as Pick<StoreShape, 'visitState'>).visitState.sessions?.pearson).toEqual({ at: '2026-11-01T00:00:00Z', failures: 0 });
+  });
   it('a resync that works clears the mark', async () => {
     const store = pearsonStore();
     store.visitState.sessions = { pearson: { at: '2026-11-01T00:00:00Z', failures: 1, frame: 'failed' } };
