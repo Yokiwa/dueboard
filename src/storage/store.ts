@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import { normalizeTitle } from '../core/courseCode';
 import { DEFAULT_SETTINGS, type CapturedDue, type CourseLink, type ManualItem, type Settings, type SourceId, type Snapshot, type StoreShape, type VisitState } from '../core/types';
 
-const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured', 'visitState', 'syllabus', 'syllabusNav'] as const;
+const KEYS = ['schemaVersion', 'snapshots', 'manualItems', 'manualLinks', 'userState', 'settings', 'syncMeta', 'captured', 'visitState', 'syllabus', 'syllabusNav', 'completion'] as const;
 
 function obj(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -85,6 +85,7 @@ export function migrate(raw: unknown): StoreShape {
     manualLinks: arr(r.manualLinks),
     userState: {
       done: obj(us.done) as Record<string, true>,
+      notDone: obj(us.notDone) as Record<string, true>,
       colors: obj(us.colors) as Record<string, string>,
       hidden: obj(us.hidden) as Record<string, true>,
       shown: obj(us.shown) as Record<string, true>,
@@ -97,6 +98,7 @@ export function migrate(raw: unknown): StoreShape {
     visitState: migrateVisitState(r.visitState),
     syllabus: obj(r.syllabus) as StoreShape['syllabus'],
     syllabusNav: obj(r.syllabusNav) as StoreShape['syllabusNav'],
+    completion: obj(r.completion) as StoreShape['completion'],
   };
 }
 

@@ -41,6 +41,28 @@ export interface RawItem {
   launchUrl?: string;
   /** The score of finished work, when the platform shows one. */
   score?: Score;
+  /** The source answered "submitted or not" for this item (`submitted` is then an answer, not a default). */
+  submissionKnown?: boolean;
+}
+
+/** What one source or one page says about whether the work was handed in. */
+export type CheckAnswer =
+  | { state: 'done'; by: 'submitted' | 'score'; source: string; score?: Score; evidence?: string }
+  | { state: 'not_done'; source: string; evidence?: string };
+
+/** What DueBoard has learned about one item's completion, kept across syncs (StoreShape.completion). */
+export interface CompletionRecord {
+  state: 'done' | 'not_done' | 'unknown';
+  by?: 'submitted' | 'score';
+  /** 'Brightspace', 'Gradescope', 'Pearson' or a platform label. */
+  source?: string;
+  score?: Score;
+  /** The page or API text it was decided from. */
+  evidence?: string;
+  /** Last time any source answered (or a page was checked) for this item. */
+  checkedAt: string;
+  /** Page checks in a row that found no answer. */
+  tries?: number;
 }
 export interface RawLink {
   source: 'brightspace';
@@ -142,6 +164,8 @@ export interface ManualItem {
 }
 export interface UserState {
   done: Record<string, true>;
+  /** Work DueBoard marked done that the student un-ticked: never marked done automatically again. */
+  notDone: Record<string, true>;
   colors: Record<string, string>;
   hidden: Record<string, true>;
   /** Non-course entries the user chose to show (they are hidden by default). */
@@ -223,4 +247,6 @@ export interface StoreShape {
   syllabus: Record<string, CourseSyllabus>;
   /** Weekly check of each course's navigation bar for a "Syllabus" launch (ou → result). */
   syllabusNav: Record<string, { url: string | null; checkedAt: string }>;
+  /** Whether each item was handed in, by item key ("<source>:<sourceItemId>"). */
+  completion: Record<string, CompletionRecord>;
 }

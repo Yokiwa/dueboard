@@ -33,7 +33,7 @@ const snap = (courses: RawCourse[], items: RawItem[] = [], partial: string[] = [
   links: [],
   partial,
 });
-const emptyUser = (): UserState => ({ done: {}, colors: {}, hidden: {}, shown: {}, merges: {}, syllabusHidden: {} });
+const emptyUser = (): UserState => ({ done: {}, notDone: {}, colors: {}, hidden: {}, shown: {}, merges: {}, syllabusHidden: {} });
 const input = (p: Partial<DashboardInput>): DashboardInput => ({
   snapshots: {},
   manualItems: [],
