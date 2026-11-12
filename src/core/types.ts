@@ -149,7 +149,7 @@ export interface Settings {
   windowFallback: boolean;
 }
 export type CompletedPlacement = 'card' | 'section';
-export const DEFAULT_SETTINGS: Settings = { visits: 'manual', syllabus: true, completed: 'card', windowFallback: true };
+export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;

@@ -30,6 +30,7 @@ describe('store', () => {
     const s = await loadStore();
     expect(s.schemaVersion).toBe(1);
     expect(s.settings).toEqual(DEFAULT_SETTINGS);
+    expect(s.settings.visits).toBe('auto');
     expect(s.visitState).toEqual({ needsPermission: [], snoozed: {}, frame: {} });
     expect(s.snapshots).toEqual({});
     expect(s.manualItems).toEqual([]);
@@ -192,11 +193,11 @@ describe('visit progress', () => {
 });
 
 describe('default settings', () => {
-  it('a new install opens platform pages only when Refresh is clicked', () => {
-    expect(migrate({}).settings.visits).toBe('manual');
+  it('a new install reads platform pages automatically, in the background', () => {
+    expect(migrate({}).settings.visits).toBe('auto');
   });
   it('a choice the student made is kept', () => {
-    expect(migrate({ settings: { visits: 'auto', syllabus: true } }).settings.visits).toBe('auto');
+    expect(migrate({ settings: { visits: 'manual', syllabus: true } }).settings.visits).toBe('manual');
   });
 });
 

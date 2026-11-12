@@ -96,4 +96,20 @@ describe('Settings', () => {
     fireEvent.click(box);
     await waitFor(async () => expect((await loadStore()).userState.shown).toEqual({ 'brightspace:3': true }));
   });
+
+  it('reading platforms: new option wording, automatic by default, window fallback checkbox saves', async () => {
+    render(<Settings />);
+    await waitFor(() => row('CS 18000'));
+    const select = screen.getByRole('combobox', { name: /Read platforms/ }) as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.textContent)).toEqual(['Automatically, in the background', 'Only when I click Refresh', 'Never']);
+    expect(select.value).toBe('auto');
+    const box = screen.getByRole('checkbox', { name: "Use a small minimized window for pages that can't be read in the background" }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    await waitFor(async () => expect((await loadStore()).settings.windowFallback).toBe(false));
+    fireEvent.change(select, { target: { value: 'off' } });
+    await waitFor(() => expect(box.disabled).toBe(true));
+    expect(box.checked).toBe(false);
+  });
 });

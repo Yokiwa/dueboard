@@ -1,5 +1,5 @@
 import { createRouter } from '../background/router';
-import { handleInstalled } from '../background/install';
+import { handleInstalled, settingsAfterUpdate } from '../background/install';
 import { createBrightspaceConnector } from '../connectors/brightspace';
 import { createGradescopeConnector } from '../connectors/gradescope';
 import { collectFixtures, probe } from '../diagnostics/probe';
@@ -102,7 +102,11 @@ export default defineBackground({
 
   browser.runtime.onInstalled.addListener(async (details) => {
     // A new version may read pages the old one couldn't: retry homeworks the old one found nothing on.
-    if (details.reason === 'update') await patchStore({ captured: forgetUnfoundVisits((await loadStore()).captured) });
+    if (details.reason === 'update') {
+      const store = await loadStore();
+      const settings = settingsAfterUpdate(store.settings, details.previousVersion);
+      await patchStore({ captured: forgetUnfoundVisits(store.captured), ...(settings !== store.settings && { settings }) });
+    }
     void handleInstalled(details.reason, {
       ensureAlarm,
       sync: () => syncNow('auto'),

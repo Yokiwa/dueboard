@@ -146,7 +146,8 @@ const messages = {
   'settings.readingHint':
     'DueBoard opens homework links from Brightspace in a minimized window, reads the due date and closes it. It never clicks or submits anything.',
   'settings.visits': 'Read platforms in a minimized window',
-  'settings.visits.auto': 'Automatically',
+  'settings.visits.auto': 'Automatically, in the background',
+  'settings.windowFallback': "Use a small minimized window for pages that can't be read in the background",
   'settings.visits.manual': 'Only when I click Refresh',
   'settings.visits.off': 'Never',
   'settings.access': 'Platform access',

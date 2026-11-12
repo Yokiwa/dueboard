@@ -152,6 +152,15 @@ function ReadingPlatforms({ store }: { store: StoreShape }) {
           <option value="off">{t('settings.visits.off')}</option>
         </select>
       </label>
+      <label className="flex items-center gap-3 body-5">
+        <input
+          type="checkbox"
+          checked={store.settings.windowFallback}
+          disabled={store.settings.visits === 'off'}
+          onChange={(e) => void saveSettings({ windowFallback: e.target.checked })}
+        />
+        {t('settings.windowFallback')}
+      </label>
       <div className="flex flex-col gap-2">
         <span className="caption-3 text-db-muted">{t('settings.access')}</span>
         {platforms.length === 0 && <p className={hint}>{t('settings.noAccess')}</p>}
