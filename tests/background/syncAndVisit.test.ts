@@ -247,3 +247,37 @@ describe('frame memory of a session', () => {
     expect(last.visitState.sessions?.pearson).toEqual({ at: '2026-11-01T00:00:00Z', failures: 0 });
   });
 });
+
+describe('syncAndVisit status line', () => {
+  it('says what the run is doing from start to end: sources, then syllabi, then (visits report their own), then nothing', async () => {
+    const steps: unknown[] = [];
+    const { d } = deps(withHomework(), [], {
+      status: vi.fn(async (p) => void steps.push(p)),
+      sync: vi.fn(async () => {
+        steps.push('sync');
+        return { brightspace: 'ok' as const };
+      }),
+      syllabus: vi.fn(async () => {
+        steps.push('syllabus');
+        return { syllabus: {}, syllabusNav: {} };
+      }),
+      visit: vi.fn(async () => {
+        steps.push('visit');
+        return [];
+      }),
+    });
+    await syncAndVisit(d, 'auto');
+    expect(steps).toEqual([{ done: 0, total: 0, phase: 'sources' }, 'sync', { done: 0, total: 0, phase: 'syllabus' }, 'syllabus', 'visit', null]);
+  });
+
+  it('clears the line when the run fails or Brightspace is signed out', async () => {
+    const steps: unknown[] = [];
+    const { d } = deps(withHomework(), [], { status: vi.fn(async (p) => void steps.push(p)), sync: vi.fn(async () => ({ brightspace: 'not_logged_in' as const })) });
+    await syncAndVisit(d, 'auto');
+    expect(steps.at(-1)).toBeNull();
+    const steps2: unknown[] = [];
+    const { d: d2 } = deps(withHomework(), [], { status: vi.fn(async (p) => void steps2.push(p)), sync: vi.fn(async () => Promise.reject(new Error('offline'))) });
+    await syncAndVisit(d2, 'auto').catch(() => undefined);
+    expect(steps2.at(-1)).toBeNull();
+  });
+});

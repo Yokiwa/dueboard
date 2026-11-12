@@ -45,15 +45,9 @@ const syncNow = (trigger: Trigger = 'auto') => {
   const run = startSync(
       {
         load: loadStore,
-        sync: async () => {
-          // The dashboard says "Fetching … from Brightspace…" while the sources are read, also for a sync it didn't start.
-          await setVisitProgress({ done: 0, total: 0, phase: 'sources' }).catch(() => undefined);
-          try {
-            return await syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs));
-          } finally {
-            await setVisitProgress(null).catch(() => undefined);
-          }
-        },
+        sync: () => syncWithDiscovery(loadStore, (ids) => ids.map((id) => CONNECTORS[id]()), (cs) => runSync(cs)),
+        // The dashboard's status line for the whole run, also for a run it didn't start (install, alarm, sign-in).
+        status: (p) => setVisitProgress(p),
         granted: () => visitApi.granted(),
         visit: async (targets) => {
           // Each page's entry is saved as soon as it is read (one write after another), so the log shows how far a run
@@ -75,8 +69,8 @@ const syncNow = (trigger: Trigger = 'auto') => {
               targets,
             );
           } finally {
+            // The run clears the status line when it ends (a Pearson or Gradescope re-read may still follow).
             await logged;
-            await setVisitProgress(null);
           }
         },
         save: (patch) => patchStore(patch),

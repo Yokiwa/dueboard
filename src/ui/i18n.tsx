@@ -23,6 +23,7 @@ const messages = {
   'sync.never': 'Not synced yet',
   'sync.syncing': 'Syncing…',
   'sync.fetching': 'Fetching your courses and assignments from Brightspace…',
+  'sync.syllabi': 'Reading your course syllabi…',
   refresh: 'Refresh',
   settings: 'Settings',
   ago: agoEn,

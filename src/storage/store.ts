@@ -224,8 +224,8 @@ export async function patchVisitState(patch: Partial<VisitState>): Promise<void>
 export interface VisitProgress {
   done: number;
   total: number;
-  /** 'sources': the sync is still reading Brightspace and the other sources (done and total are 0 then). */
-  phase?: 'sources';
+  /** Before the platform pages: reading Brightspace and the other sources, then syllabi (done and total are 0 then). */
+  phase?: 'sources' | 'syllabus';
 }
 export async function setVisitProgress(p: VisitProgress | null): Promise<void> {
   await browser.storage.local.set({ visitProgress: p });

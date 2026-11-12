@@ -49,6 +49,8 @@ describe('Header', () => {
     // A sync this page started, before the background has said anything.
     rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing progress={null} onRefresh={() => {}} />);
     expect(screen.getByText('Fetching your courses and assignments from Brightspace…')).toBeTruthy();
+    rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} progress={{ done: 0, total: 0, phase: 'syllabus' }} onRefresh={() => {}} />);
+    expect(screen.getByText('Reading your course syllabi…')).toBeTruthy();
     rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} progress={{ done: 2, total: 9 }} onRefresh={() => {}} />);
     expect(screen.getByText('Reading 2 of 9 platform pages…')).toBeTruthy();
   });

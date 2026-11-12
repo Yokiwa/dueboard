@@ -49,6 +49,8 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
           />
           {progress?.phase === 'sources' || (syncing && !progress)
             ? t('sync.fetching')
+            : progress?.phase === 'syllabus'
+            ? t('sync.syllabi')
             : progress
             ? t('sync.visiting', { done: progress.done, total: progress.total })
             : lastSynced

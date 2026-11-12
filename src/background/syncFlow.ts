@@ -3,6 +3,7 @@ import type { SyncReport } from '../sync/runSync';
 import { activeSourceIds } from './sources';
 import { platformByHost } from '../core/platformRegistry';
 import { dueVisits, type Trigger, type VisitOutcome, type VisitTarget } from '../visits/schedule';
+import type { VisitProgress } from '../storage/store';
 
 /**
  * One sync: the platforms known so far, then — in the same run — any platform the fresh Brightspace data just
@@ -32,6 +33,11 @@ export interface SyncAndVisitDeps {
   /** Reads one background source again (after its sign-in was restored through Brightspace). */
   resync: (source: 'gradescope' | 'pearson') => Promise<SyncReport>;
   now: () => Date;
+  /**
+   * The dashboard's status line, kept for the whole run: Brightspace and the other sources, then syllabi; the visit
+   * pass reports its own page count; null when the run has ended (however it ended).
+   */
+  status?: (p: VisitProgress | null) => Promise<void>;
 }
 
 /**
@@ -76,6 +82,21 @@ export function syncAndVisit(deps: SyncAndVisitDeps, trigger: Trigger): Promise<
 }
 
 async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: SyncReport) => void): Promise<SyncReport> {
+  const status = (p: VisitProgress | null) => (deps.status ? deps.status(p).catch(() => undefined) : Promise.resolve());
+  await status({ done: 0, total: 0, phase: 'sources' });
+  try {
+    return await readAndVisit(deps, trigger, onReport, status);
+  } finally {
+    await status(null);
+  }
+}
+
+async function readAndVisit(
+  deps: SyncAndVisitDeps,
+  trigger: Trigger,
+  onReport: (r: SyncReport) => void,
+  status: (p: VisitProgress | null) => Promise<unknown>,
+): Promise<SyncReport> {
   let report: SyncReport = {};
   try {
     report = await deps.sync();
@@ -84,6 +105,7 @@ async function fullSync(deps: SyncAndVisitDeps, trigger: Trigger, onReport: (r: 
   }
   if (report.brightspace === 'not_logged_in') return report;
   if (deps.syllabus) {
+    await status({ done: 0, total: 0, phase: 'syllabus' });
     const before = await deps.load();
     const patch = await deps.syllabus(before);
     if (Object.keys(patch.syllabus).length || Object.keys(patch.syllabusNav).length) {

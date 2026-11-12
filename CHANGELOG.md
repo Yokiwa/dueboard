@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.3 — 2026-11 (trial build)
+
+- **The dashboard always says what a sync is doing**, from start to end: "Fetching your courses and assignments from Brightspace…", then "Reading your course syllabi…", then "Reading 3 of 20 platform pages…". 1.4.2 showed "Synced" while syllabi were read, so a sync that had started on its own (after installing or updating) looked finished
+- "Session expired" lines stay hidden for the whole run, until DueBoard has tried to sign back in
+
 ## 1.4.2 — 2026-11 (trial build)
 
 - **Pearson signs back in by itself**: Purdue's Pearson link first shows "Access Pearson for D2L Brightspace", and MyLab only signs you in once its **Assignments** link is opened. DueBoard now presses that link (the only one it presses there) and waits for MyLab, in the background and, if needed, in the minimized window
