@@ -153,6 +153,8 @@ export interface Item {
   doneBy?: { by: 'submitted' | 'score' | 'user'; source?: string };
   /** Past due, and nothing has said whether it was handed in. */
   notSure?: boolean;
+  /** A source shows the work handed in, whether or not the student ticked it too (un-ticking it then records notDone). */
+  sourcesDone?: boolean;
 }
 export interface CourseLink {
   courseId: string;

@@ -119,7 +119,7 @@ export function CourseDetail({ course, items, links, now, suggestions = [], syll
                         type="checkbox"
                         aria-label={t('done.mark', { title: i.title })}
                         checked={i.doneByUser || i.submitted}
-                        onChange={(e) => void (e.target.checked ? markDone(i) : toggleDone(i.sourceKeys, false, { auto: i.submitted }))}
+                        onChange={(e) => void (e.target.checked ? markDone(i) : toggleDone(i.sourceKeys, false, { auto: i.submitted || !!i.sourcesDone }))}
                         className="size-4 shrink-0 cursor-pointer"
                       />
                       <div className="min-w-0 grow">

@@ -1,5 +1,4 @@
-import { foldSnapshots, itemState } from './completion';
-import { courseTerm } from '../syllabus/read';
+import { foldSnapshots, itemState, termStart as courseStart } from './completion';
 import { platformById } from './platformRegistry';
 import { findDueMatches } from './dueText';
 import { extractCourseCode, normalizeTitle, stripDueSuffix } from './courseCode';
@@ -242,8 +241,8 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
   // Work to hand in (assignments, quizzes, the student's own entries) stays from the start of its course's term; exams and
   // events leave 7 days after their date.
   const termStart = new Map<string, number>();
-  for (const c of input.snapshots.brightspace?.courses ?? []) termStart.set(courseId('brightspace', c.sourceCourseId), courseTerm(c, now).start.getTime());
-  const guessStart = courseTerm({}, now).start.getTime();
+  for (const c of input.snapshots.brightspace?.courses ?? []) termStart.set(courseId('brightspace', c.sourceCourseId), courseStart(c, now));
+  const guessStart = courseStart({}, now);
   const windowStart = (type: ItemType, cid: string) => (type === 'exam' || type === 'event' ? minDue : Math.min(minDue, termStart.get(cid) ?? guessStart));
   const inWindow = (i: { dueAt: string | null; type: ItemType }, cid: string) => !i.dueAt || Date.parse(i.dueAt) >= windowStart(i.type, cid);
 
@@ -286,6 +285,7 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
     m.submitted = st.done && st.doneBy?.by !== 'user';
     if (st.score) m.score = st.score;
     if (st.done && st.doneBy) m.doneBy = st.doneBy;
+    if (st.known === 'done') m.sourcesDone = true;
     const pastDue = m.dueAt !== null && Date.parse(m.dueAt) <= now.getTime();
     if (!st.done && pastDue && (m.type === 'assignment' || m.type === 'quiz') && st.known === 'unknown') m.notSure = true;
   }

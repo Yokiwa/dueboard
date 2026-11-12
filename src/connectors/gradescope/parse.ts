@@ -82,7 +82,6 @@ function course(html: string, courseId: string): RawItem[] {
         : `${GS_BASE}/courses/${courseId}`;
     const dueEl = [...row.querySelectorAll('time.submissionTimeChart--dueDate')].find((t) => !/^\s*late/i.test(t.textContent ?? ''));
     const status = row.querySelector('.submissionStatus');
-    const submitted = Boolean(status?.querySelector('.submissionStatus--score')) || /submitted/i.test(text(status));
     const scoreText = text(status?.querySelector('.submissionStatus--score'));
     const sm = scoreText.match(/^\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
     const earned = sm ? Number(sm[1]) : NaN;
@@ -91,8 +90,11 @@ function course(html: string, courseId: string): RawItem[] {
       Number.isFinite(earned) && Number.isFinite(possible) && possible > 0
         ? { text: formatPoints(earned, possible), earned, possible, from: 'Gradescope', evidence: scoreText.slice(0, 120) }
         : undefined;
+    // A score shows the work was taken, unless it is a zero: Gradescope also shows 0 for work never handed in.
+    const scored = Boolean(status?.querySelector('.submissionStatus--score')) && earned !== 0;
+    const submitted = scored || /submitted/i.test(text(status));
     // "Submitted", "No Submission" or a score: Gradescope answered whether the work was handed in.
-    const answered = Boolean(status?.querySelector('.submissionStatus--score')) || /submitted|no submission/i.test(text(status));
+    const answered = scored || /submitted|no submission/i.test(text(status));
     items.push({
       source: 'gradescope',
       sourceItemId: assignmentId ?? `title:${normalizeTitle(title)}`,

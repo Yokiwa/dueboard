@@ -14,6 +14,7 @@ import {
   type Toc,
   type VersionInfo,
 } from './api';
+import { termStart } from '../../core/completion';
 import { attachGrades, folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocItems, tocLinks } from './map';
 
 const DAY = 86_400_000;
@@ -123,12 +124,14 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       };
       const ask = new Set<string>();
       const past: { ou: string; f: DropboxFolder }[] = [];
+      // Folders due before the term are not shown, so they are not asked about either.
+      const startOf = new Map(courses.map((c) => [c.sourceCourseId, termStart(c, t)]));
       for (const c of fetched) {
         for (const f of c.visible) {
           const ms = dueMs(f);
           if (Number.isNaN(ms)) continue;
           if (ms >= t.getTime() - 7 * DAY && ms <= t.getTime() + 30 * DAY) ask.add(`${c.ou}:${f.Id}`);
-          else if (ms < t.getTime() - 7 * DAY && known[`brightspace:dropbox:${f.Id}`]?.state !== 'done') past.push({ ou: c.ou, f });
+          else if (ms < t.getTime() - 7 * DAY && ms >= (startOf.get(c.ou) ?? 0) && known[`brightspace:dropbox:${f.Id}`]?.state !== 'done') past.push({ ou: c.ou, f });
         }
       }
       past.sort((a, b) => dueMs(b.f) - dueMs(a.f));

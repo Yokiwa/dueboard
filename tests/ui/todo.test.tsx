@@ -197,6 +197,15 @@ describe('TodoView 1.5.0: Overdue, "Not sure" and scores', () => {
     expect(s.userState.done).toEqual({ 'brightspace:d1': true, 'gradescope:7': true });
   });
 
+  it('un-ticking work the student ticked that a source also shows done records notDone (else the box would tick itself again)', async () => {
+    const i = item('brightspace:d3', 'brightspace:1', 'HW 3', '2026-11-06T23:59:00-05:00', { doneByUser: true, submitted: false, sourcesDone: true });
+    await toggleDone(['brightspace:d3'], true);
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'HW 3' }));
+    await waitFor(async () => expect((await loadStore()).userState.notDone).toEqual({ 'brightspace:d3': true }));
+    expect((await loadStore()).userState.done).toEqual({});
+  });
+
   it("un-ticking the student's own tick does not record notDone", async () => {
     await toggleDone(['brightspace:d2'], true);
     await toggleDone(['brightspace:d2'], false);

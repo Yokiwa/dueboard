@@ -1,4 +1,17 @@
+import { courseTerm } from '../syllabus/read';
 import type { CheckAnswer, CompletionRecord, RawItem, Score, SourceId, StoreShape, UserState } from './types';
+
+const DAY = 86_400_000;
+/** However long a course's Brightspace term (some units run for years), work older than this is not shown. */
+const TERM_FLOOR_DAYS = 150;
+
+/**
+ * Where the term's work starts for a course: its Brightspace term start, or the semester guess when Brightspace has no
+ * dates, but never more than 150 days back (about a semester and its finals).
+ */
+export function termStart(course: { start?: string | null; end?: string | null }, now: Date): number {
+  return Math.max(courseTerm(course, now).start.getTime(), now.getTime() - TERM_FLOOR_DAYS * DAY);
+}
 
 /**
  * Whether work was handed in: what a source says (answerOf), how answers add up over syncs (foldAnswer), and an

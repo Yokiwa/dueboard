@@ -5,10 +5,12 @@ import { pageLines } from './lines';
 
 /** A status of its own (a badge, a label's value): at most this many words. */
 const MAX_WORDS = 4;
-const DONE = /^(?:status:\s*)?(submitted|completed|complete|turned in|graded)\.?$/i;
+const DONE = /^(?:status:\s*)?(submitted|completed|turned in|graded)\.?$/i;
 const NOT_DONE = /^(?:status:\s*)?(not submitted|not started|no submission|not attempted|not turned in)\.?$/i;
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
+/** Filters, tabs, menus, links and column headers name statuses without being this work's status. */
+const NOT_A_STATUS = 'a, button, nav, select, option, th, [role="tab"], [role="tablist"], [role="menu"], [role="menuitem"], [role="navigation"], [role="button"], [role="link"], script, style, noscript, template';
 
 function hidden(el: Element): boolean {
   if (el.closest('[hidden],[aria-hidden="true"]')) return true;
@@ -16,12 +18,22 @@ function hidden(el: Element): boolean {
   return Boolean(style && (style.display === 'none' || style.visibility === 'hidden'));
 }
 
+/** An element's visible text, leaving out hidden parts and controls (whose words are not a status). */
+function statusText(el: Element): string {
+  let out = '';
+  for (const n of Array.from(el.childNodes)) {
+    if (n.nodeType === 3) out += n.textContent ?? '';
+    else if (n.nodeType === 1 && !hidden(n as Element) && !(n as Element).matches(NOT_A_STATUS)) out += ` ${statusText(n as Element)} `;
+  }
+  return out;
+}
+
 /** The status words the page shows on their own, innermost element per word. */
 function statuses(doc: Document): { state: 'done' | 'not_done'; text: string }[] {
   const out: { state: 'done' | 'not_done'; text: string; el: Element }[] = [];
   for (const el of Array.from(doc.body?.querySelectorAll('*') ?? [])) {
-    if (hidden(el)) continue;
-    const text = clean(el.textContent ?? '');
+    if (hidden(el) || el.closest(NOT_A_STATUS)) continue;
+    const text = clean(statusText(el));
     if (!text || text.split(' ').length > MAX_WORDS) continue;
     const state = NOT_DONE.test(text) ? 'not_done' : DONE.test(text) ? 'done' : null;
     if (!state) continue;

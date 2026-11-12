@@ -27,7 +27,7 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
   /** The same read-only callback the "see score" link sends. Failures leave the row without a score. */
   async function addScores(page: PearsonPage) {
     // Rows not known done, of any date; rows known done only when due in the last 14 days and not checked for a day
-    // (a regrade). The most recently due first.
+    // (a regrade).
     const now = (opts.now?.() ?? new Date()).getTime();
     const known = (await opts.completion?.().catch(() => undefined)) ?? {};
     const wanted = (c: { itemId: string; dueAt: string }) => {
@@ -36,9 +36,11 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
       const due = Date.parse(c.dueAt);
       return due <= now && due > now - REGRADE_DAYS * DAY && now - Date.parse(r.checkedAt) > DAY;
     };
+    // Past-due rows first (the ones Overdue and "Not sure" wait on), the most recently due first; then rows not due yet.
+    const pastDue = (c: { dueAt: string }) => Date.parse(c.dueAt) <= now;
     const targets = (page.scoreCells ?? [])
       .filter(wanted)
-      .sort((a, b) => Date.parse(b.dueAt) - Date.parse(a.dueAt))
+      .sort((a, b) => Number(pastDue(b)) - Number(pastDue(a)) || Date.parse(b.dueAt) - Date.parse(a.dueAt))
       .slice(0, MAX_SCORE_REQUESTS);
     if (!targets.length || !Object.keys(page.form ?? {}).length) return;
     const url = new URL('./DoAssignments.aspx?view=all', PEARSON_ASSIGNMENTS_URL).href;

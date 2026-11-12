@@ -70,6 +70,14 @@ describe('gradescope parser', () => {
     expect(items.find((i) => i.title === 'Participation')!.score).toBeUndefined();
   });
 
+  it('a zero score alone does not say the work was handed in (Gradescope shows 0 for missing work too)', () => {
+    const html = course.replace('18.0 / 20.0', '0.0 / 20.0');
+    const hw = domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!;
+    expect(hw.score).toMatchObject({ earned: 0, possible: 20 });
+    expect(hw.submitted).toBe(false);
+    expect(hw.submissionKnown).toBeUndefined();
+  });
+
   it('no score when possible is zero', () => {
     const html = course.replace('18.0 / 20.0', '5 / 0');
     expect(domGradescopeParser.course(html, '123456').find((i) => i.title === 'Homework 1')!.score).toBeUndefined();

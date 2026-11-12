@@ -185,6 +185,17 @@ describe('pearson scores', () => {
     expect(params[0]).toBe('H_200_IVF_2_False');
   });
 
+  it('past-due rows are asked before rows not due yet (10 future rows never crowd them out)', async () => {
+    // NOW is 11/10: ten rows due later in November first, then two past-due rows.
+    const future = ['11/15/26', '11/16/26', '11/17/26', '11/18/26', '11/19/26', '11/20/26', '11/21/26', '11/22/26', '11/23/26', '11/24/26'];
+    const s = spy((b) => `s${b.get('__CALLBACKPARAM')}_90%`, many([...future, '10/31/26', '09/01/26']));
+    await createPearsonConnector({ parse: async (h) => parsePearson(h), fetchImpl: s.impl, now: () => NOW, completion: async () => ({}) }).fetchAll();
+    const params = postsOf(s).map((c) => new URLSearchParams(String(c.init!.body)).get('__CALLBACKPARAM'));
+    expect(params).toHaveLength(10);
+    expect(params).toContain('H_210_IVF_2_False');
+    expect(params).toContain('H_211_IVF_2_False');
+  });
+
   it('asks rows of any age not known done; a row known done only when due in the last 14 days and not checked today', async () => {
     // NOW is 11/10. Rows: 09/01 (long past), 10/31 (10 days ago), 11/01 (9 days ago), 10/20 (21 days ago).
     const s = spy((b) => `s${b.get('__CALLBACKPARAM')}_90%`, many(['09/01/26', '10/31/26', '11/01/26', '10/20/26']));

@@ -44,7 +44,7 @@ function Row({ item, course, now }: { item: Item; course: Course | undefined; no
         type="checkbox"
         aria-label={item.title}
         checked={done}
-        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked, { auto: item.submitted })}
+        onChange={(e) => void toggleDone(item.sourceKeys, e.target.checked, { auto: item.submitted || !!item.sourcesDone })}
         className="size-4 shrink-0 cursor-pointer"
       />
       <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />

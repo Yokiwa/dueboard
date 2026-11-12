@@ -667,6 +667,31 @@ describe('buildDashboard — every overdue item of the term (1.5.0)', () => {
     expect(items.map((i) => i.title)).toEqual(['September work']);
   });
 
+  it('a course whose Brightspace term spans years shows at most the last 150 days of overdue work', () => {
+    const course = termCourse('2024-08-20T04:00:00.000Z', '2027-05-10T04:00:00.000Z');
+    const items = run(
+      [
+        item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'Spring 2025 work', dueAt: '2025-03-20T04:00:00.000Z' }),
+        item({ source: 'brightspace', sourceItemId: 'dropbox:2', sourceCourseId: '42', title: 'September work', dueAt: '2026-09-20T04:00:00.000Z' }),
+      ],
+      {},
+      course,
+    );
+    expect(items.map((i) => i.title)).toEqual(['September work']);
+  });
+
+  it('a source that also says done tells the item so, even when the student ticked it (so un-ticking can record notDone)', () => {
+    const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(20) })], {
+      userState: { ...emptyUser(), done: { 'brightspace:dropbox:1': true } },
+      completion: { 'brightspace:dropbox:1': { state: 'done', by: 'submitted', source: 'Brightspace', checkedAt: 'x' } },
+    });
+    expect(it1).toMatchObject({ doneByUser: true, submitted: false, sourcesDone: true });
+    const [it2] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:2', sourceCourseId: '42', title: 'HW 2', dueAt: due(20) })], {
+      userState: { ...emptyUser(), done: { 'brightspace:dropbox:2': true } },
+    });
+    expect(it2!.sourcesDone).toBeFalsy();
+  });
+
   it('a done record makes the item submitted with its score and doneBy', () => {
     const score = { text: '18/25', earned: 18, possible: 25, from: 'Brightspace' };
     const [it1] = run([item({ source: 'brightspace', sourceItemId: 'dropbox:1', sourceCourseId: '42', title: 'HW 1', dueAt: due(20) })], {

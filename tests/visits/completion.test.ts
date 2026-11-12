@@ -40,4 +40,30 @@ describe('findCompletion', () => {
   it('hidden elements are ignored', () => {
     expect(findCompletion(page('<span hidden>Submitted</span><h1>HW 3</h1>'), 'X', now)).toBeNull();
   });
+
+  it('status words in tabs, links, buttons, menus, navigation or table headers say nothing (filters and lists, not this work)', () => {
+    for (const html of [
+      '<h1>HW 7</h1><div role="tablist"><span role="tab">Upcoming</span><span role="tab">Completed</span></div>',
+      '<h1>HW 7</h1><nav><span>Completed</span></nav>',
+      '<h1>HW 7</h1><a href="/done">Completed</a>',
+      '<h1>HW 7</h1><button>Submitted</button>',
+      '<h1>HW 7</h1><table><tr><th>Graded</th></tr><tr><td>Problem 1</td></tr></table>',
+      '<h1>HW 7</h1><select><option>Not started</option></select>',
+    ]) {
+      document.body.innerHTML = html;
+      expect(findCompletion(document, 'ALEKS', now), html).toBeNull();
+    }
+  });
+
+  it('"Complete" (often a button or an instruction) is not a status', () => {
+    document.body.innerHTML = '<h1>HW 7</h1><p><span>Complete</span></p>';
+    expect(findCompletion(document, 'ALEKS', now)).toBeNull();
+  });
+
+  it('a hidden child does not make a status out of its parent', () => {
+    document.body.innerHTML = '<h1>HW 7</h1><p><span>Submitted</span><span hidden> late by 3 days, not accepted</span></p>';
+    expect(findCompletion(document, 'ALEKS', now)).toMatchObject({ state: 'done', by: 'submitted' });
+    document.body.innerHTML = '<h1>HW 7</h1><div><span hidden>Submitted</span></div>';
+    expect(findCompletion(document, 'ALEKS', now)).toBeNull();
+  });
 });

@@ -2,7 +2,7 @@
 
 ## 1.5.0 — 2026-11 (trial build)
 
-- **Done or not, for the whole term**: Overdue now lists every past-due assignment, quiz and homework of the term, not only the last 7 days. Exams and calendar events still leave the page 7 days after their date
+- **Done or not, for the whole term**: Overdue now lists every past-due assignment, quiz and homework of the term (from the course's start, at most 150 days back), not only the last 7 days. Exams and calendar events still leave the page 7 days after their date
 - **Work you handed in is ticked off automatically, with its score**: from Brightspace (your submission in an assignment folder, your gradebook grade, which is also how quizzes count), Gradescope (a score, "Submitted" or "No Submission"), Pearson MyLab (its "see score" answer) and other homework platforms (the page's own score or "Submitted" status, read in the background like due dates). A score of 0 alone does not count, since platforms show 0 for missing work
 - **"Not sure"**: past-due work that nothing has said anything about stays in Overdue with a "Not sure" tag; tick it if you did it. DueBoard keeps checking (each page at most once a day, after three checks with no answer only on Refresh), and the tag goes away by itself once a source answers
 - **You decide**: untick work DueBoard ticked and it stays unticked, whatever a later sync reads

@@ -471,6 +471,13 @@ describe('brightspace submissions for the whole term', () => {
     expect(new Set(asked)).toEqual(new Set(expected));
   });
 
+  it('does not ask about folders due before the term (the course start, or the semester guess when Brightspace has none)', async () => {
+    // Course 101 runs from Aug 20; course 102 has no dates (the guess starts Aug 1). Now is Nov 4.
+    const f = fakeFetch(routes({ [`${LE}/101/dropbox/folders/`]: { body: [folder(1, 12), folder(2, 100)] }, [`${LE}/102/dropbox/folders/`]: { body: [folder(3, 120), folder(4, 30)] } }));
+    await createBrightspaceConnector({ fetchImpl: f.impl, now }).fetchAll();
+    expect(askedIds(f.calls).sort()).toEqual([1, 4]);
+  });
+
   it('without completion records it still asks at most 40 past-due folders', async () => {
     const f = fakeFetch(routes({ [`${LE}/101/dropbox/folders/`]: { body: f101 }, [`${LE}/102/dropbox/folders/`]: { body: f102 } }));
     await createBrightspaceConnector({ fetchImpl: f.impl, now }).fetchAll();
