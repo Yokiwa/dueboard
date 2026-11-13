@@ -29,6 +29,19 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **Automatic sync** every 30 minutes, using the sessions already in your browser.
 - **Chrome, Edge and Firefox** (and other Chromium browsers such as Brave, Arc and Opera).
 
+### To-do list and focus timer
+
+<table>
+  <tr>
+    <td valign="top" width="68%"><img src="docs/assets/todo.png" alt="The To-do list: Overdue, a Not sure if handed in section, Today, This week and Later, each with a count and a countdown badge on every item"></td>
+    <td valign="top" width="32%"><img src="docs/assets/popup-timer.png" alt="The toolbar popup: the Pomodoro timer with adjustable focus and break minutes above the next deadline and upcoming work"></td>
+  </tr>
+  <tr>
+    <td>The To-do list groups your work by when it is due. Work DueBoard couldn't check waits under <b>Not sure if handed in</b>.</td>
+    <td>The toolbar popup shows the focus timer, the next deadline and what's coming up.</td>
+  </tr>
+</table>
+
 ### Dashboard themes
 
 | Theme | Intended study time | Palette |
