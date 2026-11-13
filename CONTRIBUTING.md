@@ -24,18 +24,16 @@ Folder guide: [docs/team/README.md](docs/team/README.md).
    - Docs only: `docs/short-description`
 3. **Change and commit on that branch.** Only change what the issue is about.
 4. **Open a pull request into `main`** and write `Closes #<issue number>` in the description. UI changes must include before/after screenshots.
-5. **Merge it yourself once CI is green.** No approval is needed for changes in `src/`, `tests/`, `design/` or `docs/`. Easiest: click **Enable auto-merge** on the PR and GitHub merges it as soon as the checks pass. If GitHub says the branch is out of date, click **Update branch** first.
+5. **Wait for Raymond to review and merge it.** Every PR into `main` needs Raymond's (@Yokiwa) approval, and only Raymond merges. Don't merge it yourself and don't enable auto-merge. Make CI green; if GitHub says the branch is out of date, click **Update branch**.
 6. The branch is deleted after merging. Next time, go back to step 2 and **branch again from the latest `main`**.
 
-### What still needs Raymond's approval
+### Raymond's approval
 
-Only PRs that touch the files that control the project (listed in [.github/CODEOWNERS](.github/CODEOWNERS)):
+Every PR needs it ([.github/CODEOWNERS](.github/CODEOWNERS) lists Raymond for every file). GitHub asks Raymond for review automatically and blocks the merge until Raymond approves. Be extra careful with the files that control the project:
 
 - `.github/` (CI, templates, code owners)
 - `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md` (the rules)
 - `package.json`, `package-lock.json`, `CHANGELOG.md` (versions and dependencies)
-
-GitHub asks Raymond for review automatically on those PRs and blocks the merge until Raymond approves. For a big or risky change elsewhere, @Yokiwa in the PR and wait for an answer before merging.
 
 Writing code with Codex, Claude or another AI? [AGENTS.md](AGENTS.md) in the repository root is read by the AI automatically, and it follows this process on its own.
 

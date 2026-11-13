@@ -1,6 +1,8 @@
-# Files that need the maintainer's approval before merging
+# Every pull request into main needs the maintainer's approval before merging
 # (enforced when "Require review from Code Owners" is on for main).
-# Everything else (src/, tests/, design/, docs/) can be merged by its author once CI passes.
+# Only the maintainer merges into main.
+
+*                    @Yokiwa
 
 /.github/            @Yokiwa
 /AGENTS.md           @Yokiwa
