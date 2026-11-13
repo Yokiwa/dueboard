@@ -48,7 +48,7 @@ Use the theme button in the dashboard header to cycle through all five choices. 
 | Brightspace | Assignments, quizzes, calendar events and dated content items, read directly |
 | Gradescope | Read from your Gradescope course pages when you are signed in |
 | Pearson MyLab & Mastering | Read from MyLab when a course links to Pearson; if the session expired, DueBoard reopens it through Brightspace |
-| WileyPLUS, ALEKS, Norton (InQuizitive, Smartwork), WebAssign, McGraw-Hill Connect, Achieve, Cengage, zyBooks, Top Hat, Perusall, Packback, Hawkes, Vista Higher Learning, Sapling, Expert TA, Knewton Alta, PrairieLearn, Vocareum, GoReact | Read in the background from the assignment page your Brightspace homework link opens |
+| WileyPLUS, ALEKS, Norton (InQuizitive, Smartwork), WebAssign, McGraw-Hill Connect, Achieve, Cengage, zyBooks, Top Hat, Perusall, Packback, Hawkes, Vista Higher Learning, Sapling, Expert TA, Knewton Alta, PrairieLearn, Vocareum, GoReact, LabFlow, BeyondLabz, Circuit, Variate | Read in the background from the assignment page your Brightspace homework link opens |
 | Any other platform Brightspace launches | Same as above, once you allow the site the first time DueBoard finds it |
 | Syllabus (Simple Syllabus, PDF or web page in Content) | Shown as suggestions you can add or hide |
 | Anything else | Add it by hand; it stays until you remove it |
@@ -68,6 +68,7 @@ DueBoard currently supports `purdue.brightspace.com`.
 - Everything stays in your browser. Nothing is uploaded, collected or analyzed.
 - DueBoard never sees your password; it only reuses sessions your browser already has, and only sends read requests.
 - Platform pages are opened only through your own Brightspace links and only read — DueBoard never types or submits anything. They load in hidden frames inside the extension (or, as a fallback, a small minimized window) and appear in your browser history like pages you open yourself.
+- Timed or proctored exam tools (ExamSoft, Respondus LockDown Browser, Honorlock, Examity) are never opened automatically, so DueBoard never starts an exam attempt.
 - Hidden frames can't open tabs or windows. While reading, DueBoard removes the "do not embed" headers only from its own hidden frame requests on homework sites; your own tabs are never affected.
 - Uninstalling removes all data.
 - Details: [privacy policy](docs/privacy.html).
