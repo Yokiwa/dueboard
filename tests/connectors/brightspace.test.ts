@@ -101,7 +101,7 @@ describe('brightspace connector', () => {
     const { result, calls } = await run();
     if (!result.ok) throw new Error('expected ok');
     const events = result.items.filter((i) => i.sourceItemId.startsWith('event:'));
-    expect(events.map((e) => e.sourceItemId).sort()).toEqual(['event:501', 'event:504']);
+    expect(events.map((e) => e.sourceItemId).sort()).toEqual(['event:501', 'event:504', 'event:506']);
     expect(events.find((e) => e.sourceItemId === 'event:501')).toMatchObject({
       sourceCourseId: '102',
       type: 'event',
@@ -109,6 +109,8 @@ describe('brightspace connector', () => {
       url: `${B}/d2l/le/calendar/102`,
     });
     expect(events.find((e) => e.sourceItemId === 'event:504')).toMatchObject({ type: 'exam', dueAt: '2026-11-12T23:00:00.000Z' });
+    // Issue #19: a reading posted as a plain event titled after the text, the work only in its description.
+    expect(events.find((e) => e.sourceItemId === 'event:506')).toMatchObject({ sourceCourseId: '102', title: 'Zarathustra', type: 'event', dueAt: '2026-11-14T04:59:00.000Z' });
     expect(calls.find((c) => c.includes('myEvents'))).toContain('orgUnitIdsCSV=101,102');
   });
 
