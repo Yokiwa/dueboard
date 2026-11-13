@@ -202,7 +202,7 @@
   clip: rect(0 0 0 0);
 }
 
-/* The mark keeps the theme accent BrandMark gives it (not the text color: dark in light themes, white in dark ones). */
+/* The mark keeps the extension icon colors BrandMark draws (no theme color over it). */
 .dashboard-brand svg {
   width: 29px;
   height: 29px;
