@@ -30,12 +30,12 @@ const titles = (el: HTMLElement) => within(el).queryAllByTestId('todo-title').ma
 describe('TodoView', () => {
   beforeEach(() => fakeBrowser.reset());
 
-  it('lists items sorted, grouped Overdue / Today / Tomorrow / This week / Later / No due date', () => {
+  it('lists items sorted, grouped Overdue / Today / This week / Later / No due date (tomorrow is part of this week)', () => {
     renderIn('en', <TodoView dashboard={d} now={NOW} />);
     expect(titles(group('Overdue'))).toEqual(['Late lab']);
     expect(titles(group('Today'))).toEqual(['Project 3']);
-    expect(titles(group('Tomorrow'))).toEqual(['WebAssign 14.3']);
-    expect(titles(group('This week'))).toEqual(['Office hours prep', 'Quiz 6']);
+    expect(screen.queryByRole('region', { name: 'Tomorrow' })).toBeNull();
+    expect(titles(group('This week'))).toEqual(['WebAssign 14.3', 'Office hours prep', 'Quiz 6']);
     expect(titles(group('Later'))).toEqual(['Exam 2']);
     expect(titles(group('No due date'))).toEqual(['Reading']);
     expect(within(group('Today')).getByText('CS 18000')).toBeTruthy();
@@ -49,7 +49,7 @@ describe('TodoView', () => {
 
   it('done items that are not past due stay in their group, checked', () => {
     renderIn('en', <TodoView dashboard={d} now={NOW} />);
-    expect(titles(group('This week'))).toEqual(['Office hours prep', 'Quiz 6']);
+    expect(titles(group('This week'))).toEqual(['WebAssign 14.3', 'Office hours prep', 'Quiz 6']);
     expect((screen.getByRole('checkbox', { name: 'Office hours prep' }) as HTMLInputElement).checked).toBe(true);
   });
 
@@ -81,6 +81,28 @@ describe('TodoView', () => {
     renderIn('en', <TodoView dashboard={withManual} now={NOW} />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete X' }));
     await waitFor(async () => expect((await loadStore()).manualItems).toEqual([]));
+  });
+
+  it('each group heading shows how many items it holds', () => {
+    renderIn('en', <TodoView dashboard={d} now={NOW} />);
+    expect(within(group('This week')).getByRole('heading').textContent).toBe('This week3');
+    expect(screen.getByText('6 to do')).toBeTruthy();
+  });
+
+  it('badges do not repeat the group: overdue rows say how late, undated rows have none, tomorrow says Tomorrow', () => {
+    renderIn('en', <TodoView dashboard={d} now={NOW} />);
+    expect(within(group('Overdue')).getByText('1 day late')).toBeTruthy();
+    expect(within(group('Overdue')).queryByText('Overdue', { selector: 'span' })).toBeNull();
+    expect(within(group('No due date')).queryByText('No due date', { selector: 'span' })).toBeNull();
+    expect(within(group('This week')).getByText('Tomorrow')).toBeTruthy();
+  });
+
+  it('the second line shows the course only; where the date came from is in its tooltip', () => {
+    const fromPage = item('brightspace:p', 'brightspace:1', 'HW 12', '2026-11-05T23:59:00-05:00', { dueFrom: 'platform', duePlatform: 'WileyPLUS', dueEvidence: "Read from WileyPLUS: 'Due Thursday'" });
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [fromPage] })} now={NOW} />);
+    const line = within(group('This week')).getByText('CS 18000');
+    expect(line.getAttribute('title')).toBe("Read from WileyPLUS: 'Due Thursday'");
+    expect(screen.queryByText(/Read from WileyPLUS/)).toBeNull();
   });
 
   it('empty state', () => {
@@ -159,16 +181,26 @@ describe('TodoView 1.5.0: Overdue, "Not sure" and scores', () => {
     expect(titles(group('Overdue'))).toHaveLength(3);
   });
 
+  it('4 overdue show all four: a button would hide just one', () => {
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [1, 2, 3, 4].map(overdue) })} now={NOW} />);
+    expect(titles(group('Overdue'))).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+  });
+
   it('3 or fewer overdue show no button', () => {
     renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [1, 2, 3].map(overdue) })} now={NOW} />);
     expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
   });
 
-  it('a notSure item shows "Not sure" with the hint', () => {
-    const i = { ...overdue(2), notSure: true };
-    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items: [i] })} now={NOW} />);
-    const tag = within(group('Overdue')).getByText('Not sure');
-    expect(tag.getAttribute('title')).toBe("DueBoard couldn't tell whether you've done this — tick it if you have.");
+  it('"Not sure" items are not in Overdue but in their own collapsed section, with the hint and no per-row tag', () => {
+    const items = [overdue(1), { ...overdue(2), notSure: true }, { ...overdue(3), notSure: true }];
+    renderIn('en', <TodoView dashboard={dash({ courses: [cs], items })} now={NOW} />);
+    expect(titles(group('Overdue'))).toEqual(['Old 1']);
+    const details = screen.getByText('Not sure if handed in (2)').closest('details')!;
+    expect(details.open).toBe(false);
+    expect(within(details).getAllByTestId('todo-title').map((x) => x.textContent)).toEqual(['Old 2', 'Old 3']);
+    expect(within(details).getByText("DueBoard couldn't tell whether you've done this — tick it if you have.")).toBeTruthy();
+    expect(screen.queryByText('Not sure', { exact: true })).toBeNull();
   });
 
   it('automatic done work with a score shows "Submitted · 18/25" and "Score from Gradescope"', () => {

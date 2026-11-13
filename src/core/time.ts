@@ -25,6 +25,14 @@ export function relativeDue(dueAt: Date, now: Date): string {
   return `in ${days} days`;
 }
 
+/** How late past-due work is: "20 min late", "3 h late" (same day), "1 day late", "7 days late". */
+export function relativeLate(dueAt: Date, now: Date): string {
+  const diff = Math.max(0, now.getTime() - dueAt.getTime());
+  const days = differenceInCalendarDays(now, dueAt);
+  if (days === 0) return diff < HOUR ? `${Math.max(1, Math.floor(diff / MIN))} min late` : `${Math.floor(diff / HOUR)} h late`;
+  return days === 1 ? '1 day late' : `${days} days late`;
+}
+
 /** Absolute due time: "Today 11:59 PM", "Tomorrow 11:59 PM", "Nov 7, 11:59 PM" (year added when it differs). */
 export function formatDueAt(dueAt: Date, now: Date): string {
   const days = differenceInCalendarDays(dueAt, now);

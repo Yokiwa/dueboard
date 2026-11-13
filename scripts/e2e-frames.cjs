@@ -249,10 +249,13 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       const showAll = overdue.getByRole('button', { name: /^Show all \d+ overdue$/ });
       check((await showAll.count()) === 1 && (await overdue.getByRole('listitem').count()) === 3, `Overdue shows 3 and "${await showAll.textContent().catch(() => '')}"`);
       const row = (title) => overdue.getByRole('listitem').filter({ has: page.getByRole('checkbox', { name: title, exact: true }) });
-      check((await row('Blank Homework').getByText('Not sure', { exact: true }).count()) === 1, 'the homework whose page said nothing is "Not sure"');
+      check((await row('Blank Homework').count()) === 0, 'the homework whose page said nothing is not in Overdue');
+      const notSure = page.locator('details').filter({ has: page.getByText(/^Not sure if handed in \(\d+\)$/) });
+      await notSure.locator('summary').click();
+      check((await notSure.getByRole('checkbox', { name: 'Blank Homework', exact: true }).count()) === 1, `it is under "${await notSure.locator('summary').textContent()}"`);
       await showAll.click();
       check((await overdue.getByRole('button', { name: 'Show fewer' }).count()) === 1, '"Show fewer" after showing all');
-      for (const title of ['Essay 2', 'Essay 3', 'Essay 4']) check((await row(title).count()) === 1 && (await row(title).getByText('Not sure', { exact: true }).count()) === 0, `${title}, not handed in, is overdue without "Not sure"`);
+      for (const title of ['Essay 2', 'Essay 3', 'Essay 4']) check((await row(title).count()) === 1, `${title}, not handed in, is in Overdue`);
       for (const title of ['Essay 1', 'Scored Homework', 'Quiz 4']) check((await row(title).count()) === 0, `${title}, done, is not in Overdue`);
       await page.getByText(/^Completed \(\d+\)$/).click();
       const doneRow = (title) => page.getByRole('listitem').filter({ has: page.getByRole('checkbox', { name: title, exact: true }) });
