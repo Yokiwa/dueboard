@@ -10,7 +10,7 @@ describe('music state', () => {
   it('keeps an uploaded track selected and clamps volume', () => {
     const uploaded = [{ id: 'song-1', name: 'Study mix', size: 42, type: 'audio/mp3' }];
     expect(normalizeMusicState({ currentId: 'song-1', volume: -1, uploaded })).toEqual({
-      currentId: 'song-1', volume: 0, playing: false, uploaded, youtubeUrl: null,
+      currentId: 'song-1', volume: 0, playing: false, uploaded,
     });
   });
 });

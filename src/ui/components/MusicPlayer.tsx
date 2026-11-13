@@ -1,20 +1,16 @@
 import { useEffect, useId, useMemo, useState } from 'react';
-import { ArrowSquareOut, LinkSimple, MusicNotes, Pause, Play, SkipBack, SkipForward, Trash, UploadSimple, X } from '@phosphor-icons/react';
+import { MusicNotes, Pause, Play, SkipBack, SkipForward, Trash, UploadSimple } from '@phosphor-icons/react';
 import { addMusicFiles, deleteMusicFiles } from '../../music/library';
 import { DEFAULT_MUSIC_STATE, loadMusicState, saveMusicState, subscribeMusicState, type MusicState } from '../../music/state';
 import { primaryBtn, secondaryBtn } from '../forms';
 import { useT } from '../i18n';
 import { sendToBackground } from '../messaging';
-import { parseYouTubeMusicUrl } from '../../music/youtube';
 
 export function MusicPlayer({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const headingId = useId();
   const [state, setState] = useState<MusicState>(DEFAULT_MUSIC_STATE);
   const [error, setError] = useState(false);
-  const [youtubeInput, setYoutubeInput] = useState('');
-  const [youtubeError, setYoutubeError] = useState(false);
-  const youtube = useMemo(() => parseYouTubeMusicUrl(state.youtubeUrl ?? ''), [state.youtubeUrl]);
   const tracks = useMemo(() => [
     { id: 'rain', name: t('music.rain') },
     { id: 'cabin', name: t('music.cabin') },
@@ -30,8 +26,6 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
       unsubscribe();
     };
   }, []);
-
-  useEffect(() => setYoutubeInput(state.youtubeUrl ?? ''), [state.youtubeUrl]);
 
   const send = async (message: Record<string, unknown>) => {
     setError(false);
@@ -95,26 +89,6 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
     await saveMusicState(next);
   };
 
-  const linkYouTube = async () => {
-    const parsed = parseYouTubeMusicUrl(youtubeInput);
-    if (!parsed) {
-      setYoutubeError(true);
-      return;
-    }
-    setYoutubeError(false);
-    const next = { ...state, youtubeUrl: parsed.sourceUrl };
-    setState(next);
-    await saveMusicState(next);
-  };
-
-  const unlinkYouTube = async () => {
-    setYoutubeError(false);
-    const next = { ...state, youtubeUrl: null };
-    setState(next);
-    setYoutubeInput('');
-    await saveMusicState(next);
-  };
-
   return (
     <section aria-labelledby={headingId} className={`music-player ${compact ? 'music-player-compact' : ''} rounded-2xl border border-db-border bg-db-surface p-4 shadow-sm`}>
       <div className="flex items-center gap-3">
@@ -158,48 +132,6 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
         </button>}
       </div>
       {error && <p role="alert" className="mb-0 mt-2 caption-4 text-db-urgent-fg">{t('music.error')}</p>}
-      {!compact && <div className="mt-4 border-t border-db-border-soft pt-4">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-db-subtle text-db-muted">
-            <LinkSimple aria-hidden="true" size={19} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="m-0 title-3 text-db-text">{t('music.youtubeTitle')}</h3>
-            <p className="mb-3 mt-0 caption-4 text-db-muted">{t('music.youtubeHelp')}</p>
-            <form className="flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); void linkYouTube(); }}>
-              <input
-                type="url"
-                aria-label={t('music.youtubeLink')}
-                placeholder={t('music.youtubePlaceholder')}
-                value={youtubeInput}
-                onChange={(event) => { setYoutubeInput(event.target.value); setYoutubeError(false); }}
-                className="min-w-64 flex-1 rounded-lg border border-db-border bg-db-surface px-3 py-2 body-6 text-db-text"
-              />
-              <button type="submit" className={secondaryBtn}>{t('music.youtubeAdd')}</button>
-            </form>
-            {youtubeError && <p role="alert" className="mb-0 mt-2 caption-4 text-db-urgent-fg">{t('music.youtubeInvalid')}</p>}
-          </div>
-        </div>
-
-        {youtube && <div className="mt-4 overflow-hidden rounded-xl border border-db-border-soft bg-db-subtle">
-          <iframe
-            src={youtube.embedUrl}
-            title={t('music.youtubePlayer')}
-            className="aspect-video min-h-[200px] w-full border-0"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-          <div className="flex items-center justify-between gap-3 px-3 py-2">
-            <a href={youtube.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 caption-4 text-db-accent no-underline hover:underline">
-              {t('music.youtubeOpen')}<ArrowSquareOut aria-hidden="true" size={14} />
-            </a>
-            <button type="button" onClick={() => void unlinkYouTube()} className="db-press inline-flex items-center gap-1 border-0 bg-transparent caption-4 text-db-muted hover:text-db-text">
-              <X aria-hidden="true" size={14} />{t('music.youtubeRemove')}
-            </button>
-          </div>
-        </div>}
-      </div>}
     </section>
   );
 }

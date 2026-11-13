@@ -39,26 +39,4 @@ describe('MusicPlayer', () => {
     await waitFor(() => expect(screen.getByRole('combobox').textContent).toContain('Study mix'));
     expect(screen.getByRole('button', { name: 'Clear playlist' })).toBeTruthy();
   });
-
-  it('links a YouTube Music song in the full Music tab', async () => {
-    renderIn('en', <MusicPlayer />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'YouTube Music link' }), {
-      target: { value: 'https://music.youtube.com/watch?v=dQw4w9WgXcQ' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Link' }));
-    const player = await screen.findByTitle('YouTube Music player') as HTMLIFrameElement;
-    expect(player.src).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ?playsinline=1');
-    expect(screen.getByRole('link', { name: /Open in YouTube Music/ }).getAttribute('href')).toContain('music.youtube.com/watch');
-  });
-
-  it('rejects invalid links and keeps the compact player small', () => {
-    const full = renderIn('en', <MusicPlayer />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'YouTube Music link' }), { target: { value: 'https://example.com/not-music' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Link' }));
-    expect(screen.getByRole('alert').textContent).toContain('valid YouTube Music');
-    full.unmount();
-
-    renderIn('en', <MusicPlayer compact />);
-    expect(screen.queryByRole('textbox', { name: 'YouTube Music link' })).toBeNull();
-  });
 });
