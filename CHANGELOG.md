@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.6.0 — 2026-11
+
+Includes everything from the 1.5.0 trial (it was never published on the stores).
+
+- **Class meetings in the calendar, not among your work** (#29): lectures, recitations and other class meetings your courses post in the Brightspace calendar ("Lec21", "LEC 22", "Lecture", "Office hours"…) no longer show up on course cards, in To-do or in the counts. They appear only in the calendar
+- **Week view laid out by time**: each day's work sits in a "Due" row on top; below it, a time grid shows your classes at their real times, in the course's color, side by side when they overlap, with a line at the current time. Weeks without classes show only the Due row. The month view is unchanged
+- **New look**: the dashboard, popup and settings were redesigned, with four study themes (Morning Dew, Noon Cafe, Dusk Lullaby, Nightowl) that follow the time of day or the one you pick, and a calendar laid out like a notebook
+- **A tidier To-do**: fewer groups (Tomorrow is part of This week), a count on each group, overdue work says how late it is, and work DueBoard could not check sits in its own "Not sure if handed in" section
+- **Background reading never opens a window or tab**: homework pages are read only in hidden frames inside the extension; Pearson signs back in there too, through its sign-in gateway, and WileyPLUS dates are read through its two-step launcher. Pages that cannot be read that way keep their last known dates. The "use a small window" setting is gone
+- **Readings posted as plain calendar events** (titled after the text, the reading in the description) are listed as work
+- The logo uses the extension icon's blue in every theme; the "due in 48 h" chip's flame stands out
+- **New site access**: `socket.pearsoned.com` (Pearson's sign-in gateway), so Pearson can sign back in without a window. Chrome asks you to approve it when DueBoard updates from 1.4.9
+
 ## 1.5.0 — 2026-11 (trial build)
 
 - **Done or not, for the whole term**: Overdue now lists every past-due assignment, quiz and homework of the term (from the course's start, at most 150 days back), not only the last 7 days. Exams and calendar events still leave the page 7 days after their date
