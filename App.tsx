@@ -16,6 +16,7 @@ import { ViewTabs, type View } from '../../ui/components/ViewTabs';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
 import { useView } from '../../ui/hooks/useView';
+import { useT, type MessageKey } from '../../ui/i18n';
 import { CoursesView } from '../../ui/views/CoursesView';
 import { CalendarView } from '../../ui/views/CalendarView';
 import { TodoView } from '../../ui/views/TodoView';
@@ -23,6 +24,12 @@ import type { Dashboard } from '../../core/dashboard';
 import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
 import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
 import type { CompletedPlacement, StoreShape } from '../../core/types';
+
+const VIEW_LABEL: Record<View, MessageKey> = {
+  courses: 'tabs.courses',
+  calendar: 'tabs.calendar',
+  todo: 'tabs.todo',
+};
 
 /** Oldest successful sync across platforms that have synced at least once. */
 export function lastSynced(store: StoreShape): string | null {
@@ -40,6 +47,7 @@ function ViewBody({ view, dashboard, now, syllabus, completed }: { view: View; d
 }
 
 export function App() {
+  const t = useT();
   const { dashboard, store, syncing, refresh } = useDashboard();
   const now = useNow(1000);
   const [view, setView] = useView();
@@ -47,24 +55,26 @@ export function App() {
   const progress = useVisitProgress();
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
-    return (
-      <Onboarding />
-    );
+    return <Onboarding />;
   }
 
   const counts = dueCounts(dashboard.items, now);
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);
   return (
     <DoneToastProvider>
-        <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
-          <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
-            <StatChips within48={counts.within48} week={counts.week} />
-          </Header>
-          {granted && <SiteAccessBanner granted={granted} />}
-          <SourceBanners store={store} now={now} busy={syncing || progress !== null} />
-          {granted && <PlatformAccess store={store} granted={granted} now={now} />}
+      <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
+        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
+          <StatChips within48={counts.within48} week={counts.week} />
+        </Header>
+        {granted && <SiteAccessBanner granted={granted} />}
+        <SourceBanners store={store} now={now} busy={syncing || progress !== null} />
+        {granted && <PlatformAccess store={store} granted={granted} now={now} />}
+        <div className="dashboard-priority" data-has-deadline={Boolean(dashboard.nextDue)}>
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <PomodoroTimer now={now} />
+        </div>
+        <section aria-labelledby="dashboard-view-heading" className="dashboard-view">
+          <h2 id="dashboard-view-heading" className="dashboard-view-heading">{t(VIEW_LABEL[view])}</h2>
           <ViewBody
             key={view}
             view={view}
@@ -73,7 +83,8 @@ export function App() {
             syllabus={{ suggestions: syllabusSuggestions(store, dashboard, now), unreadable: unreadableSyllabi(store, dashboard) }}
             completed={store.settings.completed}
           />
-        </AppShell>
+        </section>
+      </AppShell>
     </DoneToastProvider>
   );
 }

@@ -85,7 +85,7 @@ export function PomodoroTimer({ now }: { now: Date }) {
   }
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-db-border bg-db-surface px-5 py-4 shadow-sm">
+    <section aria-labelledby={headingId} className="pomodoro-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-db-border bg-db-surface px-5 py-4 shadow-sm">
       <div className="flex items-center gap-3">
         <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-db-accent-soft text-db-accent">
           <Timer aria-hidden="true" size={22} />
@@ -111,7 +111,7 @@ export function PomodoroTimer({ now }: { now: Date }) {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span role="timer" aria-labelledby={headingId} className="font-mono heading-5 text-db-text tabular-nums">{clock}</span>
+        <span role="timer" aria-labelledby={headingId} className="pomodoro-clock font-mono heading-5 text-db-text tabular-nums">{clock}</span>
         <div className="flex gap-2">
           <button type="button" onClick={handleAction} className={primaryBtn}>{action}</button>
           <button type="button" disabled={isReady} onClick={() => update(ready(session.mode))} className={secondaryBtn}>{t('pomodoro.reset')}</button>
