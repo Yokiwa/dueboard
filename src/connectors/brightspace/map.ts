@@ -64,6 +64,14 @@ export function toQuizItem(q: Quiz, ou: string, base: string): RawItem {
 // Whole words only: "lab" must not match "Syllabus"/"Collaborate", "exam" must not match "Example".
 const DEADLINE_WORDS = /\b(due|hw\d*|homework|assignment|quiz|exam|midterm|final|project|essay|report|paper|webassign|connect|mastering|mylab|zybooks?)\b/i;
 const EXAM_WORDS = /\b(exam|midterm|final)\b/i;
+/** Plain events that are class meetings or days off, never work, whatever their description says. */
+const MEETING_WORDS = /\b(lectures?|office hours?|recitations?|collaborate|sections?|breaks?|holidays?|no class)\b/i;
+/**
+ * Description wording that assigns work: a reading ("pg. 121-139", "Chapters 1-3", "Reading Questions") or something
+ * to write and hand in. Humanities courses often post each reading as an event titled only after the text.
+ */
+const WORK_DESCRIPTION =
+  /\b(read|reading|readings|write|respond|response|prompt|submit|due|assignment|homework|essay|worksheet)\b|\b(pages?|pg|pp|chapters?|ch|lines)\.?\s*\d/i;
 const DUPLICATE_ENTITY = /dropbox|quiz/i;
 
 /** Absolute http(s) URL, or null for anything else (relative paths resolve against Brightspace). */
@@ -86,13 +94,21 @@ function eventUrl(ev: CalendarEvent, ou: string, base: string): string {
   return webUrl(ev.AssociatedEntity?.Link, base) ?? webUrl(ev.CalendarEventViewUrl, base) ?? `${base}/d2l/le/calendar/${ou}`;
 }
 
+/** A plain (unlinked) event's description, without HTML tags, asks for work. */
+function describesWork(ev: CalendarEvent): boolean {
+  if (MEETING_WORDS.test(ev.Title)) return false;
+  const text = (ev.Description ?? '').replace(/<[^>]*>/g, ' ');
+  return WORK_DESCRIPTION.test(text);
+}
+
 /**
  * Calendar events become items only when they look like a deadline: events tied to an assignment or
- * quiz are skipped (we already read those), and plain events need a deadline-like word in the title.
+ * quiz are skipped (we already read those), and plain events need a deadline-like word in the title,
+ * or a description that assigns a reading or writing (class meetings and days off excepted).
  */
 export function toEventItem(ev: CalendarEvent, base: string): RawItem | null {
   if (ev.AssociatedEntity && DUPLICATE_ENTITY.test(ev.AssociatedEntity.AssociatedEntityType)) return null;
-  if (!ev.AssociatedEntity && !DEADLINE_WORDS.test(ev.Title)) return null;
+  if (!ev.AssociatedEntity && !DEADLINE_WORDS.test(ev.Title) && !describesWork(ev)) return null;
   const ou = String(ev.OrgUnitId);
   return {
     source: 'brightspace',

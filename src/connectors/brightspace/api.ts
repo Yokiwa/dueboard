@@ -19,6 +19,8 @@ export interface CalendarEvent {
   CalendarEventId: number;
   OrgUnitId: number;
   Title: string;
+  /** The event's text as the instructor wrote it (may hold HTML). */
+  Description?: string | null;
   StartDateTime: string | null;
   EndDateTime: string | null;
   AssociatedEntity: { AssociatedEntityType: string; AssociatedEntityId: number; Link?: string | null } | null;
