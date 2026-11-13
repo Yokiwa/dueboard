@@ -20,13 +20,16 @@ export function inExtensionFrame(win: Window): boolean {
  * opened empty (set its location, write a "loading" note, focus it), so an address given afterwards loads here too.
  * Self-contained (no outside names), so it can also be injected as is into the visit window's pages.
  */
-export function installOpenHere(win: Window = window): void {
+export function installOpenHere(win: Window = window, routeToTop = false): void {
   const w = win as unknown as OpenWindow;
   if (w.__dueboardOpenHere) return;
   w.__dueboardOpenHere = true;
   const go = (u: unknown) => {
     const s = String(u);
-    if (s && s !== 'about:blank') w.location.assign(s);
+    if (s && s !== 'about:blank') {
+      if (routeToTop && win.top) win.top.location.assign(s);
+      else w.location.assign(s);
+    }
   };
   const location = {
     assign: go,
@@ -54,7 +57,34 @@ export function installOpenHere(win: Window = window): void {
       go(u);
     },
   };
-  w.open = (u?: string | URL) => {
+  w.open = (u?: string | URL, target?: string) => {
+    if ((!u || String(u) === 'about:blank') && doc?.createElement) {
+      // A real child browsing context supports document.write + POST forms, opener and postMessage.
+      // The ancestor sandbox continues to forbid actual tabs/windows and top-level navigation.
+      const frame = doc.createElement('iframe');
+      frame.name = target && !target.startsWith('_') ? target : `dueboard-popup-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      frame.width = '1280';
+      frame.height = '900';
+      frame.style.cssText = 'position:absolute;left:-10000px;top:0;width:1280px;height:900px;border:0';
+      const existingTopTab = win.top === win;
+      frame.setAttribute('sandbox', `allow-scripts allow-same-origin allow-forms${existingTopTab ? ' allow-top-navigation' : ''}`);
+      (doc.body ?? doc.documentElement).appendChild(frame);
+      const child = frame.contentWindow;
+      if (child) {
+        try { child.opener = win; } catch { /* Some browsers make opener read-only. */ }
+        installOpenHere(child, existingTopTab);
+        if (existingTopTab) {
+          // In the first-connection tab, keep top-level cookies and avoid embedding restrictions.
+          // Blank popup forms submit to this same tab; location assignments use the existing proxy.
+          return Object.create(standIn, {
+            document: { value: child.document },
+            postMessage: { value: child.postMessage.bind(child) },
+          });
+        }
+        return child;
+      }
+      frame.remove();
+    }
     if (u !== undefined) go(u);
     return standIn;
   };
@@ -64,6 +94,7 @@ export function installOpenHere(win: Window = window): void {
   // page itself is left alone.
   const doc = (win as unknown as { document?: Document }).document;
   const keepHere = (el: Element | null) => {
+    if (routeToTop && el?.tagName.toLowerCase() === 'form') { el.setAttribute('target', '_top'); return; }
     const target = el?.getAttribute('target')?.trim();
     if (!el || !target || target === '_self') return;
     const ownFrame = !target.startsWith('_') && Array.from(doc?.querySelectorAll('iframe, frame') ?? []).some((f) => (f as HTMLIFrameElement).name === target);

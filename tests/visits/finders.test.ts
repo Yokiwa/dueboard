@@ -100,3 +100,14 @@ describe('finders: fixes from review', () => {
     expect(findDueWiley(d, now)).toBeNull();
   });
 });
+
+describe('WileyPLUS rendered due fields', () => {
+  it('joins split labels, dates and times without reading hidden dates', () => {
+    const d = page('<h1>PHYS 172H - HW11 - FA26</h1><div><span>Due</span><span>Monday, Nov 9</span><span>at 11:59 PM (EST)</span></div><div hidden>Due Nov 2</div>');
+    expect(findDueWiley(d, now)?.dueAt).toBe('2026-11-10T04:59:00.000Z');
+  });
+  it('reads an accessible heading and a block-layout date', () => {
+    const d = page('<div role="heading">Physics Homework 12</div><div><div>Due Date:</div><div>11/12/2026</div><div>11:59 PM EST</div></div>');
+    expect(findDueWiley(d, now)).toMatchObject({ title: 'Physics Homework 12', dueAt: '2026-11-13T04:59:00.000Z' });
+  });
+});

@@ -36,7 +36,7 @@ export type VisitOutcome =
   | { key: string; status: 'failed'; reason: 'timeout' | 'error' | 'unknown' | 'frame' }
   | { key: string; status: 'needs_permission'; host: string }
   | { key: string; status: 'text'; lines: string[]; host: string }
-  | { key: string; status: 'landed'; host: string; via?: 'frame' }
+  | { key: string; status: 'landed'; host: string; via?: 'frame'; sessionHtml?: string }
   | { key: string; status: 'signed_out' };
 
 const H = 3_600_000;
@@ -137,8 +137,8 @@ function sessionTargets(store: StoreShape, now: Date, trigger: Trigger): VisitTa
   const out: VisitTarget[] = [];
   for (const src of SESSION_SOURCES) {
     const last = store.visitState.sessions?.[src];
-    // Automatic syncs try at most every 6 hours; Refresh (the student asking) tries at once.
-    if (last && trigger !== 'manual' && now.getTime() - Date.parse(last.at) < 6 * H) continue;
+    // Back off failed renewals, but renew again immediately if a previously successful session expires.
+    if (last && last.failures > 0 && trigger !== 'manual' && now.getTime() - Date.parse(last.at) < 6 * H) continue;
     if (last && last.failures >= 3 && trigger !== 'manual') continue;
     const meta = store.syncMeta[src];
     const err = meta?.lastError;
@@ -168,7 +168,8 @@ export function dueVisits(store: StoreShape, now: Date, trigger: Trigger, grante
   );
   const ranked: { target: VisitTarget; rank: number }[] = [];
   for (const item of dash.items) {
-    if (item.submitted || item.doneByUser) continue;
+    // A score is not a deadline. Backfill missing dates even for automatically completed homework.
+    if (item.doneByUser || (item.submitted && item.dueAt)) continue;
     if (item.dueAt && item.dueFrom !== 'platform') continue;
     const key = item.sourceKeys.find((k) => k.startsWith('brightspace:topic:') && raw.get(k)?.launchUrl);
     if (!key) continue;

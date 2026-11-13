@@ -13,6 +13,9 @@ describe('openButton (the one button DueBoard may press: "open the assignment")'
 
   it.each([
     ['<button>Open Assignment</button>', 'Open Assignment'],
+    ['<input type="submit" aria-label="Opens in a new window" value="Open Assignment">', 'Open Assignment'],
+    ['<button aria-label="Opens in a new window">Open Assignment</button>', 'Open Assignment'],
+    ['<a href="#" aria-label="Opens in a new window"><span>Open Assignment</span></a>', 'Open Assignment'],
     ['<button>Open in new tab</button>', 'Open in new tab'],
     ['<a href="https://education.wiley.com/x" target="_blank">Launch</a>', 'Launch'],
     ['<div role="button" aria-label="View assignment"></div>', 'View assignment'],
@@ -23,8 +26,11 @@ describe('openButton (the one button DueBoard may press: "open the assignment")'
 
   it.each([
     '<button>Start Assignment</button>',
+    '<button aria-label="Open">Start Assignment</button>',
+    '<button aria-label="Submit answers">Open Assignment</button>',
     '<button>Begin</button>',
     '<button>Submit</button>',
+    '<input type="submit" aria-label="Open" value="Submit">',
     '<button>Continue</button>',
     '<button>Continue attempt</button>',
     '<button>Resume</button>',

@@ -23,6 +23,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
   let ext;
   let profile;
   let ctx;
+  const logs = [];
   const cleanup = async () => {
     await ctx?.close().catch(() => {});
     await server?.close().catch(() => {});
@@ -46,17 +47,17 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     });
     let [sw] = ctx.serviceWorkers();
     if (!sw) sw = await ctx.waitForEvent('serviceworker', { timeout: 15000 });
-    const logs = [];
     sw.on('console', (m) => logs.push(`[sw] ${m.text()}`));
     ctx.on('console', (m) => logs.push(`[page] ${m.text()}`));
     const id = new URL(sw.url()).host;
     const page = await ctx.newPage();
     await page.goto(`chrome-extension://${id}/dashboard.html`);
+    const dashboardTabId = await page.evaluate(async () => (await chrome.tabs.getCurrent()).id);
     // Record every tab and window created from here on, so one opened and closed in between cannot go unseen.
     await page.evaluate(() => {
       window.__created = [];
       chrome.tabs.onCreated.addListener((t) => window.__created.push(`tab ${t.id} ${t.url ?? ''}`));
-      chrome.windows.onCreated.addListener((w) => window.__created.push(`window ${w.id}`));
+      chrome.windows.onCreated.addListener((w) => self.__created.push(`window ${w.id}`));
     });
 
     const layout = () =>
@@ -73,23 +74,26 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         const req = r.request();
         return r.fulfill(mocks.respond({ url: req.url(), method: req.method(), headers: req.headers(), body: req.postData() ?? '' }, 'route'));
       };
-      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'console.pearson.com', 'mylab.pearson.com'])
+      for (const host of ['purdue.brightspace.com', 'education.wiley.com', 'www.aleks.com', 'digital.wwnorton.com', 'example-unknown.com', 'example-unknown2.com', 'www.gradescope.com', 'interop.pearson.com', 'socket.pearsoned.com', 'console.pearson.com', 'mylab.pearson.com'])
         await ctx.route(`https://${host}/**`, answer);
 
-      const local = (keys) => page.evaluate((k) => chrome.storage.local.get(k), keys);
+      const local = (keys) => sw.evaluate((k) => chrome.storage.local.get(k), keys);
       const captured = async () => (await local('captured')).captured ?? {};
       const visitLog = async () => (await local('visitLog')).visitLog ?? [];
-      const noWindow = () => page.evaluate(async () => (await chrome.storage.session.get('visitWindowId')).visitWindowId == null);
+      const noWindow = () => sw.evaluate(async () => (await chrome.storage.session.get('visitWindowId')).visitWindowId == null);
       const progressNull = async () => (await local('visitProgress')).visitProgress == null;
       const watchCreated = () =>
-        page.evaluate(() => {
-          window.__created = []; // listeners are added once per page load; later calls only empty the list
-          if (window.__watching) return;
-          window.__watching = true;
-          chrome.tabs.onCreated.addListener((t) => window.__created.push(`tab ${t.id}`));
-          chrome.windows.onCreated.addListener((w) => window.__created.push(`window ${w.id}`));
-        });
-      const created = () => page.evaluate(() => window.__created);
+        sw.evaluate((tabId) => {
+          self.__watchedTab = tabId;
+          self.__navigation = [];
+          self.__created = []; // listeners are added once per page load; later calls only empty the list
+          if (self.__watching) return;
+          self.__watching = true;
+          chrome.tabs.onCreated.addListener((t) => self.__created.push(`tab ${t.id}`));
+          chrome.windows.onCreated.addListener((w) => self.__created.push(`window ${w.id}`));
+          chrome.tabs.onUpdated.addListener((id, info) => { if (id === self.__watchedTab && info.url) self.__navigation.push(info.url.split(/[?#]/)[0]); });
+        }, dashboardTabId);
+      const created = () => sw.evaluate(() => self.__created);
       /** Waits for `done()`, then until the run is over: no progress line and no visit window for 3 s. */
       const settle = async (done, what) => {
         let waited = 0;
@@ -113,20 +117,28 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
         await page.waitForTimeout(500);
       }
       mocks.state.signedOut = false;
+      mocks.state.pearson = true;
+      mocks.state.pearsonWorkerExpired = true;
+      mocks.state.mylabSignedIn = false;
       await page.reload();
       await watchCreated();
       const framedBefore = mocks.state.hits.framed;
       await page.getByRole('button', { name: 'Log in to Brightspace' }).click();
       await settle(async () => {
         const c = await captured();
-        return ['21', '23', '24', '25', '29', '30', '32', '33'].every((n) => c[`brightspace:topic:${n}`]?.dueAt);
+        return ['21', '23', '24', '25', '29', '30', '32', '33'].every((n) => c[`brightspace:topic:${n}`]?.dueAt) && (await local('snapshots')).snapshots?.pearson?.items?.length === 42;
       }, 'the first automatic sync to date the homeworks');
+      check((await sw.evaluate(() => self.__navigation)).length === 0, 'the dashboard never navigated during the entire first sync');
+      check(mocks.state.hits.socket > 0, 'Pearson authentication passed through socket.pearsoned.com');
+      check(mocks.state.hits.gatewayClick > 0, 'Open Pearson was followed inside the hidden reader before Assignments');
       let c = await captured();
       check(c['brightspace:topic:21'].dueAt === (await local20(20)), `a page that refuses framing was dated in the sync (${c['brightspace:topic:21'].dueAt})`);
       check(mocks.state.hits.framed > framedBefore, `its page came from the hidden frame server during this sync (${framedBefore} -> ${mocks.state.hits.framed} hits)`);
       check((await created()).length === 0, `no window or tab opened during the automatic sync (${(await created()).join('; ') || 'none'})`);
       check(c['brightspace:topic:29'].dueAt === (await local20(24)), `a page Brightspace shows inside its own launch page was dated in the background (${c['brightspace:topic:29'].dueAt})`);
       check(c['brightspace:topic:30'].dueAt === '2026-11-24T04:59:00.000Z', `a launcher with its own window.open and an empty new window opened the assignment in the frame (${c['brightspace:topic:30'].dueAt})`);
+      const scoredWiley = (await local('completion')).completion?.['brightspace:topic:30'];
+      check(scoredWiley?.state === 'done' && scoredWiley?.score?.earned === 18, 'Wiley homework kept its gradebook score and still received a due date');
       check(c['brightspace:topic:32'].dueAt === (await local20(25)), `a tool Brightspace opens "in a new window" was read in the frame (${c['brightspace:topic:32'].dueAt})`);
       check(c['brightspace:topic:33'].dueAt === (await local20(26)), `a link the launch page's script clicked without adding it to the page opened in the frame (${c['brightspace:topic:33'].dueAt})`);
       check(mocks.state.hits.nodate > 0 && !c['brightspace:topic:31']?.dueAt, `an embedded page without a date was read and left undated (${mocks.state.hits.nodate} hits)`);
@@ -140,82 +152,37 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       const psVisits = psLog.filter((e) => e.detail !== 'listed');
       check(psVisits.length === 1 && psLog.length === 3, `one frame visit served all three (${psVisits.length} visit, ${psLog.length} entries)`);
 
-      // A homework on a site that is not a known platform: DueBoard opens the minimized window once to learn the site
-      // (the 1.2.4 behavior), never reads it, and asks for access.
-      await watchCreated();
-      const unknownWindowsBefore = (await layout()).windows;
-      mocks.state.unknownSite = true;
-      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
-      await settle(async () => ((await local('visitState')).visitState?.needsPermission ?? []).includes('example-unknown.com'), 'the unknown site to be noted');
-      const learned = await created();
-      check(learned.filter((x) => x.startsWith('window')).length === 1, `learning the unknown site opened exactly one window (${learned.join('; ')})`);
-      check((await layout()).windows === unknownWindowsBefore && (await noWindow()), 'that window closed afterwards');
-      // The banner for an unknown site, and none for a registry platform (ALEKS and Norton are granted at install).
-      await page.reload();
-      await page.getByRole('tab', { name: 'To-do' }).click();
-      await page.getByText('DueBoard found example-unknown.com in your courses').waitFor({ timeout: 10000 });
-      check((await page.getByRole('button', { name: 'Allow', exact: true }).count()) === 1, 'one "Allow" banner, for the unknown site');
-      const banner = await page.getByText(/DueBoard found .* in your courses/).allTextContents();
-      check(banner.length === 1 && !/aleks|norton|wwnorton|wiley|gradescope|pearson/i.test(banner[0]), `no "Allow" banner for a registry platform (the only banner: ${banner[0]})`);
-      check(!(await captured())['brightspace:topic:26']?.dueAt, 'no date was taken from the unknown site');
+      const math = (await local('snapshots')).snapshots.pearson.items;
+      check(math.length === 42 && math.every((item) => item.dueAt), 'all 42 math assignments have dates after the first Brightspace login click');
+      check((await created()).length === 0, 'Pearson first sync created no tabs or windows');
+      check(!JSON.stringify(await visitLog()).includes('sessionHtml'), 'transient session HTML is absent from diagnostics');
+      mocks.state.pearsonWorkerExpired = false;
 
-      console.log('e2e frames: a page the frames cannot read goes to the minimized window in the same run');
+      console.log('e2e frames: blocked platforms and expired sessions never open tabs or windows');
       await watchCreated();
       const windowsBefore = (await layout()).windows;
       mocks.state.frameless = true;
-      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
-      await settle(async () => !!(await captured())['brightspace:topic:22']?.dueAt, 'the windowed homework to be dated');
-      c = await captured();
-      check(c['brightspace:topic:22'].dueAt === (await local20(19)), `dated in the window (${c['brightspace:topic:22'].dueAt})`);
-      const made = await created();
-      check(made.filter((x) => x.startsWith('window')).length === 1, `one window was opened (${made.join('; ')})`);
-      check((await layout()).windows === windowsBefore && (await noWindow()), 'the window closed afterwards');
-      log = await visitLog();
-      const mine = log.filter((e) => e.key === 'brightspace:topic:22');
-      check(mine.some((e) => e.mode === 'frame') && mine.some((e) => e.mode === 'window' && e.result === 'found'), `the log has a Background entry and a Window entry for it (${mine.map((e) => `${e.mode}:${e.result}`).join(', ')})`);
-      const remembered = (await local('visitState')).visitState?.frame?.aleks;
-      check(!!remembered?.skipUntil && Date.parse(remembered.skipUntil) > Date.now() + 6 * 86_400_000, `the platform the window read and the frame could not is remembered: straight to the window next time (${JSON.stringify(remembered)})`);
-      await page.goto(`chrome-extension://${id}/diagnostics.html`);
-      await page.getByRole('heading', { name: 'Platform visits' }).waitFor({ timeout: 10000 });
-      check((await page.getByRole('cell', { name: 'Background', exact: true }).count()) > 0 && (await page.getByRole('cell', { name: 'Window', exact: true }).count()) > 0, 'Diagnostics shows both "Background" and "Window" in the Mode column');
-      await page.goto(`chrome-extension://${id}/dashboard.html`);
-
-      console.log('e2e frames: Pearson signs back in through the minimized window (its first stop hands off at once)');
       mocks.state.pearson = true;
       mocks.state.pearsonFrameBroken = true;
       mocks.state.mylabSignedIn = false;
-      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
-      await settle(async () => {
-        const meta = (await local('syncMeta')).syncMeta?.pearson;
-        return !!meta?.lastSuccess || (await visitLog()).some((e) => e.key === 'pearson:session' && e.mode === 'window');
-      }, 'Pearson to be signed back in');
-      log = await visitLog();
-      const sessionLog = log.filter((e) => e.key === 'pearson:session');
-      console.log(`  pearson:session: ${sessionLog.map((e) => `${e.mode}:${e.result}${e.detail ? `:${e.detail}` : ''} ${e.landed ?? ''} ${e.clicked?.join(',') ?? ''} ${e.siteNote ?? ''}`).join(' | ')}`);
-      check(sessionLog.some((e) => e.mode === 'window' && e.result === 'landed' && e.clicked?.some((c) => c.startsWith('Assignments'))), 'the window pressed Assignments and landed on MyLab');
-      const pmeta = (await local('syncMeta')).syncMeta?.pearson;
-      check(!!pmeta?.lastSuccess && (!pmeta.lastError || Date.parse(pmeta.lastSuccess) >= Date.parse(pmeta.lastError.at)), `Pearson was read after signing back in (${JSON.stringify(pmeta)})`);
-      await page.reload();
-      await page.getByRole('heading', { level: 1 }).waitFor();
-      check((await page.getByText(/Pearson session expired/).count()) === 0, 'no "Pearson session expired" line on the dashboard');
-      mocks.state.pearson = false;
-
-      console.log('e2e frames: window fallback turned off');
-      await page.evaluate(async () => {
-        const { settings } = await chrome.storage.local.get('settings');
-        await chrome.storage.local.set({ settings: { ...settings, windowFallback: false } });
-      });
-      await watchCreated();
-      mocks.state.frameless2 = true;
-    mocks.state.unknownSite2 = true; // a second unknown site, learned only through the window
-      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
-      await settle(async () => (await visitLog()).some((e) => e.key === 'brightspace:topic:27') && (await visitLog()).some((e) => e.key === 'brightspace:topic:28'), 'the visits of the second windowed homework and the second unknown site');
-      check((await created()).length === 0, `no window and no tab opened, also for an unknown site (${(await created()).join('; ') || 'none'})`);
-      check(!(await captured())['brightspace:topic:27']?.dueAt, 'the item the frames cannot read stays undated');
+      // Stored opt-ins from older versions must not resurrect window visits.
       await page.evaluate(async () => {
         const { settings } = await chrome.storage.local.get('settings');
         await chrome.storage.local.set({ settings: { ...settings, windowFallback: true } });
       });
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => {
+        const entries = await visitLog();
+        return entries.some((e) => e.key === 'brightspace:topic:22') && entries.some((e) => e.key === 'pearson:session');
+      }, 'blocked homework and expired Pearson session to finish in the background');
+      check((await created()).length === 0, 'neither a tab nor a window opened for blocked pages or expired sessions');
+      check((await layout()).windows === windowsBefore && (await noWindow()), 'browser windows stayed unchanged');
+      check(!(await captured())['brightspace:topic:22']?.dueAt, 'an unreadable page stays undated rather than fabricating a date');
+      log = await visitLog();
+      check(log.every((e) => e.mode === 'frame'), 'every platform visit stayed in hidden frames');
+      check((await sw.evaluate(() => self.__navigation)).length === 0, 'a failed Pearson renewal did not navigate the dashboard');
+      check((await local('snapshots')).snapshots?.pearson?.items?.length === 42, 'a failed renewal preserved previously read math assignments');
+      mocks.state.pearson = false;
 
       console.log('e2e frames: 1.5.0, whether past-due work was handed in, its score, "Not sure" and Overdue');
       mocks.state.completion = true;
@@ -298,6 +265,18 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       check(!!(await captured())['brightspace:topic:21']?.dueAt, 'the sync started by itself and dated a homework');
       check(!page.url().includes('start='), 'the address no longer carries ?start=1');
     }
+    if (process.env.E2E_SYNC_ONLY) {
+      await sw.evaluate(() => {
+        self.__senders = [];
+        chrome.runtime.onMessage.addListener((message, sender) => {
+          if (['sync', 'beginLogin', 'syncIfStale'].includes(message?.type)) self.__senders.push({ type: message.type, id: sender.tab?.id, url: sender.url?.split(/[?#]/)[0] });
+        });
+      });
+      await fullSyncChecks();
+      await cleanup();
+      console.log('e2e sync: all checks passed');
+      return;
+    }
     const target = 'https://www.aleks.com/framed/hw7';
     const before = await layout();
 
@@ -328,7 +307,7 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
     const escape = await probe('t4', 'https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=103&type=lti&rcode=E6', true);
     console.log(`  FrameResult: ${brief(escape)}`);
     await page.waitForTimeout(1500);
-    check(escape?.status === 'blocked', `the visit ends blocked, for the minimized window to read (${escape?.status})`);
+    check(escape?.status === 'blocked', `the visit ends blocked without a visible fallback (${escape?.status})`);
 
     const after = await layout();
     const created = await page.evaluate(() => window.__created);

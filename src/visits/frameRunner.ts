@@ -184,7 +184,7 @@ export async function runFrameVisits(targets: VisitTarget[], api: FrameApi, opts
       case 'text':
         return { outcome: { key, status: 'text', lines: r.lines ?? [], host }, fallback: false };
       default:
-        return { outcome: { key, status: 'landed', host, via: 'frame' }, fallback: false };
+        return { outcome: { key, status: 'landed', host, via: 'frame', ...(r.sessionHtml ? { sessionHtml: r.sessionHtml } : {}) }, fallback: false };
     }
   }
 

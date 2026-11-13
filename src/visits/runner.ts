@@ -77,7 +77,7 @@ export interface VisitLogEntry {
   answer?: string;
   detail?: string;
   /** How the page was read: in a hidden frame or in the visit window. */
-  mode: 'frame' | 'window';
+  mode: 'frame' | 'window' | 'existing-tab';
 }
 
 /** A page's answer in a few words, for the visit log. */
@@ -233,7 +233,7 @@ export async function runVisits(targets: VisitTarget[], api: VisitApi, opts: Run
       // slow frame never reaches "idle"). Frames that are ready have the reader by then, so the round goes on.
       await settleWithin(api.inject(tabId, t.mode, t.platform), injectMs);
       const msg = await api.nextMessage(tabId, ROUND_MS);
-      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed') continue;
+      if (msg === 'timeout' || msg.type === 'visitFrame' || msg.type === 'visitClick' || msg.type === 'visitSample' || msg.type === 'visitListed' || msg.type === 'visitSessionReady') continue;
       if (msg.type === 'visitText') return { key: t.key, status: 'text', lines: msg.lines, host };
       if (msg.type === 'visitCheck') {
         if (t.mode !== 'check') continue;

@@ -86,3 +86,12 @@ describe('platform registry', () => {
     expect(o.slice(1)).toEqual([...o.slice(1)].sort());
   });
 });
+
+describe('Pearson LTI socket gateway observed in the live launch', () => {
+  it('covers the exact gateway in permissions, content scripts and the shared platform registry', () => {
+    expect(platformByHost('socket.pearsoned.com')?.id).toBe('pearson');
+    expect(manifestOrigins()).toContain('https://socket.pearsoned.com/*');
+    expect(originPatterns(platformById('pearson')!)).toContain('https://socket.pearsoned.com/*');
+    expect(manifestOrigins()).not.toContain('https://*.pearsoned.com/*');
+  });
+});

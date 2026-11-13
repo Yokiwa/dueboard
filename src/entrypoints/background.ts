@@ -15,7 +15,7 @@ import { runVisitPass } from '../background/visitPass';
 import { runFrameVisits } from '../visits/frameRunner';
 import { startSync, syncWithDiscovery } from '../background/syncFlow';
 import type { Trigger } from '../visits/schedule';
-import { closeLeftover, runVisits, type VisitLogEntry } from '../visits/runner';
+import { closeLeftover, type VisitLogEntry } from '../visits/runner';
 import { forgetUnfoundVisits, forgetVisitMemory } from '../visits/apply';
 import { createBrowserVisitApi, deliverVisitMessage, isVisitTab } from '../visits/browserApi';
 import { isVisitMessage } from '../visits/messages';
@@ -72,7 +72,6 @@ const syncNow = (trigger: Trigger = 'auto') => {
                 save: (patch) => patchStore(patch),
                 now: () => new Date(),
                 frames: (ts, opts) => runFrameVisits(ts, frameApi, opts),
-                windows: (ts, onLog) => runVisits(ts, visitApi, { onProgress: () => undefined, onLog }),
                 signedIn: () => visitApi.signedIn(),
                 progress: (done, total) => void setVisitProgress({ done, total }),
                 log,
@@ -85,8 +84,11 @@ const syncNow = (trigger: Trigger = 'auto') => {
           }
         },
         save: (patch) => patchStore(patch),
-        resync: async (src) => {
-          const report = await runSync([CONNECTORS[src]()]);
+        resync: async (src, sessionHtml) => {
+          const connector = src === 'pearson' && sessionHtml
+            ? createPearsonConnector({ parse: parsers.pearson, completion: knownCompletion, sessionHtml })
+            : CONNECTORS[src]();
+          const report = await runSync([connector]);
           await recordCompletion(loadStore, patchStore, new Date()).catch(() => undefined);
           return report;
         },

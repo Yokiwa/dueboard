@@ -186,19 +186,19 @@ export interface UserState {
 export type VisitMode = 'auto' | 'manual' | 'off';
 export type DashboardTheme = 'nightowl' | 'morning-dew' | 'noon-cafe' | 'dusk-lullaby' | 'automatic';
 export interface Settings {
-  /** When to read platform pages (in the background, with a window fallback). */
+  /** When to read platform pages in the background. */
   visits: VisitMode;
   /** Show dates found in syllabi as suggestions. */
   syllabus: boolean;
   /** Where finished work shows on the Courses page: at the bottom of each course card, or in a "Done this week" section. */
   completed: CompletedPlacement;
-  /** Read pages the hidden frames could not read in a minimized window, in the same run. */
+  /** Deprecated compatibility field. Always false; platform visits never open windows. */
   windowFallback: boolean;
   /** Visual palette used by the dashboard. */
   theme: DashboardTheme;
 }
 export type CompletedPlacement = 'card' | 'section';
-export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true, theme: 'automatic' };
+export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: false, theme: 'automatic' };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;

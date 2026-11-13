@@ -26,7 +26,7 @@ The only account DueBoard needs is Brightspace. It finds your homework platforms
 
 - **Gradescope** — read automatically while you are signed in to Gradescope.
 - **Pearson MyLab** — read automatically. If the Pearson session expired, DueBoard reopens it through Brightspace by itself.
-- **WileyPLUS, ALEKS, InQuizitive and other platforms** — the first time DueBoard finds one in your courses, a bar asks to allow it. After that, when you click Refresh, DueBoard opens new homework links in a minimized window, reads the due date and closes it (Settings can make this automatic). Opening an assignment yourself also works.
+- **WileyPLUS, ALEKS, InQuizitive and other platforms** — the first time DueBoard finds one in your courses, a bar asks to allow it. After that, DueBoard attempts to read homework invisibly, without opening tabs or windows. Existing dates stay saved when a read fails. Sign in yourself if needed, then refresh. Some platforms may remain unavailable.
 
 ## Update to a new version
 

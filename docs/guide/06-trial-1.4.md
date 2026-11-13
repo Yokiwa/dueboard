@@ -1,3 +1,5 @@
+> Historical 1.4 trial guide. Its window fallback instructions no longer apply: current background reading never creates tabs or windows. See `docs/background-reading-audit.md`.
+
 # Guide 06: Trial of DueBoard 1.4 (background reading)
 
 This is a test version. It is not on the Chrome Web Store or Firefox Add-ons yet. Version 1.4 reads your homework pages
