@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { displayName } from '../../core/courseName';
 import { cardView, nextWeeks } from '../../core/courseWeek';
 import type { Course, CourseLink, Item } from '../../core/types';
@@ -46,7 +46,7 @@ export function CourseCard({ course, items, links, now, showDone = true, onOpen 
   // Lecture videos etc. found in course content only appear in the detail view; the card keeps platform shortcuts.
   const shortcuts = links.filter((l) => l.category !== 'website' || l.source === 'manual');
   return (
-    <article aria-label={course.code} className="db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm transition-shadow duration-300 ease-db hover:shadow-md">
+    <article aria-label={course.code} style={{ '--course-color': course.color } as CSSProperties} className="dashboard-course db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm transition-shadow duration-300 ease-db hover:shadow-md">
       <button
         type="button"
         onClick={onOpen}

@@ -33,15 +33,15 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
   const greet = t(greetingKey(now));
   const title = pendingWeek > 0 ? t('header.pendingWeek', { greet, n: pendingWeek }) : t('header.noneWeek', { greet });
   return (
-    <header className="db-rise flex flex-wrap items-end justify-between gap-6">
+    <header className="dashboard-header db-rise flex flex-wrap items-end justify-between gap-6">
       <div className="flex min-w-0 max-w-[680px] flex-col gap-3">
-        <span className="body-5 text-db-muted">{date}</span>
+        <time dateTime={format(now, 'yyyy-MM-dd')} className="dashboard-date body-5 text-db-muted">{date}</time>
         <h1 className="m-0 heading-4 tracking-tight sm:heading-3">
           <span className="hero-text">{title}</span>
         </h1>
         {children}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="dashboard-sync flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-2 caption-2 text-db-muted">
           <span
             aria-hidden="true"
