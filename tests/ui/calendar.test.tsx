@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { screen, fireEvent, within } from '@testing-library/react';
 import { renderIn } from './render';
 import { CalendarView } from '../../src/ui/views/CalendarView';
+import { TodoView } from '../../src/ui/views/TodoView';
+import { CoursesView } from '../../src/ui/views/CoursesView';
 import { NOW, course, item, dash } from './fixtures';
 
 const cs = course('b:1', 'CS 18000', { color: '#EA580C' });
@@ -95,5 +97,32 @@ describe('CalendarView 1.5.0: past work', () => {
     expect(chip('Done long ago').getAttribute('data-done')).toBe('true');
     expect(chip('Missed long ago').getAttribute('data-overdue')).toBe('true');
     expect(chip('Done long ago').getAttribute('data-overdue')).toBe('false');
+  });
+});
+
+describe('CalendarView: class meetings (issue #29)', () => {
+  const lec = { id: 'brightspace:event:9', courseId: 'b:1', title: 'Lec21', startAt: '2026-11-05T09:30:00-05:00', endAt: '2026-11-05T10:20:00-05:00', url: 'https://purdue.brightspace.com/d2l/le/calendar/1' };
+  const withLec = dash({ ...d, meetings: [lec] });
+
+  it('the week view shows a meeting under the day\'s work, with its time range, linking to its page', () => {
+    renderIn('en', <CalendarView dashboard={withLec} now={NOW} />);
+    const thu = screen.getByRole('gridcell', { name: 'Nov 5' });
+    const chip = within(thu).getByText('CS 18000 · Lec21').closest('a')!;
+    expect(chip.getAttribute('href')).toBe(lec.url);
+    expect(chip.getAttribute('data-kind')).toBe('meeting');
+    expect(chip.textContent).toContain('9:30–10:20 AM');
+  });
+
+  it('the month view shows no meetings', () => {
+    renderIn('en', <CalendarView dashboard={withLec} now={NOW} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Month' }));
+    expect(screen.queryByText(/Lec21/)).toBeNull();
+  });
+
+  it('To-do and the course cards never show meetings', () => {
+    renderIn('en', <TodoView dashboard={withLec} now={NOW} />);
+    expect(screen.queryByText(/Lec21/)).toBeNull();
+    renderIn('en', <CoursesView dashboard={withLec} now={NOW} />);
+    expect(screen.queryByText(/Lec21/)).toBeNull();
   });
 });
