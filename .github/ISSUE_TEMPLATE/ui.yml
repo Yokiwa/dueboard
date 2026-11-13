@@ -1,28 +1,28 @@
-name: 🎨 UI / 设计
-description: 界面改动或新设计 / A UI change or new design
+name: 🎨 UI / design
+description: A UI change or new design
 labels: [ui]
 body:
   - type: textarea
     id: what
     attributes:
-      label: 要改什么 / What to change
-      description: 哪个页面或组件（Header、课程卡片、日历、弹窗……）
+      label: What to change
+      description: Which page or component (Header, course cards, calendar, popup …)
     validations:
       required: true
   - type: textarea
     id: mockup
     attributes:
-      label: 设计图 / Mockup
-      description: 直接把图片拖进来，或放到 design/mockups/ 后贴链接
+      label: Mockup
+      description: Drag images in here, or put them in design/mockups/ and paste the link
   - type: input
     id: files
     attributes:
-      label: 会改到的文件 / Files you will touch
-      description: 例 src/ui/components/Header.tsx — 先写上，避免和修 bug 的人撞文件
+      label: Files you will touch
+      description: e.g. src/ui/components/Header.tsx — list them first so you don't collide with someone else's work
   - type: checkboxes
     id: base
     attributes:
-      label: 开工前 / Before starting
+      label: Before starting
       options:
-        - label: 我会从最新的 main 开一个 ui/ 分支
+        - label: I will create a ui/ branch from the latest main
           required: true

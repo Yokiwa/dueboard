@@ -1,49 +1,49 @@
-# 团队协作规则（必读）
+# Contributing (read this first)
 
-我们出过的问题：一个人在新版本上修 bug，另一个人在旧版本上做 UI，最后两边对不上。
-下面的规则就是为了避免这个。**核心只有一句：不管是谁、做什么，每次都从最新的 `main` 开一个新分支，改完用 Pull Request 合回 `main`。**
+The problem we had: one person fixed bugs on the new version while another built UI on an old version, and the two no longer fit together.
+These rules prevent that. **The core rule: whoever you are and whatever you work on, every time start a new branch from the latest `main`, and merge back into `main` through a pull request.**
 
-## 1. 团队
+## 1. Team
 
-| 人 | GitHub |
+| Person | GitHub |
 |---|---|
-| Raymond（项目负责人：审核并合并 PR、发版本） | @Yokiwa |
+| Raymond (maintainer: reviews and merges PRs, makes releases) | @Yokiwa |
 | Kaiyi | @ricecooker669 |
 | VNzia | @VNzia |
 
-**分工会变，流程不变。** 谁这次做什么，看 Issue 指派给了谁；任何人都可以修 bug、做 UI 或加功能，做法都一样。
-文件夹说明见 [docs/team/README.md](docs/team/README.md)。
+**Roles change; the process does not.** Who does what this time is whoever the issue is assigned to. Anyone can fix bugs, work on UI or add features, and the steps are the same.
+Folder guide: [docs/team/README.md](docs/team/README.md).
 
-## 2. 每次干活的流程
+## 2. Every piece of work
 
-1. **先有 Issue**：要做的事都先在 GitHub 的 Issues 里开一个（有模板），指派给这次做的人。
-2. **从最新 `main` 开新分支**。分支名的前缀看**这次做的是什么事**，不看是谁做：
-   - 修 bug：`fix/简短描述`，例：`fix/pearson-login`
-   - UI / 设计：`ui/简短描述`，例：`ui/header-redesign`
-   - 新功能：`feat/简短描述`
-   - 只改文档：`docs/简短描述`
-3. **在分支上改、提交**。只改和这个 Issue 有关的东西。
-4. **开 Pull Request 到 `main`**，在描述里写 `Closes #Issue号`。UI 改动必须贴改前/改后截图。
-5. **自动检查（CI）通过 + Raymond 审核通过** 才能合并。
-6. 合并后删掉分支。下次干活回到第 2 步，**重新从最新 `main` 开分支**。
+1. **Start with an issue.** Open one in GitHub Issues (there are templates) and assign it to whoever is doing it.
+2. **Create a new branch from the latest `main`.** The prefix depends on **what the work is**, not on who does it:
+   - Bug fix: `fix/short-description`, e.g. `fix/pearson-login`
+   - UI / design: `ui/short-description`, e.g. `ui/header-redesign`
+   - New feature: `feat/short-description`
+   - Docs only: `docs/short-description`
+3. **Change and commit on that branch.** Only change what the issue is about.
+4. **Open a pull request into `main`** and write `Closes #<issue number>` in the description. UI changes must include before/after screenshots.
+5. It can be merged only when **CI passes and Raymond has approved it**.
+6. Delete the branch after merging. Next time, go back to step 2 and **branch again from the latest `main`**.
 
-用 Codex / Claude 等 AI 写代码？仓库根目录的 [AGENTS.md](AGENTS.md) 会被 AI 自动读取，上面这套流程它会自己照做。
+Writing code with Codex, Claude or another AI? [AGENTS.md](AGENTS.md) in the repository root is read by the AI automatically, and it follows this process on its own.
 
-不会用命令行？看 [docs/team/git-workflow.md](docs/team/git-workflow.md)，用 GitHub Desktop 点几下就行。
+Not comfortable with the command line? See [docs/team/git-workflow.md](docs/team/git-workflow.md) — a few clicks in GitHub Desktop.
 
-## 3. 禁止事项
+## 3. Don'ts
 
-- ❌ 不要直接往 `main` 推代码或网页上传文件到 `main`。
-- ❌ 不要把 `.tsx` / `.ts` / `.css` 文件传到仓库**根目录**——构建只看 `src/`，放根目录等于没改（CI 会直接报错）。
-- ❌ 不要在一个很久以前的分支上继续做新东西。开工前先同步 `main`。
-- ❌ 不要在一个 PR 里同时修 bug 又改 UI，分开两个 PR。
+- ❌ Don't push or upload files directly to `main`.
+- ❌ Don't put `.tsx` / `.ts` / `.css` files in the repository **root**. The build only reads `src/`, so files in the root do nothing (and CI fails).
+- ❌ Don't keep building new work on an old branch. Sync with `main` before you start.
+- ❌ Don't fix a bug and redesign UI in the same PR. Make two PRs.
 
-## 4. 两个人改到同一个文件怎么办
+## 4. When two people change the same file
 
-- UI 和 bug 最常撞在 `src/ui/` 里。开工前在 Issue 里说一声你要改哪个文件。
-- 如果 PR 显示 "This branch has conflicts"：先把最新 `main` 合进你的分支（GitHub Desktop：*Branch → Update from main*），解决冲突后再推。不确定就在 PR 里 @ 对方一起看。
+- UI work and bug fixes most often meet in `src/ui/`. Before you start, say in the issue which files you will change.
+- If the PR says "This branch has conflicts": merge the latest `main` into your branch (GitHub Desktop: *Branch → Update from main*), resolve the conflicts, then push. If unsure, @ the other person in the PR and look at it together.
 
-## 5. 提交之前自己检查
+## 5. Check before you push
 
 ```bash
 npm install
@@ -53,4 +53,4 @@ npm install
 npm run compile && npm test
 ```
 
-UI 改动再跑 `npm run dev` 在浏览器里亲眼看一下。
+For UI changes, also run `npm run dev` and look at it in the browser.
