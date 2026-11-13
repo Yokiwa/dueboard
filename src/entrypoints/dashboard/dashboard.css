@@ -448,16 +448,32 @@
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 900ms;
-  animation-timing-function: ease-in-out;
+  animation: none;
+}
+
+:root.theme-transitioning::view-transition-old(root) {
+  animation: theme-fade-out 900ms ease-in-out both;
+}
+
+:root.theme-transitioning::view-transition-new(root) {
+  animation: theme-fade-in 900ms ease-in-out both;
 }
 
 ::view-transition-old(dashboard-content) {
-  animation: dashboard-view-old 160ms ease-in both;
+  opacity: 0;
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 ::view-transition-new(dashboard-content) {
-  animation: dashboard-view-new 360ms cubic-bezier(.2,.75,.25,1) both;
+  animation: dashboard-view-new 240ms cubic-bezier(.2,.75,.25,1) both;
+  mix-blend-mode: normal;
+}
+
+@supports (view-transition-name: dashboard-content) {
+  .dashboard-view-content {
+    animation: none;
+  }
 }
 
 .dashboard-course {
@@ -548,18 +564,19 @@
   }
 }
 
-@keyframes dashboard-view-old {
-  to {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
+@keyframes theme-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes theme-fade-in {
+  from { opacity: 0; }
 }
 
 @keyframes dashboard-view-new {
   from {
-    opacity: 0;
-    transform: translateX(14px);
+    clip-path: inset(0 7% 0 0);
   }
+  to { clip-path: inset(0); }
 }
 
 @media (max-width: 900px) {
@@ -636,6 +653,8 @@
 @media (prefers-reduced-motion: reduce) {
   .next-due-banner,
   .dashboard-view-content,
+  :root.theme-transitioning::view-transition-old(root),
+  :root.theme-transitioning::view-transition-new(root),
   ::view-transition-old(dashboard-content),
   ::view-transition-new(dashboard-content) {
     animation: none;

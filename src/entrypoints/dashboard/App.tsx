@@ -71,9 +71,13 @@ export function App() {
       document.body.dataset.theme = displayedTheme;
       document.body.dataset.themeMode = selectedTheme;
     };
-    const transitionDocument = document as Document & { startViewTransition?: (update: () => void) => void };
+    const transitionDocument = document as Document & {
+      startViewTransition?: (update: () => void) => { finished: Promise<unknown> };
+    };
     if (document.body.dataset.theme && document.body.dataset.theme !== displayedTheme && transitionDocument.startViewTransition) {
-      transitionDocument.startViewTransition(applyTheme);
+      document.documentElement.classList.add('theme-transitioning');
+      const transition = transitionDocument.startViewTransition(applyTheme);
+      void transition.finished.finally(() => document.documentElement.classList.remove('theme-transitioning'));
     } else {
       applyTheme();
     }
@@ -87,9 +91,7 @@ export function App() {
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);
   const changeView = (next: View) => {
     if (next === view) return;
-    const transitionDocument = document as Document & {
-      startViewTransition?: (update: () => void) => void;
-    };
+    const transitionDocument = document as Document & { startViewTransition?: (update: () => void) => unknown };
     if (transitionDocument.startViewTransition) {
       transitionDocument.startViewTransition(() => setView(next));
       return;
@@ -99,7 +101,7 @@ export function App() {
   return (
     <DoneToastProvider>
       <AppShell nav={<ViewTabs view={view} onChange={changeView} />}>
-        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
+        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => window.location.assign(browser.runtime.getURL('/options.html'))}>
           <div className="dashboard-header-tools">
             <StatChips within48={counts.within48} week={counts.week} />
             <ThemeSwitcher theme={store.settings.theme} onChange={(theme) => void saveSettings({ theme })} />
