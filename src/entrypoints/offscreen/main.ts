@@ -2,7 +2,6 @@ import { createFrameHost } from '../../visits/frame/host';
 import { isReaderMessage, type FrameVisitRequest } from '../../visits/frame/protocol';
 import { handleOffscreenMessage } from '../../sync/offscreenParser';
 import { handleOffscreenSyllabus } from '../../sync/syllabusLines';
-import { playCompletionCue } from '../../pomodoro/sound';
 
 const host = createFrameHost(document);
 window.addEventListener('message', (e) => host.onPost(e));
@@ -16,10 +15,6 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (m && m.target === 'offscreen' && m.kind === 'frameReset') {
     host.reset();
     sendResponse(true);
-    return undefined;
-  }
-  if (m && m.target === 'offscreen' && m.kind === 'pomodoroComplete') {
-    sendResponse(playCompletionCue());
     return undefined;
   }
   if (isReaderMessage(msg)) {
