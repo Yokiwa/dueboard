@@ -15,6 +15,7 @@
   --theme-hover: #eaf3f0;
   --theme-next-a: #dfeee9;
   --theme-next-b: #e2edf6;
+  --theme-timer: #f6edcf;
   --theme-course-1: #e2f0eb;
   --theme-course-2: #e3edf5;
   --theme-course-3: #f6edcf;
@@ -90,6 +91,7 @@
   --theme-hover: #30334a;
   --theme-next-a: #292b48;
   --theme-next-b: #233947;
+  --theme-timer: #343044;
   --theme-course-1: #253a3d;
   --theme-course-2: #352e49;
   --theme-course-3: #3b3540;
@@ -121,6 +123,7 @@
   --theme-hover: #f4e7da;
   --theme-next-a: #f2dfca;
   --theme-next-b: #f3cdb8;
+  --theme-timer: #efe4c8;
   --theme-course-1: #eee0c8;
   --theme-course-2: #f3d2bf;
   --theme-course-3: #e7d8c5;
@@ -146,6 +149,7 @@
   --theme-hover: #5c3d56;
   --theme-next-a: #684052;
   --theme-next-b: #59405b;
+  --theme-timer: #60483f;
   --theme-course-1: #564250;
   --theme-course-2: #683f55;
   --theme-course-3: #634b3f;
@@ -333,11 +337,16 @@
 
 .dashboard-priority {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr);
   gap: 14px;
 }
 
-.next-due-banner {
+.dashboard-priority[data-has-deadline='false'] {
+  grid-template-columns: 1fr;
+}
+
+.next-due-banner,
+.pomodoro-panel {
   position: relative;
   min-height: 132px;
   overflow: hidden;
@@ -393,6 +402,22 @@
   border-color: var(--theme-line);
   background: var(--theme-overlay);
   color: var(--theme-ink);
+}
+
+.pomodoro-panel {
+  background: var(--theme-timer) !important;
+  padding: 18px 20px !important;
+}
+
+.pomodoro-clock {
+  color: var(--theme-countdown);
+  font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+  font-weight: 520;
+  letter-spacing: -0.07em;
+}
+
+.pomodoro-duration-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dashboard-view {

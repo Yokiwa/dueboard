@@ -6,6 +6,7 @@ import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
+import { PomodoroTimer } from '../../ui/components/PomodoroTimer';
 import { SourceBanners } from '../../ui/components/SourceBanners';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
@@ -104,6 +105,7 @@ export function App() {
         {granted && <PlatformAccess store={store} granted={granted} now={now} />}
         <div className="dashboard-priority" data-has-deadline={Boolean(dashboard.nextDue)}>
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
+          <PomodoroTimer now={now} />
         </div>
         <section aria-labelledby="dashboard-view-heading" className="dashboard-view">
           <h2 id="dashboard-view-heading" className="dashboard-view-heading">{t(VIEW_LABEL[view])}</h2>

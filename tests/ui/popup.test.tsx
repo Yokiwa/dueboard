@@ -34,24 +34,17 @@ describe('popup', () => {
     expect(create).toHaveBeenCalledWith({ url: browser.runtime.getURL('/dashboard.html') });
   });
 
-  it('has no Pomodoro timer (removed)', async () => {
-    render(<PopupApp />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open full dashboard' })).toBeTruthy());
-    expect(screen.queryByRole('group', { name: 'Timer mode' })).toBeNull();
-    expect(screen.queryByText(/Pomodoro/i)).toBeNull();
-  });
-
   it('empty state still offers the full dashboard', async () => {
     render(<PopupApp />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open full dashboard' })).toBeTruthy());
     expect(screen.getByText('Nothing to do. Enjoy the break.')).toBeTruthy();
   });
 
-  it('uses the saved dashboard theme', async () => {
+  it('uses the saved dashboard theme and includes the shared timer', async () => {
     await saveSettings({ theme: 'noon-cafe' });
     render(<PopupApp />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open full dashboard' })).toBeTruthy());
-    await waitFor(() => expect(document.body.dataset.theme).toBe('noon-cafe'));
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00'));
+    expect(document.body.dataset.theme).toBe('noon-cafe');
   });
 });
 

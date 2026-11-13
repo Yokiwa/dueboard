@@ -7,7 +7,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dashboard-nightowl.png">
-    <img src="docs/assets/dashboard-morning-dew.png" width="760" alt="The DueBoard dashboard: the next deadline with a live countdown and course cards">
+    <img src="docs/assets/dashboard-morning-dew.png" width="760" alt="The DueBoard dashboard: the next deadline with a live countdown, the focus timer and course cards">
   </picture>
 </p>
 
@@ -25,6 +25,7 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off, grouped into Overdue, Today, This week and Later with a count on each group. Class meetings your courses post in the Brightspace calendar (lectures, recitations) appear in the week view only, never among your work.
 - **Handed-in work ticks itself off, with its score.** Brightspace (your submission or gradebook grade), Gradescope, Pearson MyLab and other homework pages say whether you handed the work in; DueBoard ticks it off and shows the score. Untick something DueBoard ticked and it stays unticked.
 - **Overdue for the whole term.** Every past-due assignment, quiz and homework since the course started, not only last week's. Work no source has said anything about moves into a collapsed **Not sure if handed in** section of the to-do list until one does, or until you tick it.
+- **Focus timer.** A built-in Pomodoro timer on the dashboard and in the toolbar popup, with 25-minute focus sessions and 5-minute breaks by default (each adjustable from 1 to 180 minutes). Both share one timer, and a short chime plays when a session ends, even if DueBoard isn't open.
 - **Study themes.** Switch between Nightowl, Morning Dew, Noon Cafe and Dusk Lullaby, or let Automatic choose for the time of day. Theme changes fade smoothly without interrupting your work.
 - **Focused settings flow.** Settings open in the current DueBoard tab, with a back button that returns to the dashboard.
 - **Background platform reading.** For homework that Brightspace launches on another platform, DueBoard attempts to read the link in a hidden frame inside the extension, without opening tabs or windows. Pages requiring interactive authentication may remain unavailable. Unknown sites require permission.
