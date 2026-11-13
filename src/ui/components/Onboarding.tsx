@@ -52,8 +52,8 @@ export function Onboarding() {
   }, []);
 
   return (
-    <div className="flex min-h-screen justify-center bg-db-bg px-4 py-16">
-      <main className="db-rise flex w-full max-w-[560px] flex-col gap-6">
+    <div className="dashboard-onboarding flex min-h-screen justify-center bg-db-bg px-4 py-16">
+      <main className="dashboard-onboarding-panel db-rise flex w-full max-w-[560px] flex-col gap-6">
         <BrandMark className="size-12" />
         <div className="flex flex-col gap-3">
           <h1 className="m-0 heading-4 tracking-tight">

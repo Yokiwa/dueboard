@@ -89,6 +89,11 @@ describe('store', () => {
     expect(migrate('x').manualItems).toEqual([]);
   });
 
+  it('migrates dashboard themes and falls back to automatic', () => {
+    expect(migrate({ settings: { theme: 'nightowl' } }).settings.theme).toBe('nightowl');
+    expect(migrate({ settings: { theme: 'unknown' } }).settings.theme).toBe('automatic');
+  });
+
   it('onStoreChange fires on local storage changes and can unsubscribe', async () => {
     const cb = vi.fn();
     const off = onStoreChange(cb);
@@ -137,7 +142,7 @@ describe('store', () => {
   });
 
   it('migrate keeps valid settings', () => {
-    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: true });
+    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: true, theme: 'automatic' });
   });
 
   it('finished work shows in the course cards unless set to its own section', () => {
@@ -172,7 +177,7 @@ describe('store', () => {
 
   it('saveSettings merges into the current settings', async () => {
     await saveSettings({ visits: 'off' });
-    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card', windowFallback: true });
+    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card', windowFallback: true, theme: 'automatic' });
   });
 
   it('patchVisitState merges into the current visit state', async () => {
