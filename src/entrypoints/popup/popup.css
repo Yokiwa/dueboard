@@ -32,12 +32,3 @@
 .dueboard-popup .pomodoro-duration-fields {
   grid-template-columns: 1fr 1fr;
 }
-
-.dueboard-popup .music-player-compact {
-  border-radius: 18px !important;
-  padding: 14px !important;
-}
-
-.dueboard-popup .music-player-compact .title-3 {
-  font-size: 0.95rem;
-}
