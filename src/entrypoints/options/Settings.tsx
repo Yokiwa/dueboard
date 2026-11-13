@@ -1,10 +1,10 @@
 import { useId, useMemo } from 'react';
 import { browser } from 'wxt/browser';
-import { ArrowLeft, ArrowUpRight, Check } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowUpRight } from '@phosphor-icons/react';
 import { BrandMark } from '../../ui/components/BrandMark';
-import { buildDashboard, PALETTE } from '../../core/dashboard';
+import { buildDashboard } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
-import { saveSettings, setCourseColor, setCourseVisible, setMerge } from '../../storage/store';
+import { saveSettings, setCourseVisible, setMerge } from '../../storage/store';
 import { grantedPlatforms } from '../../core/permissions';
 import { useGranted } from '../../ui/hooks/useGranted';
 import { secondaryBtn } from '../../ui/forms';
@@ -88,23 +88,6 @@ function Body({ store }: { store: StoreShape }) {
                   <span className="body-4">{c.code}</span>
                   <span className="truncate text-db-faint">{displayName(c)}</span>
                 </label>
-                <div className="flex gap-2">
-                  {PALETTE.map((color, i) => (
-                    <button
-                      key={color}
-                      type="button"
-                      aria-label={t('settings.color', { code: c.code, n: i + 1 })}
-                      aria-pressed={c.color === color}
-                      onClick={() => void setCourseColor(c.id, color)}
-                      className={`db-press inline-flex size-6 cursor-pointer items-center justify-center rounded-full border-0 p-0 text-white hover:scale-110 ${
-                        c.color === color ? 'ring-2 ring-db-ink ring-offset-2 ring-offset-db-surface' : ''
-                      }`}
-                      style={{ background: color }}
-                    >
-                      {c.color === color && <Check aria-hidden="true" size={12} weight="bold" />}
-                    </button>
-                  ))}
-                </div>
               </li>
             ))}
           </ul>

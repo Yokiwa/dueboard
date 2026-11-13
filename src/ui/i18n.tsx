@@ -142,7 +142,7 @@ const messages = {
   'dev.saved': (v: Vars) => `Downloaded: ${v.name}`,
   'settings.title': 'DueBoard settings',
   'settings.courses': 'Courses',
-  'settings.coursesHint': 'Uncheck a course to hide it; click a swatch to change its color.',
+  'settings.coursesHint': 'Uncheck a course to hide it.',
   'settings.show': (v: Vars) => `Show ${v.code}`,
   'settings.color': (v: Vars) => `${v.code} color ${v.n}`,
   'settings.noCourses': 'No courses yet. Run the first sync.',

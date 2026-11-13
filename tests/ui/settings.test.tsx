@@ -6,7 +6,6 @@ import { browser } from 'wxt/browser';
 vi.mock('../../src/ui/config', () => ({ FEEDBACK_URL: 'https://forms.gle/test' }));
 import { Settings } from '../../src/entrypoints/options/Settings';
 import { loadStore, patchStore, saveSnapshot } from '../../src/storage/store';
-import { PALETTE } from '../../src/core/dashboard';
 
 async function seed() {
   await saveSnapshot('brightspace', {
@@ -39,15 +38,6 @@ describe('Settings', () => {
     await waitFor(async () => expect((await loadStore()).userState.hidden).toEqual({ 'brightspace:1': true }));
     fireEvent.click(within(row('CS 18000')).getByRole('checkbox', { name: 'Show CS 18000' }));
     await waitFor(async () => expect((await loadStore()).userState.hidden).toEqual({}));
-  });
-
-  it('color picker from palette sets userState.colors', async () => {
-    render(<Settings />);
-    await waitFor(() => row('CS 18000'));
-    const swatches = within(row('CS 18000')).getAllByRole('button', { name: /color/ });
-    expect(swatches).toHaveLength(PALETTE.length);
-    fireEvent.click(swatches[3]!);
-    await waitFor(async () => expect((await loadStore()).userState.colors).toEqual({ 'brightspace:1': PALETTE[3] }));
   });
 
   it('has no language or new-tab settings (English-only UI, dashboard opens from the toolbar)', async () => {
