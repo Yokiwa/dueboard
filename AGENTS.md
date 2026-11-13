@@ -43,3 +43,12 @@ All must pass. For a bug fix, add or update a test in `tests/`. For UI work, als
 - Do not merge a PR whose CI failed: fix the cause first. Never weaken, skip or delete tests or CI to get green.
 - PRs touching `.github/`, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `package.json`, `package-lock.json` or `CHANGELOG.md` need the maintainer's approval (see `.github/CODEOWNERS`). Avoid touching them unless the task requires it, and say so in the PR.
 - At the end, tell the user: the branch name, that it was based on the latest `main`, and the result of `npm run compile` and `npm test`.
+
+## 5. Building a package (zip) for someone to try
+
+Other people merge into `main` all the time, so a zip built from your copy can already be out of date. Every time you build a zip (`npm run zip`, `npm run zip:firefox`) to hand to someone:
+
+1. **Check the latest version first.** `git fetch origin`, then compare `git rev-parse HEAD` with `git rev-parse origin/main`. If they differ, update (`git switch main && git pull --ff-only origin main`, or `git merge origin/main` on a branch you are testing) and run `npm run compile` and `npm test` again.
+2. **Build only from the latest `main`**, or from a branch you have just updated from it. Never from an old branch or an old copy of the files.
+3. **Check again right before you hand it over.** If `origin/main` moved while you were building or testing, update, test and build again.
+4. **Say what it is.** Tell the user the commit it was built from (`git rev-parse --short HEAD`), that this is the latest `main`, and the version in `package.json`. Zips with the same version have the same file name, so say which one is current.
