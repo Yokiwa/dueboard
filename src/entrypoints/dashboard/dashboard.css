@@ -420,6 +420,17 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.music-player {
+  border-color: transparent !important;
+  background: var(--theme-panel) !important;
+  box-shadow: none !important;
+}
+
+.music-player select,
+.music-player input[type='range'] {
+  color-scheme: inherit;
+}
+
 .dashboard-view {
   position: relative;
   display: flex;
