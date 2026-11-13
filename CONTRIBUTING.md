@@ -25,6 +25,8 @@
 5. **自动检查（CI）通过 + Raymond 审核通过** 才能合并。
 6. 合并后删掉分支。下次干活回到第 2 步，**重新从最新 `main` 开分支**。
 
+用 Codex / Claude 等 AI 写代码？仓库根目录的 [AGENTS.md](AGENTS.md) 会被 AI 自动读取，上面这套流程它会自己照做。
+
 不会用命令行？看 [docs/team/git-workflow.md](docs/team/git-workflow.md)，用 GitHub Desktop 点几下就行。
 
 ## 3. 禁止事项
