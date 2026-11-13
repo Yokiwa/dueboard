@@ -66,9 +66,9 @@ export async function ensureOffscreenDocument(): Promise<void> {
   creating ??= browser.offscreen
     .createDocument({
       url,
-      reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS, browser.offscreen.Reason.DOM_SCRAPING],
+      reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS, browser.offscreen.Reason.DOM_SCRAPING, browser.offscreen.Reason.AUDIO_PLAYBACK],
       justification:
-        "Parse Gradescope, Pearson and syllabus pages into assignments, and read due dates from the student's own assignment pages",
+        "Parse course pages, read due dates from the student's assignment pages, and play the Pomodoro completion cue",
     })
     .finally(() => {
       creating = null;

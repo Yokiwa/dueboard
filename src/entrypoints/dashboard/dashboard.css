@@ -1,4 +1,4 @@
-.dueboard-dashboard {
+.dueboard-themed {
   --theme-page: #eef5f3;
   --theme-page-glow-a: rgb(206 231 225 / 0.58);
   --theme-page-glow-b: rgb(214 230 242 / 0.54);
@@ -74,7 +74,7 @@
   transition: background-color 1.4s ease, color 1.4s ease;
 }
 
-.dueboard-dashboard[data-theme='nightowl'] {
+.dueboard-themed[data-theme='nightowl'] {
   --theme-page: #11131d;
   --theme-page-glow-a: rgb(82 75 151 / 0.28);
   --theme-page-glow-b: rgb(58 101 122 / 0.24);
@@ -102,11 +102,11 @@
   color-scheme: dark;
 }
 
-.dueboard-dashboard[data-theme='morning-dew'] {
+.dueboard-themed[data-theme='morning-dew'] {
   color-scheme: light;
 }
 
-.dueboard-dashboard[data-theme='noon-cafe'] {
+.dueboard-themed[data-theme='noon-cafe'] {
   --theme-page: #f5efe5;
   --theme-page-glow-a: rgb(239 205 163 / 0.48);
   --theme-page-glow-b: rgb(223 191 159 / 0.4);
@@ -132,7 +132,7 @@
   color-scheme: light;
 }
 
-.dueboard-dashboard[data-theme='dusk-lullaby'] {
+.dueboard-themed[data-theme='dusk-lullaby'] {
   --theme-page: #281724;
   --theme-page-glow-a: rgb(190 99 112 / 0.3);
   --theme-page-glow-b: rgb(137 82 124 / 0.34);
@@ -415,6 +415,10 @@
   font-size: clamp(1.8rem, 3.4vw, 2.8rem);
   font-weight: 520;
   letter-spacing: -0.07em;
+}
+
+.pomodoro-duration-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .dashboard-view {

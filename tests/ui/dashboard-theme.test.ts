@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { automaticTheme } from '../../src/entrypoints/dashboard/App';
+import { automaticTheme } from '../../src/core/theme';
 
 describe('automatic dashboard theme', () => {
   const at = (hour: number) => new Date(2026, 10, 13, hour, 0, 0);
