@@ -60,9 +60,20 @@ export function App() {
 
   const counts = dueCounts(dashboard.items, now);
   const nextCourse = dashboard.courses.find((c) => c.id === dashboard.nextDue?.courseId);
+  const changeView = (next: View) => {
+    if (next === view) return;
+    const transitionDocument = document as Document & {
+      startViewTransition?: (update: () => void) => void;
+    };
+    if (transitionDocument.startViewTransition) {
+      transitionDocument.startViewTransition(() => setView(next));
+      return;
+    }
+    setView(next);
+  };
   return (
     <DoneToastProvider>
-      <AppShell nav={<ViewTabs view={view} onChange={setView} />}>
+      <AppShell nav={<ViewTabs view={view} onChange={changeView} />}>
         <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
           <StatChips within48={counts.within48} week={counts.week} />
         </Header>
@@ -75,14 +86,15 @@ export function App() {
         </div>
         <section aria-labelledby="dashboard-view-heading" className="dashboard-view">
           <h2 id="dashboard-view-heading" className="dashboard-view-heading">{t(VIEW_LABEL[view])}</h2>
-          <ViewBody
-            key={view}
-            view={view}
-            dashboard={dashboard}
-            now={now}
-            syllabus={{ suggestions: syllabusSuggestions(store, dashboard, now), unreadable: unreadableSyllabi(store, dashboard) }}
-            completed={store.settings.completed}
-          />
+          <div key={view} className="dashboard-view-content" data-view={view}>
+            <ViewBody
+              view={view}
+              dashboard={dashboard}
+              now={now}
+              syllabus={{ suggestions: syllabusSuggestions(store, dashboard, now), unreadable: unreadableSyllabi(store, dashboard) }}
+              completed={store.settings.completed}
+            />
+          </div>
         </section>
       </AppShell>
     </DoneToastProvider>

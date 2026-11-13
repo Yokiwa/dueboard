@@ -1,15 +1,49 @@
 .dueboard-dashboard {
-  --rhine-orange: #e46f24;
-  --rhine-orange-deep: #b94d12;
-  --rhine-ink: #20211f;
-  --rhine-paper: #f5f2e9;
-  --rhine-panel: rgb(255 254 249 / 0.88);
-  --rhine-line: rgb(32 33 31 / 0.16);
+  --rhine-black: #0b0c0d;
+  --rhine-yellow: #f4d100;
+  --rhine-silver: #c7cac8;
+  --rhine-orange: var(--rhine-yellow);
+  --rhine-ink: var(--rhine-black);
+  --rhine-paper: var(--rhine-silver);
+  --rhine-panel: rgb(225 227 225 / 0.86);
+  --rhine-line: rgb(11 12 13 / 0.2);
+  --color-db-bg: var(--rhine-silver);
+  --color-db-surface: rgb(225 227 225);
+  --color-db-subtle: rgb(199 202 200 / 0.44);
+  --color-db-raised: rgb(225 227 225);
+  --color-db-glass: rgb(199 202 200 / 0.78);
+  --color-db-border: rgb(11 12 13 / 0.2);
+  --color-db-border-soft: rgb(11 12 13 / 0.12);
+  --color-db-track: rgb(11 12 13 / 0.09);
+  --color-db-hover: rgb(244 209 0 / 0.2);
+  --color-db-text: var(--rhine-black);
+  --color-db-text-2: rgb(11 12 13 / 0.86);
+  --color-db-muted: rgb(11 12 13 / 0.68);
+  --color-db-faint: rgb(11 12 13 / 0.5);
+  --color-db-accent: var(--rhine-yellow);
+  --color-db-accent-soft: rgb(244 209 0 / 0.2);
+  --color-db-ink: var(--rhine-black);
+  --color-db-ink-hover: rgb(11 12 13 / 0.86);
+  --color-db-on-ink: var(--rhine-silver);
+  --color-db-on-accent: var(--rhine-black);
+  --color-db-ring: var(--rhine-black);
+  --color-db-ok: var(--rhine-black);
+  --color-db-hero-from: var(--rhine-black);
+  --color-db-hero-to: rgb(11 12 13 / 0.62);
+  --color-db-urgent-bg: rgb(244 209 0 / 0.32);
+  --color-db-urgent-fg: var(--rhine-black);
+  --color-db-soon-bg: rgb(244 209 0 / 0.2);
+  --color-db-soon-fg: var(--rhine-black);
+  --color-db-normal-bg: rgb(11 12 13 / 0.08);
+  --color-db-normal-fg: var(--rhine-black);
+  --color-db-banner-label: var(--rhine-yellow);
+  --color-db-banner-sub: rgb(199 202 200 / 0.72);
+  --color-db-countdown: var(--rhine-yellow);
   background-color: var(--rhine-paper);
   background-image:
-    linear-gradient(rgb(32 33 31 / 0.026) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(32 33 31 / 0.026) 1px, transparent 1px),
-    radial-gradient(circle, rgb(32 33 31 / 0.065) 0.7px, transparent 0.8px);
+    linear-gradient(rgb(11 12 13 / 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(11 12 13 / 0.032) 1px, transparent 1px),
+    radial-gradient(circle, rgb(11 12 13 / 0.075) 0.7px, transparent 0.8px);
   background-position: 0 0, 0 0, 8px 8px;
   background-size: 64px 64px, 64px 64px, 16px 16px;
 }
@@ -21,12 +55,12 @@
   pointer-events: none;
   content: '';
   background:
-    radial-gradient(circle at 12% 18%, rgb(228 111 36 / 0.11), transparent 25%),
-    radial-gradient(circle at 85% 12%, rgb(64 126 148 / 0.09), transparent 28%),
-    radial-gradient(circle at 58% 82%, rgb(203 164 76 / 0.075), transparent 32%),
-    radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(64 126 148 / 0.075) 131px 133px, transparent 134px),
-    radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(228 111 36 / 0.075) 91px 93px, transparent 94px),
-    linear-gradient(128deg, transparent 0 42%, rgb(32 33 31 / 0.035) 42.1% 42.25%, transparent 42.35%);
+    radial-gradient(circle at 12% 18%, rgb(244 209 0 / 0.13), transparent 25%),
+    radial-gradient(circle at 85% 12%, rgb(11 12 13 / 0.08), transparent 28%),
+    radial-gradient(circle at 58% 82%, rgb(244 209 0 / 0.07), transparent 32%),
+    radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(11 12 13 / 0.08) 131px 133px, transparent 134px),
+    radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(244 209 0 / 0.095) 91px 93px, transparent 94px),
+    linear-gradient(128deg, transparent 0 42%, rgb(11 12 13 / 0.045) 42.1% 42.25%, transparent 42.35%);
   filter: blur(2px);
   animation: dashboard-atmosphere 24s ease-in-out infinite alternate;
 }
@@ -37,7 +71,7 @@
   z-index: 100;
   pointer-events: none;
   content: '';
-  background: linear-gradient(180deg, transparent 0 48%, rgb(228 111 36 / 0.045) 50%, transparent 52%);
+  background: linear-gradient(180deg, transparent 0 48%, rgb(244 209 0 / 0.055) 50%, transparent 52%);
   background-size: 100% 240px;
   animation: dashboard-scan 9s linear infinite;
   mix-blend-mode: multiply;
@@ -61,9 +95,9 @@
   align-items: stretch;
   gap: 24px;
   border: 1px solid var(--rhine-line);
-  background: rgb(245 242 233 / 0.86);
+  background: rgb(199 202 200 / 0.86);
   padding: 12px 10px;
-  box-shadow: 0 12px 40px rgb(32 33 31 / 0.08);
+  box-shadow: 0 12px 40px rgb(11 12 13 / 0.12);
   backdrop-filter: blur(16px);
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
@@ -87,7 +121,6 @@
   width: 36px;
   height: 36px;
   color: var(--rhine-orange);
-  filter: grayscale(1) contrast(2);
 }
 
 .dashboard-tabs {
@@ -124,7 +157,7 @@
 .dashboard-tab[aria-selected='true'] {
   border-color: var(--rhine-ink);
   background: var(--rhine-ink);
-  color: var(--rhine-paper);
+  color: var(--rhine-silver);
   clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%);
 }
 
@@ -152,7 +185,7 @@
   align-items: center;
   overflow: hidden;
   border: 1px solid var(--rhine-line);
-  background: rgb(245 242 233 / 0.75);
+  background: rgb(199 202 200 / 0.72);
   padding: 30px clamp(24px, 4vw, 54px);
   clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
 }
@@ -209,7 +242,7 @@
 
 .dashboard-priority {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.65fr);
   gap: 16px;
 }
 
@@ -237,10 +270,27 @@
 
 .next-due-banner {
   overflow: hidden;
-  border-left: 7px solid var(--rhine-orange);
+  min-height: 184px;
+  border: 1px solid var(--rhine-yellow) !important;
+  border-left: 9px solid var(--rhine-yellow) !important;
   background:
-    linear-gradient(110deg, transparent 0 62%, rgb(228 111 36 / 0.08) 62% 63%, transparent 63%),
-    var(--rhine-panel);
+    linear-gradient(110deg, transparent 0 62%, rgb(244 209 0 / 0.17) 62% 63%, transparent 63%),
+    var(--rhine-black);
+  color: var(--rhine-silver);
+  box-shadow:
+    0 18px 48px rgb(11 12 13 / 0.26),
+    inset 0 0 0 1px rgb(244 209 0 / 0.16);
+  animation: deadline-arrive 620ms var(--ease-db) both;
+}
+
+.next-due-banner::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  background: linear-gradient(105deg, transparent 0 42%, rgb(244 209 0 / 0.16) 49%, transparent 56%);
+  transform: translateX(-120%);
+  animation: deadline-sweep 4.8s ease-in-out 900ms infinite;
 }
 
 .next-due-banner::after,
@@ -257,7 +307,7 @@
 
 .pomodoro-panel {
   border-top: 4px solid var(--rhine-ink);
-  background-image: repeating-linear-gradient(135deg, transparent 0 9px, rgb(32 33 31 / 0.025) 9px 10px);
+  background-image: repeating-linear-gradient(135deg, transparent 0 9px, rgb(11 12 13 / 0.035) 9px 10px);
 }
 
 .pomodoro-clock {
@@ -265,6 +315,40 @@
   font-size: clamp(2rem, 4vw, 3.6rem);
   font-weight: 500;
   letter-spacing: -0.08em;
+}
+
+.next-due-banner .heading-6 {
+  color: var(--rhine-silver);
+  font-size: clamp(1.35rem, 2.3vw, 2rem);
+  letter-spacing: -0.025em;
+}
+
+.next-due-banner .caption-2 {
+  color: rgb(199 202 200 / 0.72);
+}
+
+.next-due-banner [role='timer'] {
+  color: var(--rhine-yellow);
+  font-size: clamp(2.4rem, 5vw, 4.25rem);
+  font-weight: 520;
+  letter-spacing: -0.08em;
+  text-shadow: 0 0 24px rgb(244 209 0 / 0.2);
+}
+
+.next-due-banner .bg-db-ink {
+  background: var(--rhine-yellow);
+  color: var(--rhine-black);
+}
+
+.next-due-banner .bg-db-surface {
+  border-color: var(--rhine-silver);
+  background: transparent;
+  color: var(--rhine-silver);
+}
+
+.next-due-banner span[style*='background'],
+.dashboard-view span[style*='background'] {
+  background: var(--rhine-yellow) !important;
 }
 
 .dashboard-view {
@@ -299,11 +383,36 @@
   color: var(--rhine-orange);
 }
 
+.dashboard-view-content {
+  position: relative;
+  view-transition-name: dashboard-content;
+  animation: dashboard-view-enter 440ms var(--ease-db) both;
+}
+
+.dashboard-view-content::after {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  content: '';
+  background: linear-gradient(90deg, transparent, rgb(244 209 0 / 0.3), transparent);
+  transform: translateX(-110%);
+  animation: dashboard-view-scan 540ms var(--ease-db) both;
+}
+
+::view-transition-old(dashboard-content) {
+  animation: dashboard-view-old 180ms ease-in both;
+}
+
+::view-transition-new(dashboard-content) {
+  animation: dashboard-view-new 420ms var(--ease-db) both;
+}
+
 .dashboard-course {
-  border-top: 4px solid var(--course-color);
+  border-top: 4px solid var(--rhine-yellow);
   background-image:
-    linear-gradient(90deg, rgb(32 33 31 / 0.025) 1px, transparent 1px),
-    linear-gradient(rgb(32 33 31 / 0.025) 1px, transparent 1px);
+    linear-gradient(90deg, rgb(11 12 13 / 0.025) 1px, transparent 1px),
+    linear-gradient(rgb(11 12 13 / 0.025) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -312,7 +421,7 @@
 }
 
 .dueboard-dashboard .hero-text {
-  background-image: linear-gradient(90deg, var(--rhine-ink), #595a55);
+  background-image: linear-gradient(90deg, var(--rhine-black), rgb(11 12 13 / 0.58));
 }
 
 .dueboard-dashboard :is(.bg-db-ink, .bg-db-accent) {
@@ -327,8 +436,8 @@
   position: relative;
   align-items: center;
   background:
-    linear-gradient(rgb(32 33 31 / 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(32 33 31 / 0.05) 1px, transparent 1px),
+    linear-gradient(rgb(11 12 13 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(11 12 13 / 0.05) 1px, transparent 1px),
     var(--rhine-paper);
   background-size: 64px 64px;
 }
@@ -336,7 +445,7 @@
 .dashboard-onboarding-panel {
   border: 1px solid var(--rhine-line);
   border-top: 7px solid var(--rhine-orange);
-  background: rgb(255 254 249 / 0.88);
+  background: rgb(225 227 225 / 0.9);
   padding: clamp(28px, 5vw, 56px);
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
 }
@@ -355,36 +464,118 @@
   }
 }
 
+@keyframes deadline-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+    filter: brightness(1.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes deadline-sweep {
+  0%, 72% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes dashboard-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    clip-path: inset(0 0 16% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes dashboard-view-scan {
+  from {
+    opacity: 0.8;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+}
+
+@keyframes dashboard-view-old {
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes dashboard-view-new {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+    clip-path: inset(0 12% 0 0);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .dueboard-dashboard {
-    --rhine-ink: #eeeae0;
-    --rhine-paper: #1d1c19;
-    --rhine-panel: rgb(31 31 31 / 0.84);
-    --rhine-line: rgb(238 234 224 / 0.15);
+    --rhine-ink: var(--rhine-silver);
+    --rhine-paper: var(--rhine-black);
+    --rhine-panel: rgb(11 12 13 / 0.86);
+    --rhine-line: rgb(199 202 200 / 0.18);
+    --color-db-bg: var(--rhine-black);
+    --color-db-surface: rgb(11 12 13);
+    --color-db-subtle: rgb(199 202 200 / 0.08);
+    --color-db-raised: rgb(11 12 13);
+    --color-db-glass: rgb(11 12 13 / 0.8);
+    --color-db-border: rgb(199 202 200 / 0.18);
+    --color-db-border-soft: rgb(199 202 200 / 0.11);
+    --color-db-track: rgb(199 202 200 / 0.08);
+    --color-db-hover: rgb(244 209 0 / 0.14);
+    --color-db-text: var(--rhine-silver);
+    --color-db-text-2: rgb(199 202 200 / 0.86);
+    --color-db-muted: rgb(199 202 200 / 0.68);
+    --color-db-faint: rgb(199 202 200 / 0.48);
+    --color-db-ink: var(--rhine-yellow);
+    --color-db-ink-hover: rgb(244 209 0 / 0.82);
+    --color-db-on-ink: var(--rhine-black);
+    --color-db-ok: var(--rhine-yellow);
+    --color-db-hero-from: var(--rhine-silver);
+    --color-db-hero-to: rgb(199 202 200 / 0.58);
+    --color-db-normal-bg: rgb(199 202 200 / 0.1);
+    --color-db-normal-fg: var(--rhine-silver);
   }
 
   .dashboard-rail,
   .dashboard-header {
-    background: rgb(29 28 25 / 0.88);
+    background: rgb(11 12 13 / 0.88);
   }
 
   .dashboard-tab[aria-selected='true'] {
-    background: #eeeae0;
-    color: #1d1c19;
+    background: var(--rhine-silver);
+    color: var(--rhine-black);
   }
 
   .dashboard-onboarding-panel {
-    background: rgb(29 28 25 / 0.9);
+    background: rgb(11 12 13 / 0.9);
   }
 
   .dueboard-dashboard::after {
     background:
-      radial-gradient(circle at 12% 18%, rgb(228 111 36 / 0.12), transparent 26%),
-      radial-gradient(circle at 85% 12%, rgb(39 113 145 / 0.14), transparent 30%),
-      radial-gradient(circle at 58% 82%, rgb(173 132 48 / 0.085), transparent 34%),
-      radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(58 139 168 / 0.095) 131px 133px, transparent 134px),
-      radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(228 111 36 / 0.085) 91px 93px, transparent 94px),
-      linear-gradient(128deg, transparent 0 42%, rgb(238 234 224 / 0.035) 42.1% 42.25%, transparent 42.35%);
+      radial-gradient(circle at 12% 18%, rgb(244 209 0 / 0.13), transparent 26%),
+      radial-gradient(circle at 85% 12%, rgb(199 202 200 / 0.08), transparent 30%),
+      radial-gradient(circle at 58% 82%, rgb(244 209 0 / 0.085), transparent 34%),
+      radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(199 202 200 / 0.09) 131px 133px, transparent 134px),
+      radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(244 209 0 / 0.085) 91px 93px, transparent 94px),
+      linear-gradient(128deg, transparent 0 42%, rgb(199 202 200 / 0.04) 42.1% 42.25%, transparent 42.35%);
   }
 }
 
@@ -462,5 +653,12 @@
 
   .dueboard-dashboard::before {
     display: none;
+  }
+
+  .next-due-banner,
+  .next-due-banner::before,
+  .dashboard-view-content,
+  .dashboard-view-content::after {
+    animation: none;
   }
 }
