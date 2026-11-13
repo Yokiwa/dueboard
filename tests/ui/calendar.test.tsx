@@ -104,13 +104,41 @@ describe('CalendarView: class meetings (issue #29)', () => {
   const lec = { id: 'brightspace:event:9', courseId: 'b:1', title: 'Lec21', startAt: '2026-11-05T09:30:00-05:00', endAt: '2026-11-05T10:20:00-05:00', url: 'https://purdue.brightspace.com/d2l/le/calendar/1' };
   const withLec = dash({ ...d, meetings: [lec] });
 
-  it('the week view shows a meeting under the day\'s work, with its time range, linking to its page', () => {
+  it('class blocks sit in the grid at their time with the course code and title, linking to their page', () => {
     renderIn('en', <CalendarView dashboard={withLec} now={NOW} />);
-    const thu = screen.getByRole('gridcell', { name: 'Nov 5' });
-    const chip = within(thu).getByText('CS 18000 · Lec21').closest('a')!;
-    expect(chip.getAttribute('href')).toBe(lec.url);
-    expect(chip.getAttribute('data-kind')).toBe('meeting');
-    expect(chip.textContent).toContain('9:30–10:20 AM');
+    const grid = screen.getByRole('row', { name: 'Classes' });
+    const block = within(grid).getByText('CS 18000 · Lec21').closest('a')!;
+    expect(block.getAttribute('href')).toBe(lec.url);
+    expect(block.getAttribute('data-kind')).toBe('meeting');
+    expect(block.getAttribute('title')).toBe('CS 18000 · Lec21 · 9:30–10:20 AM');
+    // The grid starts at 8 AM, one pixel per minute: 9:30 is 90 px down, 50 px tall.
+    expect(block.style.top).toBe('90px');
+    expect(block.style.height).toBe('50px');
+    expect(block.closest('[aria-label="Nov 5 classes"]')).toBeTruthy();
+  });
+
+  it('the week view has a Due row with every one of the day\'s work items, and no meetings in it', () => {
+    const busy = dash({ courses: [cs, ma], items: [1, 2, 3, 4, 5].map((n) => item(`w${n}`, 'b:2', `Work ${n}`, `2026-11-05T1${n}:00:00-05:00`)), meetings: [lec] });
+    renderIn('en', <CalendarView dashboard={busy} now={NOW} />);
+    const due = screen.getByRole('row', { name: 'Due' });
+    const thu = within(due).getByRole('gridcell', { name: 'Nov 5' });
+    expect(within(thu).getAllByText(/^Work \d$/)).toHaveLength(5);
+    expect(within(due).queryByText(/Lec21/)).toBeNull();
+  });
+
+  it('a week without meetings has no grid', () => {
+    renderIn('en', <CalendarView dashboard={d} now={NOW} />);
+    expect(screen.queryByRole('row', { name: 'Classes' })).toBeNull();
+    expect(screen.getByRole('row', { name: 'Due' })).toBeTruthy();
+  });
+
+  it("today's column has a current-time line when the grid covers now", () => {
+    renderIn('en', <CalendarView dashboard={withLec} now={NOW} />);
+    const today = screen.getByLabelText('Nov 4 classes');
+    const line = within(today).getByTestId('now-line');
+    // NOW is noon: 4 hours after the grid's 8 AM start.
+    expect(line.style.top).toBe('240px');
+    expect(within(screen.getByLabelText('Nov 5 classes')).queryByTestId('now-line')).toBeNull();
   });
 
   it('the month view shows no meetings', () => {
