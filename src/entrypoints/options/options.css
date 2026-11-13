@@ -16,10 +16,10 @@
 .theme-preview i:nth-child(3) { background: var(--preview-three); }
 
 .theme-preview-nightowl {
-  --preview-background: #171927;
-  --preview-one: #25283b;
-  --preview-two: #7c72d2;
-  --preview-three: #87b7c7;
+  --preview-background: #070d18;
+  --preview-one: #162236;
+  --preview-two: #55b8d0;
+  --preview-three: #1b3652;
 }
 
 .theme-preview-morning-dew {
@@ -37,14 +37,14 @@
 }
 
 .theme-preview-dusk-lullaby {
-  --preview-background: #242333;
-  --preview-one: #353349;
-  --preview-two: #8f789c;
-  --preview-three: #7694b1;
+  --preview-background: #281724;
+  --preview-one: #452c42;
+  --preview-two: #e09aa9;
+  --preview-three: #634b3f;
 }
 
 .theme-preview-automatic {
-  --preview-background: linear-gradient(90deg, #171927, #dcece7, #efe0c6, #353349);
+  --preview-background: linear-gradient(90deg, #070d18, #dcece7, #efe0c6, #452c42);
   --preview-one: transparent;
   --preview-two: transparent;
   --preview-three: transparent;
