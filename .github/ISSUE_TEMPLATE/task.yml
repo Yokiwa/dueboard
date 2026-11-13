@@ -22,6 +22,6 @@ body:
       label: 谁负责 / Owner
       options:
         - Raymond
-        - Kaiyi（bug / 逻辑）
-        - VNzia（UI）
+        - Kaiyi
+        - VNzia
         - 还没定 / TBD

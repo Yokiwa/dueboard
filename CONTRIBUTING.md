@@ -1,25 +1,27 @@
 # 团队协作规则（必读）
 
 我们出过的问题：一个人在新版本上修 bug，另一个人在旧版本上做 UI，最后两边对不上。
-下面的规则就是为了避免这个。**核心只有一句：所有人都从最新的 `main` 开始，改完用 Pull Request 合回 `main`。**
+下面的规则就是为了避免这个。**核心只有一句：不管是谁、做什么，每次都从最新的 `main` 开一个新分支，改完用 Pull Request 合回 `main`。**
 
-## 1. 谁负责什么
+## 1. 团队
 
-| 人 | GitHub | 负责 | 主要改的文件夹 |
-|---|---|---|---|
-| Raymond（项目负责人） | @Yokiwa | 决定做什么、审核并合并 PR、发版本 | 全部 |
-| Kaiyi | @ricecooker669 | 修 bug | `src/`（逻辑）、`tests/` |
-| VNzia | @VNzia | UI 设计 | `src/ui/`、`design/` |
+| 人 | GitHub |
+|---|---|
+| Raymond（项目负责人：审核并合并 PR、发版本） | @Yokiwa |
+| Kaiyi | @ricecooker669 |
+| VNzia | @VNzia |
 
-详细的文件夹说明见 [docs/team/README.md](docs/team/README.md)。
+**分工会变，流程不变。** 谁这次做什么，看 Issue 指派给了谁；任何人都可以修 bug、做 UI 或加功能，做法都一样。
+文件夹说明见 [docs/team/README.md](docs/team/README.md)。
 
 ## 2. 每次干活的流程
 
-1. **先有 Issue**：要修的 bug、要做的 UI，都先在 GitHub 的 Issues 里开一个（有模板），指派给自己。
-2. **从最新 `main` 开新分支**：
+1. **先有 Issue**：要做的事都先在 GitHub 的 Issues 里开一个（有模板），指派给这次做的人。
+2. **从最新 `main` 开新分支**。分支名的前缀看**这次做的是什么事**，不看是谁做：
    - 修 bug：`fix/简短描述`，例：`fix/pearson-login`
-   - UI：`ui/简短描述`，例：`ui/header-redesign`
+   - UI / 设计：`ui/简短描述`，例：`ui/header-redesign`
    - 新功能：`feat/简短描述`
+   - 只改文档：`docs/简短描述`
 3. **在分支上改、提交**。只改和这个 Issue 有关的东西。
 4. **开 Pull Request 到 `main`**，在描述里写 `Closes #Issue号`。UI 改动必须贴改前/改后截图。
 5. **自动检查（CI）通过 + Raymond 审核通过** 才能合并。

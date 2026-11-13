@@ -13,7 +13,7 @@ git pull --ff-only origin main
 git switch -c <type>/<short-description>
 ```
 
-- Use `fix/...` for bug fixes (e.g. `fix/pearson-login`) and `ui/...` for UI/design work (e.g. `ui/header-redesign`); `feat/...` for new features, `docs/...` for docs only.
+- Pick the prefix from **what this task is**, not from who is asking (people switch roles): `fix/...` for bug fixes (e.g. `fix/pearson-login`), `ui/...` for UI/design work (e.g. `ui/header-redesign`), `feat/...` for new features, `docs/...` for docs only. Every task gets its own new branch from the latest `main`, every time.
 - If the user's task was already started on a branch, first bring it up to date: `git fetch origin && git merge origin/main` (or rebase), resolve conflicts, then continue.
 - Never build new work on an old branch or an old copy of the files. If you cannot fetch `origin/main`, stop and tell the user.
 

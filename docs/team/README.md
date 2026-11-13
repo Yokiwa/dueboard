@@ -2,25 +2,25 @@
 
 - [CONTRIBUTING.md](../../CONTRIBUTING.md)：协作规则（先看这个）
 - [git-workflow.md](git-workflow.md)：用 GitHub Desktop 一步步操作
-- 下面：仓库里每个文件夹是干什么的、谁负责
+- 下面：仓库里每个文件夹是干什么的
 
 ## 文件夹地图
 
 ```
 dueboard/
 ├── src/                     ← 扩展的全部代码（只有这里的代码会被打包）
-│   ├── ui/                  ← 界面【VNzia 主要改这里】
+│   ├── ui/                  ← 界面（UI 改动主要在这里）
 │   │   ├── tokens.css       ← 全局颜色、字体、间距
 │   │   ├── components/      ← 小组件：Header、按钮条、横幅……
 │   │   ├── views/           ← 页面：课程卡片、日历、待办……
 │   │   ├── hooks/           ← React hooks（逻辑，改前问一下）
 │   │   └── i18n.tsx         ← 界面上的所有文字（中英文）
 │   ├── entrypoints/         ← 各个页面的入口：dashboard（主面板）、popup（工具栏弹窗）、options（设置）
-│   ├── core/                ← 核心逻辑：时间、截止日期、合并规则【Kaiyi】
-│   ├── connectors/          ← 读 Brightspace / Gradescope / Pearson 的代码【Kaiyi】
-│   ├── background/ sync/ syllabus/ capture/ storage/ diagnostics/   ← 后台同步等【Kaiyi】
+│   ├── core/                ← 核心逻辑：时间、截止日期、合并规则
+│   ├── connectors/          ← 读 Brightspace / Gradescope / Pearson 的代码
+│   ├── background/ sync/ syllabus/ capture/ storage/ diagnostics/   ← 后台同步等
 │   └── assets/              ← 图标
-├── tests/                   ← 自动测试，结构和 src/ 对应【改了 src/ 记得补测试】
+├── tests/                   ← 自动测试，结构和 src/ 对应（改了 src/ 记得补测试）
 ├── design/                  ← 设计图和还没合进代码的 UI 草稿（不会被打包）
 ├── docs/                    ← 网站页面、指南、设计决定
 │   ├── team/                ← 团队手册（就是这里）
