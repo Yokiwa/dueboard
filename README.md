@@ -2,7 +2,7 @@
 
 <h1 align="center">DueBoard</h1>
 
-<p align="center">Every assignment, deadline and course platform from Brightspace — on one page.</p>
+<p align="center">Every assignment, deadline and course platform from Brightspace — in one focused dashboard.</p>
 
 <p align="center"><img src="docs/assets/screenshot.png" width="760" alt="DueBoard course cards with a live countdown to the next deadline"></p>
 
@@ -16,13 +16,28 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 
 - **One sign-in.** You only sign in to Brightspace. DueBoard reads your courses and discovers which homework platforms they use.
 - **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
-- **Next deadline.** The nearest deadline sits on top with a live countdown, an *Open* button and a *Done* button.
-- **Calendar and to-do views.** Week and month views; a to-do list you can tick off. Submitted work is ticked automatically where the platform reports it.
+- **Next deadline.** The nearest deadline is emphasized at the top with a live countdown, an *Open* button and a *Done* button.
+- **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off. Submitted work is ticked automatically where the platform reports it.
+- **Focus timer.** A built-in Pomodoro timer supports 25-minute focus sessions and 5-minute breaks, and remembers its state while you use the dashboard.
+- **Study themes.** Switch between Nightowl, Morning Dew, Noon Cafe and Dusk Lullaby, or let Automatic choose for the time of day. Theme changes fade smoothly without interrupting your work.
+- **Focused settings flow.** Settings open in the current DueBoard tab, with a back button that returns to the dashboard.
 - **Any homework platform.** For homework that Brightspace launches on another platform, when you click Refresh DueBoard opens the link in a minimized window, reads the "Due …" line and closes it (or automatically, if you choose that in Settings). You allow each platform once.
 - **Dates in titles.** A homework titled "HW11_due_Nov 11" gets that date.
 - **Syllabus suggestions.** Dated work found in your syllabus (Simple Syllabus, or a PDF in Content), to add with one click.
 - **Automatic sync** every 30 minutes, using the sessions already in your browser.
 - **Chrome, Edge and Firefox** (and other Chromium browsers such as Brave, Arc and Opera).
+
+### Dashboard themes
+
+| Theme | Intended study time | Palette |
+|---|---|---|
+| Nightowl | 11 PM–5 AM | Low-glare violet navy for late-night work |
+| Morning Dew | 5 AM–12 PM | Fresh mist, sky and sage for an early start |
+| Noon Cafe | 12 PM–6 PM | Warm oat, coffee and apricot for afternoon study |
+| Dusk Lullaby | 6 PM–11 PM | Aubergine, rose and muted sunset tones for the evening |
+| Automatic | All day | Follows the schedule above and fades into the next theme |
+
+Use the theme button in the dashboard header to cycle through all five choices. The selected theme is saved across reloads and can also be changed from **Settings → Appearance**.
 
 ### Where due dates come from
 
