@@ -73,7 +73,7 @@ export interface RawLink {
 
 export type ConnectorFailureReason = 'not_logged_in' | 'network' | 'parse_error';
 export type ConnectorResult =
-  | { ok: true; courses: RawCourse[]; items: RawItem[]; links: RawLink[]; partial: string[] /* sourceCourseIds that failed */; syllabusSources?: SyllabusSource[] }
+  | { ok: true; courses: RawCourse[]; items: RawItem[]; links: RawLink[]; partial: string[] /* sourceCourseIds that failed */; syllabusSources?: SyllabusSource[]; meetings?: RawMeeting[] }
   | { ok: false; reason: ConnectorFailureReason; detail?: string };
 export interface Connector {
   id: SourceId;
@@ -100,6 +100,19 @@ export interface Snapshot {
   partial: string[];
   /** Brightspace only: syllabus files and launches found in course content. */
   syllabusSources?: SyllabusSource[];
+  /** Brightspace only: class meetings from the calendar (shown in the calendar, never as work). */
+  meetings?: RawMeeting[];
+}
+
+/** A class meeting as the calendar shows it. */
+export interface Meeting {
+  /** "brightspace:event:<id>" */
+  id: string;
+  courseId: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  url: string;
 }
 
 /** A syllabus DueBoard can read for one course: a file in Content, or a launch (Simple Syllabus) read by a visit. */

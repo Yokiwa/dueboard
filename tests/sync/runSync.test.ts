@@ -34,6 +34,12 @@ describe('runSync', () => {
     expect(s.syncMeta.gradescope?.lastSuccess).toBe('2026-11-04T17:00:00.000Z');
   });
 
+  it("the snapshot keeps the connector's meetings", async () => {
+    const meetings = [{ source: 'brightspace' as const, sourceId: 'event:5', sourceCourseId: '1', title: 'Lec21', startAt: '2026-11-16T14:30:00.000Z', endAt: '2026-11-16T15:20:00.000Z', url: 'u' }];
+    await runSync([connector('brightspace', { ...okResult(1), meetings } as ConnectorResult)], at);
+    expect((await loadStore()).snapshots.brightspace?.meetings).toEqual(meetings);
+  });
+
   it('failure keeps previous snapshot and records lastError', async () => {
     await saveSnapshot('gradescope', { syncedAt: 'old', courses: [], items: [], links: [], partial: [] });
     const report = await runSync([connector('gradescope', { ok: false, reason: 'not_logged_in', detail: 'redirect' })], at);

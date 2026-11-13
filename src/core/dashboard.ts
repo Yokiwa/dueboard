@@ -9,6 +9,7 @@ import type {
   Item,
   ItemType,
   ManualItem,
+  Meeting,
   RawCourse,
   RawItem,
   SourceId,
@@ -36,6 +37,8 @@ export interface Dashboard {
   items: Item[];
   links: CourseLink[];
   nextDue: Item | null;
+  /** Class meetings of visible courses, by start: for the calendar only. */
+  meetings: Meeting[];
 }
 
 const courseId = (source: SourceId, id: string) => `${source}:${id}`;
@@ -300,7 +303,14 @@ export function buildDashboard(input: DashboardInput, now: Date, opts: { include
 
   const links = buildLinks(input, courses, alias, gsUrl);
   const nextDue = items.find((i) => pending(i) && i.dueAt && dueMs(i) > now.getTime()) ?? null;
-  return { courses, items, links, nextDue };
+  const meetings: Meeting[] = [];
+  for (const m of input.snapshots.brightspace?.meetings ?? []) {
+    const cid = alias.get(courseId('brightspace', m.sourceCourseId));
+    if (!cid || !visible.has(cid)) continue;
+    meetings.push({ id: `brightspace:${m.sourceId}`, courseId: cid, title: m.title, startAt: m.startAt, endAt: m.endAt, url: m.url });
+  }
+  meetings.sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  return { courses, items, links, nextDue, meetings };
 }
 
 /** Pending (not done, not submitted) items due in the next 48 hours / next 7 days. Overdue items are not counted. */

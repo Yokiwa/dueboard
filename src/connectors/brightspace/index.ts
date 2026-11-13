@@ -1,6 +1,6 @@
 import { AuthError, getJson } from '../http';
 import { createLimiter } from '../limit';
-import type { CompletionRecord, Connector, ConnectorResult, RawItem, RawLink, SyllabusSource } from '../../core/types';
+import type { CompletionRecord, Connector, ConnectorResult, RawItem, RawLink, RawMeeting, SyllabusSource } from '../../core/types';
 import { tocSyllabusSources } from '../../syllabus/sources';
 import {
   urls,
@@ -15,7 +15,7 @@ import {
   type VersionInfo,
 } from './api';
 import { termStart } from '../../core/completion';
-import { attachGrades, folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toQuizItem, tocItems, tocLinks } from './map';
+import { attachGrades, folderDue, isCurrent, toCourse, toDropboxItem, toEventItem, toMeeting, toQuizItem, tocItems, tocLinks } from './map';
 
 const DAY = 86_400_000;
 /** Past-due folders asked "did I submit?" per sync beyond the usual window, most recently due first. */
@@ -69,6 +69,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       const links: RawLink[] = [];
       const partial: string[] = [];
       const syllabusSources: SyllabusSource[] = [];
+      const meetings: RawMeeting[] = [];
 
       const calendar = (async () => {
         if (ous.length === 0) return;
@@ -80,6 +81,9 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
             if (!ous.includes(String(ev.OrgUnitId))) continue;
             const it = toEventItem(ev, base);
             if (it) items.push(it);
+            // Class meetings go to the calendar only, never among the work.
+            const meeting = it ? null : toMeeting(ev, base);
+            if (meeting) meetings.push(meeting);
           }
         } catch {
           // Calendar is a bonus source; dropbox and quizzes already cover most deadlines.
@@ -168,7 +172,7 @@ export function createBrightspaceConnector(opts: BrightspaceOptions = {}): Conne
       await calendar;
       partial.sort();
       syllabusSources.sort((a, b) => a.ou.localeCompare(b.ou));
-      return { ok: true, courses, items, links, partial, syllabusSources };
+      return { ok: true, courses, items, links, partial, syllabusSources, meetings };
     } catch (e) {
       if (e instanceof AuthError) return { ok: false, reason: 'not_logged_in', detail: e.message };
       return { ok: false, reason: 'network', detail: String(e) };

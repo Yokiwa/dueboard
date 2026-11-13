@@ -124,7 +124,7 @@ describe('date origin in the to-do list', () => {
       dueFrom: 'platform', duePlatform: 'ALEKS', dueEvidence: "Read from ALEKS: 'Due: 11/10/2026 11:59 PM'",
     };
     const course = { id: 'brightspace:1', code: 'MA 16100', name: 'MA 16100', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
-    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
+    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null, meetings: [] }} now={now} />);
     // The To-do line shows the course only; where the date was read is its tooltip.
     const caption = screen.getByText('MA 16100');
     expect(caption.getAttribute('title')).toBe("Read from ALEKS: 'Due: 11/10/2026 11:59 PM'");
@@ -152,7 +152,7 @@ describe('date origin: title', () => {
       sources: ['brightspace'], sourceKeys: ['brightspace:topic:7'], submitted: false, doneByUser: false, dueFrom: 'title',
     };
     const course = { id: 'brightspace:7', code: 'CHM 11510', name: 'CHM 11510', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
-    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
+    render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null, meetings: [] }} now={now} />);
     expect(screen.getByText('CHM 11510').getAttribute('title')).toBe('Date from title');
     render(<ItemRow item={item} now={now} />);
     expect(screen.getByText(/^Date from title · /)).toBeTruthy();

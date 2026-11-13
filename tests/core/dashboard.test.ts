@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildDashboard, dueCounts, PALETTE, type DashboardInput } from '../../src/core/dashboard';
-import type { RawCourse, RawItem, Snapshot, UserState } from '../../src/core/types';
+import type { RawCourse, RawItem, RawMeeting, Snapshot, UserState } from '../../src/core/types';
 
 const now = new Date('2026-11-04T12:00:00-05:00');
 const iso = (s: string) => new Date(s).toISOString();
@@ -760,5 +760,36 @@ describe('buildDashboard — every overdue item of the term (1.5.0)', () => {
     });
     expect(it1).toMatchObject({ submitted: false, doneByUser: false });
     expect(it1!.notSure).toBeFalsy();
+  });
+});
+
+describe('buildDashboard — class meetings (issue #29)', () => {
+  const meeting = (id: string, ou: string, title = 'Lec21'): RawMeeting => ({
+    source: 'brightspace', sourceId: `event:${id}`, sourceCourseId: ou, title,
+    startAt: '2026-11-05T14:30:00.000Z', endAt: '2026-11-05T15:20:00.000Z', url: `https://purdue.brightspace.com/d2l/le/calendar/${ou}`,
+  });
+  const withMeetings = (meetings: RawMeeting[], items: RawItem[] = [], userState = emptyUser()) =>
+    buildDashboard(input({ snapshots: { brightspace: { ...snap([bsCourse('42', 'CS 18000', 'CS 18000'), bsCourse('43', 'MA 26100', 'MA 26100')], items), meetings } }, userState }), now);
+
+  it('meetings are in Dashboard.meetings and in no item list', () => {
+    const d = withMeetings([meeting('9', '42')]);
+    expect(d.meetings).toEqual([{ id: 'brightspace:event:9', courseId: 'brightspace:42', title: 'Lec21', startAt: '2026-11-05T14:30:00.000Z', endAt: '2026-11-05T15:20:00.000Z', url: 'https://purdue.brightspace.com/d2l/le/calendar/42' }]);
+    expect(d.items.some((i) => i.title === 'Lec21')).toBe(false);
+    expect(d.nextDue).toBeNull();
+    expect(dueCounts(d.items, now)).toEqual({ within48: 0, week: 0 });
+  });
+
+  it('meetings are sorted by start', () => {
+    const late = { ...meeting('2', '42', 'Lec22'), startAt: '2026-11-06T14:30:00.000Z', endAt: '2026-11-06T15:20:00.000Z' };
+    expect(withMeetings([late, meeting('1', '42')]).meetings.map((m) => m.title)).toEqual(['Lec21', 'Lec22']);
+  });
+
+  it('meetings of hidden courses are not in the dashboard', () => {
+    const userState = { ...emptyUser(), hidden: { 'brightspace:43': true as const } };
+    expect(withMeetings([meeting('1', '42'), meeting('2', '43', 'MA lecture')], [], userState).meetings.map((m) => m.title)).toEqual(['Lec21']);
+  });
+
+  it('a store without meetings gives an empty list', () => {
+    expect(buildDashboard(input({ snapshots: { brightspace: snap([bsCourse('42', 'CS 18000')]) } }), now).meetings).toEqual([]);
   });
 });
