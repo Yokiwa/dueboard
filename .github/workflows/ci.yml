@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 根目录不能放代码 / No code files in the repo root
+        run: |
+          stray=$(git ls-files | grep -v / | grep -E '\.(tsx?|jsx?|css)$' | grep -vE '\.config\.ts$' || true)
+          if [ -n "$stray" ]; then
+            echo "::error::这些文件在仓库根目录，不会被打包。请放进 src/ 里对应的位置（见 docs/team/README.md）："
+            echo "$stray"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: 类型检查 / Type check
+        run: npm run compile
+
+      - name: 测试 / Tests
+        run: npm test
+
+      - name: 构建 / Build
+        run: npm run build
