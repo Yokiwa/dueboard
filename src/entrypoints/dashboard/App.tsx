@@ -7,7 +7,6 @@ import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
 import { PomodoroTimer } from '../../ui/components/PomodoroTimer';
-import { MusicPlayer } from '../../ui/components/MusicPlayer';
 import { SourceBanners } from '../../ui/components/SourceBanners';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
@@ -108,7 +107,6 @@ export function App() {
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <PomodoroTimer now={now} />
         </div>
-        <MusicPlayer />
         <section aria-labelledby="dashboard-view-heading" className="dashboard-view">
           <h2 id="dashboard-view-heading" className="dashboard-view-heading">{t(VIEW_LABEL[view])}</h2>
           <div key={view} className="dashboard-view-content" data-view={view}>
