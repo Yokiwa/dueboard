@@ -335,14 +335,11 @@
   border-radius: 10px;
 }
 
+/* The next deadline spans the row; the timer has its own tab in this edition. */
 .dashboard-priority {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr);
-  gap: 14px;
-}
-
-.dashboard-priority[data-has-deadline='false'] {
   grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 .next-due-banner,

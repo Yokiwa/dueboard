@@ -1,11 +1,12 @@
-import { CalendarBlank, ListChecks, MusicNotes, SquaresFour, type Icon } from '@phosphor-icons/react';
+import { CalendarBlank, ListChecks, MusicNotes, SquaresFour, Timer, type Icon } from '@phosphor-icons/react';
 import { useT, type MessageKey } from '../i18n';
 
-export type View = 'courses' | 'calendar' | 'todo' | 'music';
+export type View = 'courses' | 'calendar' | 'todo' | 'timer' | 'music';
 const VIEWS: [View, MessageKey, Icon][] = [
   ['courses', 'tabs.courses', SquaresFour],
   ['calendar', 'tabs.calendar', CalendarBlank],
   ['todo', 'tabs.todo', ListChecks],
+  ['timer', 'tabs.timer', Timer],
   ['music', 'tabs.music', MusicNotes],
 ];
 

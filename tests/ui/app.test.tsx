@@ -45,6 +45,19 @@ describe('dashboard App', () => {
     expect(screen.getByRole('tab', { name: 'Calendar' }).getAttribute('aria-selected')).toBe('true');
   });
 
+  it('the timer has its own remembered tab under To-do, with Music below it, and is not on the main page', async () => {
+    await seed();
+    render(<App />);
+    await screen.findByRole('tab', { name: 'Timer' });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Courses', 'Calendar', 'To-do', 'Timer', 'Music']);
+    expect(screen.queryByRole('heading', { name: 'Pomodoro timer' })).toBeNull();
+    const timer = screen.getByRole('tab', { name: 'Timer' });
+    fireEvent.click(timer);
+    expect(localStorage.getItem('dueboard.view')).toBe('timer');
+    expect(timer.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('heading', { name: 'Pomodoro timer' })).toBeTruthy();
+  });
+
   it('opens the music player in its own remembered tab', async () => {
     await seed();
     render(<App />);
