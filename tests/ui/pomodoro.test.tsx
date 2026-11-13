@@ -57,4 +57,16 @@ describe('Pomodoro timer', () => {
     expect(clock()).toBe('05:00');
     expect(screen.getByRole('button', { name: 'Break' }).getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('lets the user customize and persist focus and break lengths', () => {
+    const first = render(<PomodoroTimer now={start} />);
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Focus minutes' }), { target: { value: '40' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Break minutes' }), { target: { value: '10' } });
+    expect(clock()).toBe('40:00');
+    first.unmount();
+
+    render(<PomodoroTimer now={start} compact />);
+    expect(clock()).toBe('40:00');
+    expect((screen.getByRole('spinbutton', { name: 'Break minutes' }) as HTMLInputElement).value).toBe('10');
+  });
 });

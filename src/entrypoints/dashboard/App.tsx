@@ -25,22 +25,15 @@ import { TodoView } from '../../ui/views/TodoView';
 import type { Dashboard } from '../../core/dashboard';
 import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
 import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
-import type { CompletedPlacement, DashboardTheme, StoreShape } from '../../core/types';
+import type { CompletedPlacement, StoreShape } from '../../core/types';
 import { saveSettings } from '../../storage/store';
+import { displayedTheme } from '../../core/theme';
 
 const VIEW_LABEL: Record<View, MessageKey> = {
   courses: 'tabs.courses',
   calendar: 'tabs.calendar',
   todo: 'tabs.todo',
 };
-
-export function automaticTheme(now: Date): Exclude<DashboardTheme, 'automatic'> {
-  const hour = now.getHours();
-  if (hour >= 5 && hour < 12) return 'morning-dew';
-  if (hour >= 12 && hour < 18) return 'noon-cafe';
-  if (hour >= 18 && hour < 23) return 'dusk-lullaby';
-  return 'nightowl';
-}
 
 /** Oldest successful sync across platforms that have synced at least once. */
 export function lastSynced(store: StoreShape): string | null {
@@ -65,23 +58,23 @@ export function App() {
   const granted = useGranted();
   const progress = useVisitProgress();
   const selectedTheme = store?.settings.theme ?? 'automatic';
-  const displayedTheme = selectedTheme === 'automatic' ? automaticTheme(now) : selectedTheme;
+  const activeTheme = displayedTheme(selectedTheme, now);
   useEffect(() => {
     const applyTheme = () => {
-      document.body.dataset.theme = displayedTheme;
+      document.body.dataset.theme = activeTheme;
       document.body.dataset.themeMode = selectedTheme;
     };
     const transitionDocument = document as Document & {
       startViewTransition?: (update: () => void) => { finished: Promise<unknown> };
     };
-    if (document.body.dataset.theme && document.body.dataset.theme !== displayedTheme && transitionDocument.startViewTransition) {
+    if (document.body.dataset.theme && document.body.dataset.theme !== activeTheme && transitionDocument.startViewTransition) {
       document.documentElement.classList.add('theme-transitioning');
       const transition = transitionDocument.startViewTransition(applyTheme);
       void transition.finished.finally(() => document.documentElement.classList.remove('theme-transitioning'));
     } else {
       applyTheme();
     }
-  }, [displayedTheme, selectedTheme]);
+  }, [activeTheme, selectedTheme]);
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
     return <Onboarding />;

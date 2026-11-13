@@ -5,12 +5,15 @@ import { browser } from 'wxt/browser';
 
 vi.mock('../../src/ui/messaging', () => ({ sendToBackground: vi.fn(async () => null) }));
 import { PopupApp } from '../../src/entrypoints/popup/App';
-import { patchStore, saveSnapshot } from '../../src/storage/store';
+import { patchStore, saveSettings, saveSnapshot } from '../../src/storage/store';
 
 const inHours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
 
 describe('popup', () => {
-  beforeEach(() => fakeBrowser.reset());
+  beforeEach(() => {
+    fakeBrowser.reset();
+    localStorage.clear();
+  });
 
   it('shows next due banner, 5 nearest items, Open full dashboard button', async () => {
     await saveSnapshot('brightspace', {
@@ -35,6 +38,13 @@ describe('popup', () => {
     render(<PopupApp />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open full dashboard' })).toBeTruthy());
     expect(screen.getByText('Nothing to do. Enjoy the break.')).toBeTruthy();
+  });
+
+  it('uses the saved dashboard theme and includes the shared timer', async () => {
+    await saveSettings({ theme: 'noon-cafe' });
+    render(<PopupApp />);
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00'));
+    expect(document.body.dataset.theme).toBe('noon-cafe');
   });
 });
 
