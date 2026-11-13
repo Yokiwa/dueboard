@@ -2,7 +2,6 @@ import { createFrameHost } from '../../visits/frame/host';
 import { isReaderMessage, type FrameVisitRequest } from '../../visits/frame/protocol';
 import { handleOffscreenMessage } from '../../sync/offscreenParser';
 import { handleOffscreenSyllabus } from '../../sync/syllabusLines';
-import { handleMusicControl, type MusicAction } from '../../music/player';
 
 const host = createFrameHost(document);
 window.addEventListener('message', (e) => host.onPost(e));
@@ -17,10 +16,6 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     host.reset();
     sendResponse(true);
     return undefined;
-  }
-  if (m && m.target === 'offscreen' && m.kind === 'musicControl') {
-    void handleMusicControl(m as unknown as MusicAction).then(sendResponse);
-    return true;
   }
   if (isReaderMessage(msg)) {
     sendResponse(host.onMessage(msg));

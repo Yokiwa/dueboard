@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { View } from '../components/ViewTabs';
 
 const KEY = 'dueboard.view';
-const VIEWS: View[] = ['courses', 'calendar', 'todo', 'music'];
+const VIEWS: View[] = ['courses', 'calendar', 'todo'];
 
 /** Current dashboard view, remembered per browser (best effort: storage may be unavailable). */
 export function useView(): [View, (v: View) => void] {

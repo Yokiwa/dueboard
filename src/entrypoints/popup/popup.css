@@ -14,12 +14,3 @@
 .dueboard-popup .next-due-banner {
   min-height: 0;
 }
-
-.dueboard-popup .music-player-compact {
-  border-radius: 18px !important;
-  padding: 14px !important;
-}
-
-.dueboard-popup .music-player-compact .title-3 {
-  font-size: 0.95rem;
-}

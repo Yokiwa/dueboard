@@ -39,9 +39,9 @@ All must pass. For a bug fix, add or update a test in `tests/`. For UI work, als
 
 - Push the branch: `git push -u origin <branch>`.
 - Open a pull request into `main` using `.github/pull_request_template.md` (include `Closes #<issue>` and, for UI, before/after screenshots). If you cannot open the PR yourself, tell the user the branch name and ask them to open it on GitHub.
-- No approval is needed for changes in `src/`, `tests/`, `design/` or `docs/`: once CI is green the PR can be merged by its author. Enable auto-merge on the PR if you can (`gh pr merge --auto --merge`, or the GitHub API); otherwise tell the user to click **Enable auto-merge** or merge it when CI passes. If GitHub says the branch is out of date with `main`, update it (`git merge origin/main`, push) and let CI run again.
+- **Every PR needs the maintainer's (@Yokiwa) approval, and only the maintainer merges into `main`.** Do not merge a PR yourself and do not enable auto-merge, even when CI is green. Tell the user the PR is waiting for the maintainer's review. If GitHub says the branch is out of date with `main`, update it (`git merge origin/main`, push) and let CI run again.
 - Do not merge a PR whose CI failed: fix the cause first. Never weaken, skip or delete tests or CI to get green.
-- PRs touching `.github/`, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `package.json`, `package-lock.json` or `CHANGELOG.md` need the maintainer's approval (see `.github/CODEOWNERS`). Avoid touching them unless the task requires it, and say so in the PR.
+- Avoid touching `.github/`, `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `package.json`, `package-lock.json` or `CHANGELOG.md` unless the task requires it, and say so in the PR.
 - At the end, tell the user: the branch name, that it was based on the latest `main`, and the result of `npm run compile` and `npm test`.
 
 ## 5. Building a package (zip) for someone to try

@@ -26,7 +26,6 @@ import { createFrameApi, getBackgroundFrameHost } from '../visits/frame/api';
 import { isOwnPageSender } from '../visits/frame/probe';
 import { beginLogin, beginLoginNewTab, onTabUpdated } from '../background/login';
 import type { FrameVisitRequest } from '../visits/frame/protocol';
-import { controlMusic, parseMusicAction } from '../background/music';
 
 const ALARM = 'dueboard-sync';
 
@@ -191,11 +190,6 @@ export default defineBackground({
       const c = acceptCapture(msg, sender?.url, new Date(), { fromVisit: isVisitTab(sender?.tab?.id) });
       if (c) await saveCaptured([c]);
       return Boolean(c);
-    },
-    musicControl: async (msg, sender) => {
-      if (!isOwnPageSender(sender, browser.runtime.getURL(''))) return false;
-      const action = parseMusicAction(msg);
-      return action ? controlMusic(action) : false;
     },
   });
 

@@ -6,7 +6,6 @@ import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
-import { MusicPlayer } from '../../ui/components/MusicPlayer';
 import { SourceBanners } from '../../ui/components/SourceBanners';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
@@ -33,7 +32,6 @@ const VIEW_LABEL: Record<View, MessageKey> = {
   courses: 'tabs.courses',
   calendar: 'tabs.calendar',
   todo: 'tabs.todo',
-  music: 'tabs.music',
 };
 
 /** Oldest successful sync across platforms that have synced at least once. */
@@ -46,7 +44,6 @@ export function lastSynced(store: StoreShape): string | null {
 }
 
 function ViewBody({ view, dashboard, now, syllabus, completed }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView; completed: CompletedPlacement }) {
-  if (view === 'music') return <MusicPlayer />;
   if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} completed={completed} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
   return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;

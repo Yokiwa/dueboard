@@ -18,7 +18,7 @@ Download: https://desktop.github.com and sign in with your GitHub account.
 1. GitHub Desktop lists the changed files on the left. Write a one-line summary below them (e.g. `ui: new Header style`) and click **Commit**.
 2. Click **Publish branch** (later it says **Push origin**).
 3. Click **Create Pull Request**, fill in the template in the browser (screenshots for UI changes) and submit.
-4. On the PR page, click **Enable auto-merge**. When CI turns green ✅, GitHub merges it into `main` by itself. If CI is red, fix it: keep committing and pushing on the same branch; the PR updates itself. (Only PRs that touch the rule, CI or version files wait for Raymond's approval — see [CONTRIBUTING.md](../../CONTRIBUTING.md).)
+4. Wait for Raymond to review and merge it — don't merge it yourself or enable auto-merge. If CI is red, fix it: keep committing and pushing on the same branch; the PR updates itself. (See [CONTRIBUTING.md](../../CONTRIBUTING.md).)
 5. If the PR says the branch is out of date, click **Update branch**.
 
 ## You worked for a long time and `main` has moved on
