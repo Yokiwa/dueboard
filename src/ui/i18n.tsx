@@ -82,6 +82,8 @@ const messages = {
   'cal.prevMonth': 'Previous month',
   'cal.nextMonth': 'Next month',
   'cal.mode': 'Calendar range',
+  'cal.noCourse': 'No course',
+  'cal.more': (v: Vars) => `+${v.n} more`,
   'todo.overdue': 'Overdue',
   'todo.today': 'Today',
   'todo.week': 'This week',
