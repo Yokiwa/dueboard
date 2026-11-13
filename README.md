@@ -4,7 +4,12 @@
 
 <p align="center">Every assignment, deadline and course platform from Brightspace — in one focused dashboard.</p>
 
-<p align="center"><img src="docs/assets/screenshot.png" width="760" alt="DueBoard course cards with a live countdown to the next deadline"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dashboard-nightowl.png">
+    <img src="docs/assets/dashboard-morning-dew.png" width="760" alt="The DueBoard dashboard: the next deadline with a live countdown, the focus timer and course cards">
+  </picture>
+</p>
 
 > DueBoard is a student-built, open-source project and is **not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson, Wiley or any other platform it reads**.
 
