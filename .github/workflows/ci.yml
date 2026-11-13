@@ -11,11 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 根目录不能放代码 / No code files in the repo root
+      - name: No code files in the repo root
         run: |
           stray=$(git ls-files | grep -v / | grep -E '\.(tsx?|jsx?|css)$' | grep -vE '\.config\.ts$' || true)
           if [ -n "$stray" ]; then
-            echo "::error::这些文件在仓库根目录，不会被打包。请放进 src/ 里对应的位置（见 docs/team/README.md）："
+            echo "::error::These files are in the repository root and are not built. Move them to the matching place in src/ (see docs/team/README.md):"
             echo "$stray"
             exit 1
           fi
@@ -27,11 +27,11 @@ jobs:
 
       - run: npm ci
 
-      - name: 类型检查 / Type check
+      - name: Type check
         run: npm run compile
 
-      - name: 测试 / Tests
+      - name: Tests
         run: npm test
 
-      - name: 构建 / Build
+      - name: Build
         run: npm run build

@@ -1,33 +1,33 @@
 name: 🐞 Bug
-description: 有东西出错了 / Something is broken
+description: Something is broken
 labels: [bug]
 body:
   - type: textarea
     id: what
     attributes:
-      label: 发生了什么 / What happened
-      description: 哪个页面、哪门课、哪个平台（Brightspace / Gradescope / Pearson …）
+      label: What happened
+      description: Which page, which course, which platform (Brightspace / Gradescope / Pearson …)
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: 怎么重现 / Steps to reproduce
+      label: Steps to reproduce
       placeholder: |
-        1. 打开 …
-        2. 点 …
-        3. 看到 …
+        1. Open …
+        2. Click …
+        3. See …
   - type: textarea
     id: expected
     attributes:
-      label: 应该是什么样 / Expected
+      label: Expected
   - type: input
     id: version
     attributes:
-      label: 版本 / Version
-      description: 设置页底部或 chrome://extensions 里能看到，例 1.5.0
+      label: Version
+      description: Shown at the bottom of Settings or in chrome://extensions, e.g. 1.5.0
   - type: textarea
     id: extra
     attributes:
-      label: 截图或日志 / Screenshots or logs
-      description: 可以附上诊断页导出的日志（会自动去掉个人信息）
+      label: Screenshots or logs
+      description: You can attach the log exported from the diagnostics page (personal details are removed automatically)
