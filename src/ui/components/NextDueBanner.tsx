@@ -20,7 +20,7 @@ export function NextDueBanner({ item, course, now }: NextDueBannerProps) {
   return (
     <section
       aria-label={t('banner.label')}
-      className="db-rise flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-db-banner-border bg-db-banner-bg p-6 shadow-sm"
+      className="next-due-banner db-rise flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-db-banner-border bg-db-banner-bg p-6 shadow-sm"
     >
       <div className="flex min-w-0 flex-col gap-2">
         <span className="flex items-center gap-2 caption-3 tracking-wide text-db-banner-label">

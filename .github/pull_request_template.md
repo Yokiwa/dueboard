@@ -1,25 +1,25 @@
-## 这个 PR 做了什么 / What this changes
+## What this changes
 
-<!-- 一两句话 -->
+<!-- One or two sentences -->
 
 Closes #
 
-## 类型 / Type
+## Type
 
-- [ ] 修 bug（fix）
-- [ ] UI / 设计（ui）
-- [ ] 新功能（feat）
-- [ ] 文档 / 其他
+- [ ] Bug fix (`fix/`)
+- [ ] UI / design (`ui/`)
+- [ ] New feature (`feat/`)
+- [ ] Docs / other (`docs/`)
 
-## 截图（UI 改动必填）/ Screenshots
+## Screenshots (required for UI changes)
 
-| 改前 Before | 改后 After |
+| Before | After |
 |---|---|
 |  |  |
 
-## 检查 / Checklist
+## Checklist
 
-- [ ] 我的分支是从**最新的 `main`** 开的（或已经 *Update from main*）
-- [ ] 只改了 `src/`、`tests/`、`design/`、`docs/` 里和这个 Issue 有关的文件，没往根目录放代码
-- [ ] 本地跑过 `npm run compile && npm test`，都通过
-- [ ] UI 改动在 `npm run dev` 里亲眼看过，界面文字放在 `src/ui/i18n.tsx`
+- [ ] My branch was created from the **latest `main`** (or I ran *Update from main*)
+- [ ] I only changed files in `src/`, `tests/`, `design/` or `docs/` related to this issue, and put no code in the repository root
+- [ ] `npm run compile && npm test` pass locally
+- [ ] For UI changes: I checked it in `npm run dev`, and interface text is in `src/ui/i18n.tsx`

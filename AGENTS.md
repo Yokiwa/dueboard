@@ -1,6 +1,6 @@
 # Instructions for AI coding agents (Codex, Claude Code, etc.)
 
-> 给 AI 编程助手（Codex 等）的规则。每次在这个仓库干活都必须遵守。人类请看 [CONTRIBUTING.md](CONTRIBUTING.md)。
+> Rules for AI coding assistants. Follow them every time you work in this repository. Humans: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 This repository is worked on by several people at once. `main` is the only source of truth for the current version. Follow these rules on **every** task, without being reminded.
 

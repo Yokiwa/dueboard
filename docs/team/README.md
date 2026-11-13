@@ -1,53 +1,53 @@
-# 团队手册
+# Team handbook
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md)：协作规则（先看这个）
-- [git-workflow.md](git-workflow.md)：用 GitHub Desktop 一步步操作
-- 下面：仓库里每个文件夹是干什么的
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): how we work together (read this first)
+- [git-workflow.md](git-workflow.md): step by step in GitHub Desktop
+- Below: what each folder in the repository is for
 
-## 文件夹地图
+## Folder map
 
 ```
 dueboard/
-├── src/                     ← 扩展的全部代码（只有这里的代码会被打包）
-│   ├── ui/                  ← 界面（UI 改动主要在这里）
-│   │   ├── tokens.css       ← 全局颜色、字体、间距
-│   │   ├── components/      ← 小组件：Header、按钮条、横幅……
-│   │   ├── views/           ← 页面：课程卡片、日历、待办……
-│   │   ├── hooks/           ← React hooks（逻辑，改前问一下）
-│   │   └── i18n.tsx         ← 界面上的所有文字（中英文）
-│   ├── entrypoints/         ← 各个页面的入口：dashboard（主面板）、popup（工具栏弹窗）、options（设置）
-│   ├── core/                ← 核心逻辑：时间、截止日期、合并规则
-│   ├── connectors/          ← 读 Brightspace / Gradescope / Pearson 的代码
-│   ├── background/ sync/ syllabus/ capture/ storage/ diagnostics/   ← 后台同步等
-│   └── assets/              ← 图标
-├── tests/                   ← 自动测试，结构和 src/ 对应（改了 src/ 记得补测试）
-├── design/                  ← 设计图和还没合进代码的 UI 草稿（不会被打包）
-├── docs/                    ← 网站页面、指南、设计决定
-│   ├── team/                ← 团队手册（就是这里）
-│   ├── guide/               ← 安装、发布等操作指南
-│   └── superpowers/         ← 功能的设计文档和实现计划
-├── store/                   ← Chrome / Firefox 商店的介绍文字和截图
-├── scripts/                 ← 端到端测试脚本
-├── .github/                 ← Issue/PR 模板、自动检查（CI）、代码负责人
-└── CHANGELOG.md             ← 每个版本改了什么
+├── src/                     ← all extension code (only code here is built)
+│   ├── ui/                  ← interface (most UI changes happen here)
+│   │   ├── tokens.css       ← global colors, fonts, spacing
+│   │   ├── components/      ← small pieces: Header, buttons, banners…
+│   │   ├── views/           ← screens: course cards, calendar, to-do…
+│   │   ├── hooks/           ← React hooks (logic; ask before changing)
+│   │   └── i18n.tsx         ← every piece of text shown in the interface
+│   ├── entrypoints/         ← page entry points: dashboard, popup (toolbar), options (settings)
+│   ├── core/                ← core logic: time, due dates, merge rules
+│   ├── connectors/          ← code that reads Brightspace / Gradescope / Pearson
+│   ├── background/ sync/ syllabus/ capture/ storage/ diagnostics/   ← background sync and more
+│   └── assets/              ← icons
+├── tests/                   ← automated tests, same layout as src/ (add tests when you change src/)
+├── design/                  ← mockups and UI drafts not yet in the code (not built)
+├── docs/                    ← website pages, guides, design decisions
+│   ├── team/                ← team handbook (this folder)
+│   ├── guide/               ← install, publishing and other how-tos
+│   └── superpowers/         ← feature design documents and implementation plans
+├── store/                   ← Chrome / Firefox store listings and screenshots
+├── scripts/                 ← end-to-end test scripts
+├── .github/                 ← issue/PR templates, CI, code owners
+└── CHANGELOG.md             ← what changed in each version
 ```
 
-根目录只放配置文件（`package.json`、`wxt.config.ts` 等）和说明文档，**不要放代码**。
+The root holds only configuration files (`package.json`, `wxt.config.ts`, …) and documentation. **No code in the root.**
 
-## 版本
+## Versions
 
-- 版本号在 `package.json` 的 `version`，改动记在 `CHANGELOG.md`。
-- 只有 Raymond 改版本号和发布。别人在 PR 里写清楚改了什么，发布时汇总。
-- 想看"现在最新的是哪个版本"：永远以 `main` 分支为准。
+- The version number is `version` in `package.json`; changes are recorded in `CHANGELOG.md`.
+- Only Raymond changes the version and makes releases. Everyone else describes their change in the PR, and it is collected at release time.
+- "Which version is current?" — always `main`.
 
-## Issue 标签（建议在 GitHub 上建好）
+## Issue labels (suggested; create them on GitHub)
 
-| 标签 | 意思 |
+| Label | Meaning |
 |---|---|
-| `bug` | 出错了 |
-| `ui` | 界面/设计 |
-| `feature` | 新功能 |
-| `needs-review` | 等 Raymond 看 |
-| `blocked` | 卡住了，需要别人 |
+| `bug` | Something is broken |
+| `ui` | Interface / design |
+| `feature` | New feature |
+| `needs-review` | Waiting for Raymond |
+| `blocked` | Stuck, needs someone else |
 
-可以在仓库的 **Projects** 里建一个看板（To do / In progress / In review / Done），把 Issue 拖来拖去，谁在干什么一眼就知道。
+You can add a board under the repository's **Projects** (To do / In progress / In review / Done) and drag issues across it, so everyone sees who is working on what.
