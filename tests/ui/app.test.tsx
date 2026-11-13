@@ -32,6 +32,7 @@ describe('dashboard App', () => {
     await waitFor(() => expect(screen.getByText('CS 18000 · Project 3')).toBeTruthy());
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('1 due this week');
     expect(screen.getByRole('tab', { name: 'Courses' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Music' })).toBeTruthy();
     expect(screen.getByText('1 due in 48 h')).toBeTruthy();
   });
 
@@ -42,6 +43,16 @@ describe('dashboard App', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }));
     expect(localStorage.getItem('dueboard.view')).toBe('calendar');
     expect(screen.getByRole('tab', { name: 'Calendar' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('opens the music player in its own remembered tab', async () => {
+    await seed();
+    render(<App />);
+    const music = await screen.findByRole('tab', { name: 'Music' });
+    fireEvent.click(music);
+    expect(localStorage.getItem('dueboard.view')).toBe('music');
+    expect(music.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('heading', { name: 'Focus sounds' })).toBeTruthy();
   });
 
   it('onboarding has one Log in button; signed in starts the sync', async () => {

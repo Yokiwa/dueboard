@@ -27,6 +27,7 @@ import { isOwnPageSender } from '../visits/frame/probe';
 import { beginLogin, beginLoginNewTab, onTabUpdated } from '../background/login';
 import type { FrameVisitRequest } from '../visits/frame/protocol';
 import { POMODORO_ALARM, playPomodoroCompletion, setPomodoroAlarm } from '../background/pomodoro';
+import { controlMusic, parseMusicAction } from '../background/music';
 
 const ALARM = 'dueboard-sync';
 
@@ -198,6 +199,11 @@ export default defineBackground({
       const endsAt = typeof msg.endsAt === 'number' && Number.isFinite(msg.endsAt) ? msg.endsAt : null;
       await setPomodoroAlarm(endsAt);
       return true;
+    },
+    musicControl: async (msg, sender) => {
+      if (!isOwnPageSender(sender, browser.runtime.getURL(''))) return false;
+      const action = parseMusicAction(msg);
+      return action ? controlMusic(action) : false;
     },
   });
 
