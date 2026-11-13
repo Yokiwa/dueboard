@@ -1,3 +1,11 @@
-# Every PR automatically asks the maintainer for review.
-# Team roles change, so folders are not assigned to people here; who does what follows the issue's assignee.
-*  @Yokiwa
+# Files that need the maintainer's approval before merging
+# (enforced when "Require review from Code Owners" is on for main).
+# Everything else (src/, tests/, design/, docs/) can be merged by its author once CI passes.
+
+/.github/            @Yokiwa
+/AGENTS.md           @Yokiwa
+/CLAUDE.md           @Yokiwa
+/CONTRIBUTING.md     @Yokiwa
+/package.json        @Yokiwa
+/package-lock.json   @Yokiwa
+/CHANGELOG.md        @Yokiwa

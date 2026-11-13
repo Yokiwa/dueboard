@@ -47,7 +47,7 @@ The root holds only configuration files (`package.json`, `wxt.config.ts`, …) a
 | `bug` | Something is broken |
 | `ui` | Interface / design |
 | `feature` | New feature |
-| `needs-review` | Waiting for Raymond |
+| `needs-review` | Author wants someone to look before merging |
 | `blocked` | Stuck, needs someone else |
 
 You can add a board under the repository's **Projects** (To do / In progress / In review / Done) and drag issues across it, so everyone sees who is working on what.
