@@ -1,6 +1,6 @@
 import { extractCourseCode, normalizeTitle } from '../../core/courseCode';
 import { formatPoints } from '../../core/scoreText';
-import type { RawCourse, RawItem, RawLink, Score } from '../../core/types';
+import type { RawCourse, RawItem, RawLink, RawMeeting, Score } from '../../core/types';
 import type { CalendarEvent, DropboxFolder, Enrollment, GradeValue, Quiz, Toc, TocModule } from './api';
 
 const DAY = 86_400_000;
@@ -64,8 +64,18 @@ export function toQuizItem(q: Quiz, ou: string, base: string): RawItem {
 // Whole words only: "lab" must not match "Syllabus"/"Collaborate", "exam" must not match "Example".
 const DEADLINE_WORDS = /\b(due|hw\d*|homework|assignment|quiz|exam|midterm|final|project|essay|report|paper|webassign|connect|mastering|mylab|zybooks?)\b/i;
 const EXAM_WORDS = /\b(exam|midterm|final)\b/i;
-/** Plain events that are class meetings or days off, never work, whatever their description says. */
-const MEETING_WORDS = /\b(lectures?|office hours?|recitations?|collaborate|sections?|breaks?|holidays?|no class)\b/i;
+/** Titles that name a class meeting ("Lecture", "Lec21", "LEC 22", "Lect. 3", "Recitation", "Office hours"…). */
+const MEETING_WORDS =
+  /\b(lectures?|lect?|recitations?|office\s*hours?|class\s+(?:meeting|session)s?|discussion\s+sections?|seminars?|collaborate|sections?)\b|\blect?\.?\s*\d+/i;
+/** Days without class: neither work nor a meeting. */
+const DAYS_OFF = /\b(breaks?|holidays?|no\s+class(?:es)?)\b/i;
+/** Work named next to a meeting word ("Lecture 5 Quiz"): the title is about the work. */
+const WORK_WORDS = /\b(due|hw\d*|homework|assignments?|quiz(?:zes)?|projects?|essays?|reports?|papers?)\b/i;
+/** An exam held in a class slot ("Lecture: Midterm Exam") is still an exam; "final" alone ("Final Review") is not. */
+const EXAM_IN_CLASS = /\b(exams?|midterms?)\b/i;
+const MIN = 60_000;
+/** A meeting posted with a start only lasts a usual class period. */
+const DEFAULT_MEETING_MS = 50 * MIN;
 /**
  * Description wording that assigns work: a reading ("pg. 121-139", "Chapters 1-3", "Reading Questions") or something
  * to write and hand in. Humanities courses often post each reading as an event titled only after the text.
@@ -96,7 +106,7 @@ function eventUrl(ev: CalendarEvent, ou: string, base: string): string {
 
 /** A plain (unlinked) event's description, without HTML tags, asks for work. */
 function describesWork(ev: CalendarEvent): boolean {
-  if (MEETING_WORDS.test(ev.Title)) return false;
+  if (MEETING_WORDS.test(ev.Title) || DAYS_OFF.test(ev.Title)) return false;
   const text = (ev.Description ?? '').replace(/<[^>]*>/g, ' ');
   return WORK_DESCRIPTION.test(text);
 }
@@ -106,9 +116,41 @@ function describesWork(ev: CalendarEvent): boolean {
  * quiz are skipped (we already read those), and plain events need a deadline-like word in the title,
  * or a description that assigns a reading or writing (class meetings and days off excepted).
  */
+/** How long a timed event lasts, or null when it has no length (a deadline posted at one instant, no end). */
+function lengthMs(ev: CalendarEvent): number | null {
+  if (!ev.StartDateTime || !ev.EndDateTime) return null;
+  const ms = Date.parse(ev.EndDateTime) - Date.parse(ev.StartDateTime);
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+/**
+ * Work (shown as a deadline), a class meeting (shown in the calendar only) or nothing. Events linked to an assignment
+ * or quiz are dropped (read from their own source); other linked events are work. A title naming a meeting is a
+ * meeting unless it also names work or an exam; a timed event of class length with no deadline word is a meeting too.
+ */
+export function classifyEvent(ev: CalendarEvent): 'work' | 'meeting' | 'drop' {
+  if (ev.AssociatedEntity) return DUPLICATE_ENTITY.test(ev.AssociatedEntity.AssociatedEntityType) ? 'drop' : 'work';
+  const title = ev.Title;
+  if (DAYS_OFF.test(title)) return 'drop';
+  if (MEETING_WORDS.test(title)) {
+    if (WORK_WORDS.test(title) || EXAM_IN_CLASS.test(title)) return 'work';
+    return ev.IsAllDayEvent || !ev.StartDateTime ? 'drop' : 'meeting';
+  }
+  const ms = ev.IsAllDayEvent ? null : lengthMs(ev);
+  if (ms !== null && ms >= 20 * MIN && ms <= 4 * 60 * MIN && !DEADLINE_WORDS.test(title)) return 'meeting';
+  return DEADLINE_WORDS.test(title) || describesWork(ev) ? 'work' : 'drop';
+}
+
+/** A class meeting for the calendar, or null when the event is not one. */
+export function toMeeting(ev: CalendarEvent, base: string): RawMeeting | null {
+  if (classifyEvent(ev) !== 'meeting' || !ev.StartDateTime) return null;
+  const ou = String(ev.OrgUnitId);
+  const endAt = lengthMs(ev) !== null ? ev.EndDateTime! : new Date(Date.parse(ev.StartDateTime) + DEFAULT_MEETING_MS).toISOString();
+  return { source: 'brightspace', sourceId: `event:${ev.CalendarEventId}`, sourceCourseId: ou, title: ev.Title, startAt: ev.StartDateTime, endAt, url: eventUrl(ev, ou, base) };
+}
+
 export function toEventItem(ev: CalendarEvent, base: string): RawItem | null {
-  if (ev.AssociatedEntity && DUPLICATE_ENTITY.test(ev.AssociatedEntity.AssociatedEntityType)) return null;
-  if (!ev.AssociatedEntity && !DEADLINE_WORDS.test(ev.Title) && !describesWork(ev)) return null;
+  if (classifyEvent(ev) !== 'work') return null;
   const ou = String(ev.OrgUnitId);
   return {
     source: 'brightspace',

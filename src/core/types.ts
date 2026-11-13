@@ -80,6 +80,18 @@ export interface Connector {
   fetchAll(): Promise<ConnectorResult>;
 }
 
+/** A class meeting posted in the Brightspace calendar (a lecture, a recitation): shown in the calendar only, never as work. */
+export interface RawMeeting {
+  source: 'brightspace';
+  /** "event:<CalendarEventId>" */
+  sourceId: string;
+  sourceCourseId: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  url: string;
+}
+
 export interface Snapshot {
   syncedAt: string;
   courses: RawCourse[];
