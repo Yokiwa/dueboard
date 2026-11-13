@@ -121,6 +121,7 @@ function createMocks({ scenario = 'default' } = {}) {
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
     completion: false, // past-due work handed in or not, scores, pages that say so (1.5.0)
+    meetings: false, // a lecture posted in the course calendar (issue #29)
   };
 
   function brightspace(u) {
@@ -176,6 +177,13 @@ function createMocks({ scenario = 'default' } = {}) {
     if (u.startsWith(`${LE}/102/content/toc`)) return json(toc);
     if (u.includes('/dropbox/folders/')) return json([]);
     if (u.includes('/quizzes/')) return json({ Objects: [], Next: null });
+    // Issue #29: a class meeting posted in the calendar, its reading in the description. Today 9:30–10:20, local time.
+    if (background && state.meetings && u.includes('myEvents')) {
+      const start = new Date();
+      start.setHours(9, 30, 0, 0);
+      const end = new Date(start.getTime() + 50 * 60_000);
+      return json({ Objects: [{ CalendarEventId: 901, OrgUnitId: 103, Title: 'Lec21', Description: 'Read Ch. 5 before class', StartDateTime: start.toISOString(), EndDateTime: end.toISOString(), IsAllDayEvent: false, AssociatedEntity: null }], Next: null });
+    }
     if (u.includes('myEvents')) return json({ Objects: [], Next: null });
     if (u.includes('/content/enforced/102-MA/syllabus.pdf')) return { status: 200, headers: { 'content-type': 'application/pdf' }, body: syllabusPdf() };
     // Like Purdue's real launch pages, this one hands off in a way DueBoard can't read ahead of time.

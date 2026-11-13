@@ -247,6 +247,25 @@ const brief = (r) => JSON.stringify({ status: r?.status, host: r?.host, landed: 
       mocks.state.gradescopeSignedIn = false;
       mocks.state.pearson = false;
 
+      console.log('e2e frames: a lecture in the course calendar stays out of the work lists (issue #29)');
+      mocks.state.meetings = true;
+      const lastSync = (await local('syncMeta')).syncMeta?.brightspace?.lastSuccess;
+      await page.evaluate(() => chrome.runtime.sendMessage({ type: 'sync', trigger: 'auto' }));
+      await settle(async () => (await local('syncMeta')).syncMeta?.brightspace?.lastSuccess !== lastSync, 'the sync with a lecture in the calendar');
+      const snap = (await local('snapshots')).snapshots?.brightspace;
+      check((snap?.meetings ?? []).some((m) => m.title === 'Lec21') && !(snap?.items ?? []).some((i) => i.title === 'Lec21'), 'Lec21 is kept as a class meeting, not as work');
+      await page.reload();
+      await page.getByRole('heading', { level: 1 }).waitFor();
+      check((await page.getByText('Lec21').count()) === 0, 'Lec21 is not on the course cards');
+      await page.getByRole('tab', { name: 'To-do' }).click();
+      await page.getByRole('button', { name: /Add assignment/ }).waitFor();
+      check((await page.getByText('Lec21').count()) === 0, 'Lec21 is not in To-do');
+      await page.getByRole('tab', { name: 'Calendar' }).click();
+      const lecChip = page.locator('a[data-kind="meeting"]').filter({ hasText: 'Lec21' });
+      await lecChip.first().waitFor({ timeout: 10000 });
+      check((await lecChip.count()) === 1 && /9:30–10:20 AM/.test((await lecChip.textContent()) ?? ''), `Lec21 is in the calendar's week view (${await lecChip.textContent()})`);
+      mocks.state.meetings = false;
+
       console.log('e2e frames: first run while signed out');
       await page.evaluate(async () => {
         await chrome.storage.local.clear();
