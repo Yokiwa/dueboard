@@ -122,4 +122,15 @@ describe('class meetings vs work (issue #29)', () => {
     expect(classifyEvent(e)).toBe('drop');
     expect(toMeeting(e, B)).toBeNull();
   });
+
+  it('a lecture linked to a content page (its slides) is a meeting too; linked work stays work', () => {
+    const content = { AssociatedEntityType: 'D2L.LE.Content.ContentObject', AssociatedEntityId: 12, Link: 'https://purdue.brightspace.com/d2l/le/content/2/viewContent/12/View' };
+    const lec = timed('Lec21', S, E, { AssociatedEntity: content });
+    expect(classifyEvent(lec)).toBe('meeting');
+    expect(toEventItem(lec, B)).toBeNull();
+    expect(toMeeting(lec, B)?.url).toBe(content.Link);
+    expect(classifyEvent(timed('Lecture 5 Quiz', S, E, { AssociatedEntity: content }))).toBe('work');
+    expect(classifyEvent(timed('Project 3 - Due', S, S, { AssociatedEntity: content }))).toBe('work');
+  });
 });
+

@@ -125,17 +125,20 @@ function lengthMs(ev: CalendarEvent): number | null {
 
 /**
  * Work (shown as a deadline), a class meeting (shown in the calendar only) or nothing. Events linked to an assignment
- * or quiz are dropped (read from their own source); other linked events are work. A title naming a meeting is a
- * meeting unless it also names work or an exam; a timed event of class length with no deadline word is a meeting too.
+ * or quiz are dropped (read from their own source). A title naming a meeting is a meeting, linked or not, unless it
+ * also names work or an exam. Other linked events are work. A plain timed event of class length with no deadline word
+ * is a meeting too.
  */
 export function classifyEvent(ev: CalendarEvent): 'work' | 'meeting' | 'drop' {
-  if (ev.AssociatedEntity) return DUPLICATE_ENTITY.test(ev.AssociatedEntity.AssociatedEntityType) ? 'drop' : 'work';
+  if (ev.AssociatedEntity && DUPLICATE_ENTITY.test(ev.AssociatedEntity.AssociatedEntityType)) return 'drop';
   const title = ev.Title;
   if (DAYS_OFF.test(title)) return 'drop';
+  // A meeting word decides for linked events too: a lecture is often linked to its slides in Content.
   if (MEETING_WORDS.test(title)) {
     if (WORK_WORDS.test(title) || EXAM_IN_CLASS.test(title)) return 'work';
     return ev.IsAllDayEvent || !ev.StartDateTime ? 'drop' : 'meeting';
   }
+  if (ev.AssociatedEntity) return 'work';
   const ms = ev.IsAllDayEvent ? null : lengthMs(ev);
   if (ms !== null && ms >= 20 * MIN && ms <= 4 * 60 * MIN && !DEADLINE_WORDS.test(title)) return 'meeting';
   return DEADLINE_WORDS.test(title) || describesWork(ev) ? 'work' : 'drop';
