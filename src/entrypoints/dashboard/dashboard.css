@@ -1,49 +1,49 @@
 .dueboard-dashboard {
-  --rhine-black: #0b0c0d;
-  --rhine-yellow: #f4d100;
-  --rhine-silver: #c7cac8;
+  --rhine-black: #17130f;
+  --rhine-yellow: #e9b824;
+  --rhine-silver: #c8c0b2;
   --rhine-orange: var(--rhine-yellow);
   --rhine-ink: var(--rhine-black);
   --rhine-paper: var(--rhine-silver);
-  --rhine-panel: rgb(225 227 225 / 0.86);
-  --rhine-line: rgb(11 12 13 / 0.2);
+  --rhine-panel: rgb(221 213 199 / 0.86);
+  --rhine-line: rgb(23 19 15 / 0.2);
   --color-db-bg: var(--rhine-silver);
-  --color-db-surface: rgb(225 227 225);
-  --color-db-subtle: rgb(199 202 200 / 0.44);
-  --color-db-raised: rgb(225 227 225);
-  --color-db-glass: rgb(199 202 200 / 0.78);
-  --color-db-border: rgb(11 12 13 / 0.2);
-  --color-db-border-soft: rgb(11 12 13 / 0.12);
-  --color-db-track: rgb(11 12 13 / 0.09);
-  --color-db-hover: rgb(244 209 0 / 0.2);
+  --color-db-surface: rgb(221 213 199);
+  --color-db-subtle: rgb(200 192 178 / 0.44);
+  --color-db-raised: rgb(221 213 199);
+  --color-db-glass: rgb(200 192 178 / 0.78);
+  --color-db-border: rgb(23 19 15 / 0.2);
+  --color-db-border-soft: rgb(23 19 15 / 0.12);
+  --color-db-track: rgb(23 19 15 / 0.09);
+  --color-db-hover: rgb(233 184 36 / 0.2);
   --color-db-text: var(--rhine-black);
-  --color-db-text-2: rgb(11 12 13 / 0.86);
-  --color-db-muted: rgb(11 12 13 / 0.68);
-  --color-db-faint: rgb(11 12 13 / 0.5);
+  --color-db-text-2: rgb(23 19 15 / 0.86);
+  --color-db-muted: rgb(23 19 15 / 0.68);
+  --color-db-faint: rgb(23 19 15 / 0.5);
   --color-db-accent: var(--rhine-yellow);
-  --color-db-accent-soft: rgb(244 209 0 / 0.2);
+  --color-db-accent-soft: rgb(233 184 36 / 0.2);
   --color-db-ink: var(--rhine-black);
-  --color-db-ink-hover: rgb(11 12 13 / 0.86);
+  --color-db-ink-hover: rgb(23 19 15 / 0.86);
   --color-db-on-ink: var(--rhine-silver);
   --color-db-on-accent: var(--rhine-black);
   --color-db-ring: var(--rhine-black);
   --color-db-ok: var(--rhine-black);
   --color-db-hero-from: var(--rhine-black);
-  --color-db-hero-to: rgb(11 12 13 / 0.62);
-  --color-db-urgent-bg: rgb(244 209 0 / 0.32);
+  --color-db-hero-to: rgb(23 19 15 / 0.62);
+  --color-db-urgent-bg: rgb(233 184 36 / 0.32);
   --color-db-urgent-fg: var(--rhine-black);
-  --color-db-soon-bg: rgb(244 209 0 / 0.2);
+  --color-db-soon-bg: rgb(233 184 36 / 0.2);
   --color-db-soon-fg: var(--rhine-black);
-  --color-db-normal-bg: rgb(11 12 13 / 0.08);
+  --color-db-normal-bg: rgb(23 19 15 / 0.08);
   --color-db-normal-fg: var(--rhine-black);
   --color-db-banner-label: var(--rhine-yellow);
-  --color-db-banner-sub: rgb(199 202 200 / 0.72);
+  --color-db-banner-sub: rgb(200 192 178 / 0.72);
   --color-db-countdown: var(--rhine-yellow);
   background-color: var(--rhine-paper);
   background-image:
-    linear-gradient(rgb(11 12 13 / 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(11 12 13 / 0.032) 1px, transparent 1px),
-    radial-gradient(circle, rgb(11 12 13 / 0.075) 0.7px, transparent 0.8px);
+    linear-gradient(rgb(23 19 15 / 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(23 19 15 / 0.032) 1px, transparent 1px),
+    radial-gradient(circle, rgb(23 19 15 / 0.075) 0.7px, transparent 0.8px);
   background-position: 0 0, 0 0, 8px 8px;
   background-size: 64px 64px, 64px 64px, 16px 16px;
 }
@@ -55,12 +55,12 @@
   pointer-events: none;
   content: '';
   background:
-    radial-gradient(circle at 12% 18%, rgb(244 209 0 / 0.13), transparent 25%),
-    radial-gradient(circle at 85% 12%, rgb(11 12 13 / 0.08), transparent 28%),
-    radial-gradient(circle at 58% 82%, rgb(244 209 0 / 0.07), transparent 32%),
-    radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(11 12 13 / 0.08) 131px 133px, transparent 134px),
-    radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(244 209 0 / 0.095) 91px 93px, transparent 94px),
-    linear-gradient(128deg, transparent 0 42%, rgb(11 12 13 / 0.045) 42.1% 42.25%, transparent 42.35%);
+    radial-gradient(circle at 12% 18%, rgb(233 184 36 / 0.15), transparent 25%),
+    radial-gradient(circle at 85% 12%, rgb(23 19 15 / 0.08), transparent 28%),
+    radial-gradient(circle at 58% 82%, rgb(233 184 36 / 0.09), transparent 32%),
+    radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(23 19 15 / 0.08) 131px 133px, transparent 134px),
+    radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(233 184 36 / 0.11) 91px 93px, transparent 94px),
+    linear-gradient(128deg, transparent 0 42%, rgb(23 19 15 / 0.045) 42.1% 42.25%, transparent 42.35%);
   filter: blur(2px);
   animation: dashboard-atmosphere 24s ease-in-out infinite alternate;
 }
@@ -71,7 +71,7 @@
   z-index: 100;
   pointer-events: none;
   content: '';
-  background: linear-gradient(180deg, transparent 0 48%, rgb(244 209 0 / 0.055) 50%, transparent 52%);
+  background: linear-gradient(180deg, transparent 0 48%, rgb(233 184 36 / 0.07) 50%, transparent 52%);
   background-size: 100% 240px;
   animation: dashboard-scan 9s linear infinite;
   mix-blend-mode: multiply;
@@ -95,9 +95,9 @@
   align-items: stretch;
   gap: 24px;
   border: 1px solid var(--rhine-line);
-  background: rgb(199 202 200 / 0.86);
+  background: rgb(200 192 178 / 0.86);
   padding: 12px 10px;
-  box-shadow: 0 12px 40px rgb(11 12 13 / 0.12);
+  box-shadow: 0 12px 40px rgb(23 19 15 / 0.12);
   backdrop-filter: blur(16px);
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
@@ -185,7 +185,7 @@
   align-items: center;
   overflow: hidden;
   border: 1px solid var(--rhine-line);
-  background: rgb(199 202 200 / 0.72);
+  background: rgb(200 192 178 / 0.72);
   padding: 30px clamp(24px, 4vw, 54px);
   clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
 }
@@ -274,12 +274,12 @@
   border: 1px solid var(--rhine-yellow) !important;
   border-left: 9px solid var(--rhine-yellow) !important;
   background:
-    linear-gradient(110deg, transparent 0 62%, rgb(244 209 0 / 0.17) 62% 63%, transparent 63%),
+    linear-gradient(110deg, transparent 0 62%, rgb(233 184 36 / 0.2) 62% 63%, transparent 63%),
     var(--rhine-black);
   color: var(--rhine-silver);
   box-shadow:
-    0 18px 48px rgb(11 12 13 / 0.26),
-    inset 0 0 0 1px rgb(244 209 0 / 0.16);
+    0 18px 48px rgb(23 19 15 / 0.26),
+    inset 0 0 0 1px rgb(233 184 36 / 0.18);
   animation: deadline-arrive 620ms var(--ease-db) both;
 }
 
@@ -288,7 +288,7 @@
   inset: 0;
   pointer-events: none;
   content: '';
-  background: linear-gradient(105deg, transparent 0 42%, rgb(244 209 0 / 0.16) 49%, transparent 56%);
+  background: linear-gradient(105deg, transparent 0 42%, rgb(233 184 36 / 0.19) 49%, transparent 56%);
   transform: translateX(-120%);
   animation: deadline-sweep 4.8s ease-in-out 900ms infinite;
 }
@@ -307,7 +307,7 @@
 
 .pomodoro-panel {
   border-top: 4px solid var(--rhine-ink);
-  background-image: repeating-linear-gradient(135deg, transparent 0 9px, rgb(11 12 13 / 0.035) 9px 10px);
+  background-image: repeating-linear-gradient(135deg, transparent 0 9px, rgb(23 19 15 / 0.035) 9px 10px);
 }
 
 .pomodoro-clock {
@@ -324,7 +324,7 @@
 }
 
 .next-due-banner .caption-2 {
-  color: rgb(199 202 200 / 0.72);
+  color: rgb(200 192 178 / 0.72);
 }
 
 .next-due-banner [role='timer'] {
@@ -332,7 +332,7 @@
   font-size: clamp(2.4rem, 5vw, 4.25rem);
   font-weight: 520;
   letter-spacing: -0.08em;
-  text-shadow: 0 0 24px rgb(244 209 0 / 0.2);
+  text-shadow: 0 0 24px rgb(233 184 36 / 0.24);
 }
 
 .next-due-banner .bg-db-ink {
@@ -395,7 +395,7 @@
   z-index: 5;
   pointer-events: none;
   content: '';
-  background: linear-gradient(90deg, transparent, rgb(244 209 0 / 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgb(233 184 36 / 0.34), transparent);
   transform: translateX(-110%);
   animation: dashboard-view-scan 540ms var(--ease-db) both;
 }
@@ -411,8 +411,8 @@
 .dashboard-course {
   border-top: 4px solid var(--rhine-yellow);
   background-image:
-    linear-gradient(90deg, rgb(11 12 13 / 0.025) 1px, transparent 1px),
-    linear-gradient(rgb(11 12 13 / 0.025) 1px, transparent 1px);
+    linear-gradient(90deg, rgb(23 19 15 / 0.025) 1px, transparent 1px),
+    linear-gradient(rgb(23 19 15 / 0.025) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -421,7 +421,7 @@
 }
 
 .dueboard-dashboard .hero-text {
-  background-image: linear-gradient(90deg, var(--rhine-black), rgb(11 12 13 / 0.58));
+  background-image: linear-gradient(90deg, var(--rhine-black), rgb(23 19 15 / 0.58));
 }
 
 .dueboard-dashboard :is(.bg-db-ink, .bg-db-accent) {
@@ -436,8 +436,8 @@
   position: relative;
   align-items: center;
   background:
-    linear-gradient(rgb(11 12 13 / 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(11 12 13 / 0.05) 1px, transparent 1px),
+    linear-gradient(rgb(23 19 15 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(23 19 15 / 0.05) 1px, transparent 1px),
     var(--rhine-paper);
   background-size: 64px 64px;
 }
@@ -445,7 +445,7 @@
 .dashboard-onboarding-panel {
   border: 1px solid var(--rhine-line);
   border-top: 7px solid var(--rhine-orange);
-  background: rgb(225 227 225 / 0.9);
+  background: rgb(221 213 199 / 0.9);
   padding: clamp(28px, 5vw, 56px);
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
 }
@@ -529,34 +529,34 @@
   .dueboard-dashboard {
     --rhine-ink: var(--rhine-silver);
     --rhine-paper: var(--rhine-black);
-    --rhine-panel: rgb(11 12 13 / 0.86);
-    --rhine-line: rgb(199 202 200 / 0.18);
+    --rhine-panel: rgb(23 19 15 / 0.86);
+    --rhine-line: rgb(200 192 178 / 0.18);
     --color-db-bg: var(--rhine-black);
-    --color-db-surface: rgb(11 12 13);
-    --color-db-subtle: rgb(199 202 200 / 0.08);
-    --color-db-raised: rgb(11 12 13);
-    --color-db-glass: rgb(11 12 13 / 0.8);
-    --color-db-border: rgb(199 202 200 / 0.18);
-    --color-db-border-soft: rgb(199 202 200 / 0.11);
-    --color-db-track: rgb(199 202 200 / 0.08);
-    --color-db-hover: rgb(244 209 0 / 0.14);
+    --color-db-surface: rgb(23 19 15);
+    --color-db-subtle: rgb(200 192 178 / 0.08);
+    --color-db-raised: rgb(23 19 15);
+    --color-db-glass: rgb(23 19 15 / 0.8);
+    --color-db-border: rgb(200 192 178 / 0.18);
+    --color-db-border-soft: rgb(200 192 178 / 0.11);
+    --color-db-track: rgb(200 192 178 / 0.08);
+    --color-db-hover: rgb(233 184 36 / 0.16);
     --color-db-text: var(--rhine-silver);
-    --color-db-text-2: rgb(199 202 200 / 0.86);
-    --color-db-muted: rgb(199 202 200 / 0.68);
-    --color-db-faint: rgb(199 202 200 / 0.48);
+    --color-db-text-2: rgb(200 192 178 / 0.86);
+    --color-db-muted: rgb(200 192 178 / 0.68);
+    --color-db-faint: rgb(200 192 178 / 0.48);
     --color-db-ink: var(--rhine-yellow);
-    --color-db-ink-hover: rgb(244 209 0 / 0.82);
+    --color-db-ink-hover: rgb(233 184 36 / 0.84);
     --color-db-on-ink: var(--rhine-black);
     --color-db-ok: var(--rhine-yellow);
     --color-db-hero-from: var(--rhine-silver);
-    --color-db-hero-to: rgb(199 202 200 / 0.58);
-    --color-db-normal-bg: rgb(199 202 200 / 0.1);
+    --color-db-hero-to: rgb(200 192 178 / 0.58);
+    --color-db-normal-bg: rgb(200 192 178 / 0.1);
     --color-db-normal-fg: var(--rhine-silver);
   }
 
   .dashboard-rail,
   .dashboard-header {
-    background: rgb(11 12 13 / 0.88);
+    background: rgb(23 19 15 / 0.88);
   }
 
   .dashboard-tab[aria-selected='true'] {
@@ -565,17 +565,17 @@
   }
 
   .dashboard-onboarding-panel {
-    background: rgb(11 12 13 / 0.9);
+    background: rgb(23 19 15 / 0.9);
   }
 
   .dueboard-dashboard::after {
     background:
-      radial-gradient(circle at 12% 18%, rgb(244 209 0 / 0.13), transparent 26%),
-      radial-gradient(circle at 85% 12%, rgb(199 202 200 / 0.08), transparent 30%),
-      radial-gradient(circle at 58% 82%, rgb(244 209 0 / 0.085), transparent 34%),
-      radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(199 202 200 / 0.09) 131px 133px, transparent 134px),
-      radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(244 209 0 / 0.085) 91px 93px, transparent 94px),
-      linear-gradient(128deg, transparent 0 42%, rgb(199 202 200 / 0.04) 42.1% 42.25%, transparent 42.35%);
+      radial-gradient(circle at 12% 18%, rgb(233 184 36 / 0.15), transparent 26%),
+      radial-gradient(circle at 85% 12%, rgb(200 192 178 / 0.08), transparent 30%),
+      radial-gradient(circle at 58% 82%, rgb(233 184 36 / 0.1), transparent 34%),
+      radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(200 192 178 / 0.09) 131px 133px, transparent 134px),
+      radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(233 184 36 / 0.1) 91px 93px, transparent 94px),
+      linear-gradient(128deg, transparent 0 42%, rgb(200 192 178 / 0.04) 42.1% 42.25%, transparent 42.35%);
   }
 }
 
