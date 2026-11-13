@@ -44,7 +44,6 @@ const messages = {
   'tabs.courses': 'Courses',
   'tabs.calendar': 'Calendar',
   'tabs.todo': 'To-do',
-  'tabs.music': 'Music',
   'tabs.label': 'View',
   'chips.within48': (v: Vars) => `${v.n} due in 48 h`,
   'chips.week': (v: Vars) => `${v.n} this week`,

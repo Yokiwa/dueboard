@@ -34,7 +34,6 @@ const VIEW_LABEL: Record<View, MessageKey> = {
   courses: 'tabs.courses',
   calendar: 'tabs.calendar',
   todo: 'tabs.todo',
-  music: 'tabs.music',
 };
 
 /** Oldest successful sync across platforms that have synced at least once. */
@@ -47,7 +46,6 @@ export function lastSynced(store: StoreShape): string | null {
 }
 
 function ViewBody({ view, dashboard, now, syllabus, completed }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView; completed: CompletedPlacement }) {
-  if (view === 'music') return <MusicPlayer />;
   if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} completed={completed} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
   return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;
@@ -110,6 +108,7 @@ export function App() {
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />
           <PomodoroTimer now={now} />
         </div>
+        <MusicPlayer />
         <section aria-labelledby="dashboard-view-heading" className="dashboard-view">
           <h2 id="dashboard-view-heading" className="dashboard-view-heading">{t(VIEW_LABEL[view])}</h2>
           <div key={view} className="dashboard-view-content" data-view={view}>

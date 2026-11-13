@@ -94,8 +94,6 @@ describe('ViewTabs', () => {
     expect(screen.getByRole('tab', { name: 'Courses' }).getAttribute('aria-selected')).toBe('true');
     fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }));
     expect(onChange).toHaveBeenCalledWith('calendar');
-    fireEvent.click(screen.getByRole('tab', { name: 'Music' }));
-    expect(onChange).toHaveBeenCalledWith('music');
   });
 });
 
