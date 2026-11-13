@@ -7,7 +7,7 @@ export function StatChips({ within48, week }: { within48: number; week: number }
     <div className="flex flex-wrap gap-2">
       {within48 > 0 && (
         <span className="inline-flex items-center gap-1 rounded-full bg-db-urgent-bg px-3 py-1 caption-3 text-db-urgent-fg">
-          <Fire aria-hidden="true" size={14} weight="fill" />
+          <Fire aria-hidden="true" size={16} weight="fill" className="db-flame" />
           {t('chips.within48', { n: within48 })}
         </span>
       )}

@@ -85,6 +85,14 @@ describe('StatChips', () => {
     expect(screen.getByText('3 due in 48 h')).toBeTruthy();
     expect(screen.getByText('9 this week')).toBeTruthy();
   });
+
+  it('the 48 h chip has a flame of its own color, bigger than the text, so it stands out', () => {
+    const { container } = renderIn('en', <StatChips within48={3} week={9} />);
+    const flame = container.querySelector('svg.db-flame');
+    expect(flame).toBeTruthy();
+    expect(flame!.getAttribute('width')).toBe('16');
+    expect(screen.getByText('3 due in 48 h').contains(flame)).toBe(true);
+  });
 });
 
 describe('ViewTabs', () => {

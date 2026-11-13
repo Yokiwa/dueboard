@@ -31,6 +31,8 @@
 
   /* Brand and controls */
   --color-db-accent: #2563eb;
+  /* The flame on the "due in 48 h" chip: warm on every theme, light or dark. */
+  --color-db-flame: #f25a1d;
   --color-db-accent-soft: #e8efff;
   --color-db-ink: #141413;
   --color-db-ink-hover: #2c2c29;
@@ -278,6 +280,27 @@ input[type='checkbox'] {
   }
   .db-rise {
     animation-name: db-fade !important;
+  }
+  .db-flame {
+    animation: none !important;
+  }
+}
+
+/* The "due in 48 h" flame: its own warm color, a soft glow and a gentle flicker. */
+.db-flame {
+  color: var(--color-db-flame);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-db-flame) 60%, transparent));
+  transform-origin: 50% 85%;
+  animation: db-flicker 1.6s ease-in-out infinite;
+}
+
+@keyframes db-flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(-3deg);
+  }
+  50% {
+    transform: scale(1.14) rotate(3deg);
   }
 }
 
