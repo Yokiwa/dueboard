@@ -75,6 +75,14 @@ describe('Settings', () => {
     await waitFor(async () => expect((await loadStore()).settings.completed).toBe('section'));
   });
 
+  it('chooses a dashboard theme and links back to the dashboard', async () => {
+    render(<Settings />);
+    const dusk = await screen.findByRole('button', { name: /Dusk Lullaby/ });
+    fireEvent.click(dusk);
+    await waitFor(async () => expect((await loadStore()).settings.theme).toBe('dusk-lullaby'));
+    expect(screen.getByRole('link', { name: 'Back to dashboard' }).getAttribute('href')).toContain('/dashboard.html');
+  });
+
   it('feedback link points to FEEDBACK_URL constant', async () => {
     render(<Settings />);
     await waitFor(() => screen.getByRole('link', { name: 'Send feedback' }));

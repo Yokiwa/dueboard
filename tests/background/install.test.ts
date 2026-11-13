@@ -21,7 +21,7 @@ describe('handleInstalled', () => {
 });
 
 describe('settingsAfterUpdate', () => {
-  const base = { syllabus: true, completed: 'card' as const, windowFallback: true };
+  const base = { syllabus: true, completed: 'card' as const, windowFallback: true, theme: 'automatic' as const };
   it('turns the old default (manual) into auto when updating from before 1.4.0', () => {
     expect(settingsAfterUpdate({ ...base, visits: 'manual' }, '1.2.4').visits).toBe('auto');
   });
@@ -42,6 +42,6 @@ describe('settingsAfterUpdate', () => {
     expect(settingsAfterUpdate(s, undefined)).toEqual(s);
   });
   it('changes nothing else', () => {
-    expect(settingsAfterUpdate({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: false }, '1.3.0')).toEqual({ visits: 'auto', syllabus: false, completed: 'section', windowFallback: false });
+    expect(settingsAfterUpdate({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: false, theme: 'automatic' }, '1.3.0')).toEqual({ visits: 'auto', syllabus: false, completed: 'section', windowFallback: false, theme: 'automatic' });
   });
 });

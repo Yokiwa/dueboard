@@ -23,6 +23,10 @@ function migrateSettings(v: unknown): Settings {
     syllabus: typeof r.syllabus === 'boolean' ? r.syllabus : DEFAULT_SETTINGS.syllabus,
     windowFallback: typeof r.windowFallback === 'boolean' ? r.windowFallback : DEFAULT_SETTINGS.windowFallback,
     completed: r.completed === 'card' || r.completed === 'section' ? r.completed : DEFAULT_SETTINGS.completed,
+    theme:
+      r.theme === 'nightowl' || r.theme === 'morning-dew' || r.theme === 'noon-cafe' || r.theme === 'dusk-lullaby' || r.theme === 'automatic'
+        ? r.theme
+        : DEFAULT_SETTINGS.theme,
   };
 }
 

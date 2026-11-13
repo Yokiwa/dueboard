@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { browser } from 'wxt/browser';
 import { dueCounts } from '../../core/dashboard';
 import { DoneToastProvider } from '../../ui/components/DoneToast';
@@ -12,6 +13,7 @@ import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
 import { useGranted } from '../../ui/hooks/useGranted';
 import { useVisitProgress } from '../../ui/hooks/useVisitProgress';
 import { StatChips } from '../../ui/components/StatChips';
+import { ThemeSwitcher } from '../../ui/components/ThemeSwitcher';
 import { ViewTabs, type View } from '../../ui/components/ViewTabs';
 import { useDashboard } from '../../ui/hooks/useDashboard';
 import { useNow } from '../../ui/hooks/useNow';
@@ -23,13 +25,22 @@ import { TodoView } from '../../ui/views/TodoView';
 import type { Dashboard } from '../../core/dashboard';
 import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
 import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
-import type { CompletedPlacement, StoreShape } from '../../core/types';
+import type { CompletedPlacement, DashboardTheme, StoreShape } from '../../core/types';
+import { saveSettings } from '../../storage/store';
 
 const VIEW_LABEL: Record<View, MessageKey> = {
   courses: 'tabs.courses',
   calendar: 'tabs.calendar',
   todo: 'tabs.todo',
 };
+
+export function automaticTheme(now: Date): Exclude<DashboardTheme, 'automatic'> {
+  const hour = now.getHours();
+  if (hour >= 5 && hour < 12) return 'morning-dew';
+  if (hour >= 12 && hour < 18) return 'noon-cafe';
+  if (hour >= 18 && hour < 23) return 'dusk-lullaby';
+  return 'nightowl';
+}
 
 /** Oldest successful sync across platforms that have synced at least once. */
 export function lastSynced(store: StoreShape): string | null {
@@ -53,6 +64,20 @@ export function App() {
   const [view, setView] = useView();
   const granted = useGranted();
   const progress = useVisitProgress();
+  const selectedTheme = store?.settings.theme ?? 'automatic';
+  const displayedTheme = selectedTheme === 'automatic' ? automaticTheme(now) : selectedTheme;
+  useEffect(() => {
+    const applyTheme = () => {
+      document.body.dataset.theme = displayedTheme;
+      document.body.dataset.themeMode = selectedTheme;
+    };
+    const transitionDocument = document as Document & { startViewTransition?: (update: () => void) => void };
+    if (document.body.dataset.theme && document.body.dataset.theme !== displayedTheme && transitionDocument.startViewTransition) {
+      transitionDocument.startViewTransition(applyTheme);
+    } else {
+      applyTheme();
+    }
+  }, [displayedTheme, selectedTheme]);
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
     return <Onboarding />;
@@ -75,7 +100,10 @@ export function App() {
     <DoneToastProvider>
       <AppShell nav={<ViewTabs view={view} onChange={changeView} />}>
         <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => void browser.runtime.openOptionsPage()}>
-          <StatChips within48={counts.within48} week={counts.week} />
+          <div className="dashboard-header-tools">
+            <StatChips within48={counts.within48} week={counts.week} />
+            <ThemeSwitcher theme={store.settings.theme} onChange={(theme) => void saveSettings({ theme })} />
+          </div>
         </Header>
         {granted && <SiteAccessBanner granted={granted} />}
         <SourceBanners store={store} now={now} busy={syncing || progress !== null} />

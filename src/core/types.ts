@@ -184,6 +184,7 @@ export interface UserState {
   syllabusHidden: Record<string, true>;
 }
 export type VisitMode = 'auto' | 'manual' | 'off';
+export type DashboardTheme = 'nightowl' | 'morning-dew' | 'noon-cafe' | 'dusk-lullaby' | 'automatic';
 export interface Settings {
   /** When to read platform pages (in the background, with a window fallback). */
   visits: VisitMode;
@@ -193,9 +194,11 @@ export interface Settings {
   completed: CompletedPlacement;
   /** Read pages the hidden frames could not read in a minimized window, in the same run. */
   windowFallback: boolean;
+  /** Visual palette used by the dashboard. */
+  theme: DashboardTheme;
 }
 export type CompletedPlacement = 'card' | 'section';
-export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true };
+export const DEFAULT_SETTINGS: Settings = { visits: 'auto', syllabus: true, completed: 'card', windowFallback: true, theme: 'automatic' };
 export interface VisitState {
   /** The minimized window of a run in progress, so a restart can close it. */
   windowId?: number;

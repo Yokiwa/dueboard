@@ -1,6 +1,6 @@
 import { useId, useMemo } from 'react';
 import { browser } from 'wxt/browser';
-import { ArrowUpRight, Check } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowUpRight, Check } from '@phosphor-icons/react';
 import { BrandMark } from '../../ui/components/BrandMark';
 import { buildDashboard, PALETTE } from '../../core/dashboard';
 import { displayName } from '../../core/courseName';
@@ -12,12 +12,19 @@ import { FEEDBACK_URL } from '../../ui/config';
 import { field, label } from '../../ui/forms';
 import { useStore } from '../../ui/hooks/useStore';
 import { useT } from '../../ui/i18n';
-import type { CompletedPlacement, StoreShape, VisitMode } from '../../core/types';
+import type { CompletedPlacement, DashboardTheme, StoreShape, VisitMode } from '../../core/types';
 
 const card = 'db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm';
 const h2 = 'm-0 heading-6';
 const hint = 'm-0 body-6 text-db-faint';
 const textLink = 'db-press inline-flex items-center gap-1 rounded-sm body-5 text-db-accent no-underline hover:underline hover:underline-offset-4';
+const themes: { id: DashboardTheme; label: string; description: string }[] = [
+  { id: 'nightowl', label: 'Nightowl', description: 'Low-glare midnight navy for late study sessions.' },
+  { id: 'morning-dew', label: 'Morning Dew', description: 'Fresh mist, sky, and sage for an early start.' },
+  { id: 'noon-cafe', label: 'Noon Cafe', description: 'Warm oat, coffee, and apricot for the afternoon.' },
+  { id: 'dusk-lullaby', label: 'Dusk Lullaby', description: 'Muted plum and twilight blue for winding down.' },
+  { id: 'automatic', label: 'Automatic', description: 'Fades between themes as the day changes.' },
+];
 
 function Body({ store }: { store: StoreShape }) {
   const t = useT();
@@ -31,12 +38,38 @@ function Body({ store }: { store: StoreShape }) {
   return (
     <div className="min-h-screen bg-db-bg px-4 py-10">
       <main className="mx-auto flex max-w-[720px] flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <BrandMark className="size-8" />
-          <h1 className="m-0 heading-5 tracking-tight">
-            <span className="hero-text">{t('settings.title')}</span>
-          </h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <BrandMark className="size-8" />
+            <h1 className="m-0 heading-5 tracking-tight">
+              <span className="hero-text">{t('settings.title')}</span>
+            </h1>
+          </div>
+          <a href={browser.runtime.getURL('/dashboard.html')} className={secondaryBtn}>
+            <ArrowLeft aria-hidden="true" size={16} weight="bold" />
+            Back to dashboard
+          </a>
         </div>
+
+        <section className={card}>
+          <h2 className={h2}>Appearance</h2>
+          <p className={hint}>Choose a dashboard theme. Your selection is saved automatically.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {themes.map((theme) => (
+              <button
+                key={theme.id}
+                type="button"
+                aria-pressed={store.settings.theme === theme.id}
+                onClick={() => void saveSettings({ theme: theme.id })}
+                className="db-press flex cursor-pointer flex-col items-start gap-3 rounded-xl border border-db-border bg-db-subtle p-3 text-left text-db-text aria-pressed:ring-2 aria-pressed:ring-db-accent"
+              >
+                <span className={`theme-preview theme-preview-${theme.id}`} aria-hidden="true"><i /><i /><i /></span>
+                <span className="title-3">{theme.label}</span>
+                <span className="caption-3 text-db-faint">{theme.description}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <section className={card}>
           <h2 className={h2}>{t('settings.courses')}</h2>
