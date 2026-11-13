@@ -14,6 +14,7 @@ export interface MusicState {
   playing: boolean;
   volume: number;
   uploaded: UploadedTrack[];
+  youtubeUrl: string | null;
 }
 
 export const MUSIC_STATE_KEY = 'dueboardMusic';
@@ -22,6 +23,7 @@ export const DEFAULT_MUSIC_STATE: MusicState = {
   playing: false,
   volume: 0.45,
   uploaded: [],
+  youtubeUrl: null,
 };
 
 export function normalizeMusicState(value: unknown): MusicState {
@@ -40,6 +42,7 @@ export function normalizeMusicState(value: unknown): MusicState {
       ? Math.min(1, Math.max(0, saved.volume))
       : DEFAULT_MUSIC_STATE.volume,
     uploaded,
+    youtubeUrl: typeof saved.youtubeUrl === 'string' && saved.youtubeUrl.length <= 2_000 ? saved.youtubeUrl : null,
   };
 }
 
