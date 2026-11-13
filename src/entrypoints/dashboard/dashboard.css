@@ -188,7 +188,6 @@
   min-height: 38px;
   align-items: center;
   justify-content: center;
-  color: var(--pastel-ink);
 }
 
 .dashboard-brand > span {
@@ -199,10 +198,10 @@
   clip: rect(0 0 0 0);
 }
 
+/* The mark keeps the extension icon colors BrandMark draws (no theme color over it). */
 .dashboard-brand svg {
   width: 29px;
   height: 29px;
-  color: var(--pastel-ink);
 }
 
 .dashboard-tabs {
