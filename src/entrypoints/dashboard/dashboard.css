@@ -3,14 +3,32 @@
   --rhine-orange-deep: #b94d12;
   --rhine-ink: #20211f;
   --rhine-paper: #f5f2e9;
+  --rhine-panel: rgb(255 254 249 / 0.88);
   --rhine-line: rgb(32 33 31 / 0.16);
   background-color: var(--rhine-paper);
   background-image:
-    linear-gradient(rgb(32 33 31 / 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(32 33 31 / 0.045) 1px, transparent 1px),
-    radial-gradient(circle, rgb(32 33 31 / 0.1) 0.7px, transparent 0.8px);
+    linear-gradient(rgb(32 33 31 / 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(32 33 31 / 0.026) 1px, transparent 1px),
+    radial-gradient(circle, rgb(32 33 31 / 0.065) 0.7px, transparent 0.8px);
   background-position: 0 0, 0 0, 8px 8px;
   background-size: 64px 64px, 64px 64px, 16px 16px;
+}
+
+.dueboard-dashboard::after {
+  position: fixed;
+  inset: -8%;
+  z-index: 0;
+  pointer-events: none;
+  content: '';
+  background:
+    radial-gradient(circle at 12% 18%, rgb(228 111 36 / 0.11), transparent 25%),
+    radial-gradient(circle at 85% 12%, rgb(64 126 148 / 0.09), transparent 28%),
+    radial-gradient(circle at 58% 82%, rgb(203 164 76 / 0.075), transparent 32%),
+    radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(64 126 148 / 0.075) 131px 133px, transparent 134px),
+    radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(228 111 36 / 0.075) 91px 93px, transparent 94px),
+    linear-gradient(128deg, transparent 0 42%, rgb(32 33 31 / 0.035) 42.1% 42.25%, transparent 42.35%);
+  filter: blur(2px);
+  animation: dashboard-atmosphere 24s ease-in-out infinite alternate;
 }
 
 .dueboard-dashboard::before {
@@ -19,13 +37,15 @@
   z-index: 100;
   pointer-events: none;
   content: '';
-  background: linear-gradient(180deg, transparent 0 48%, rgb(228 111 36 / 0.08) 50%, transparent 52%);
+  background: linear-gradient(180deg, transparent 0 48%, rgb(228 111 36 / 0.045) 50%, transparent 52%);
   background-size: 100% 240px;
   animation: dashboard-scan 9s linear infinite;
   mix-blend-mode: multiply;
 }
 
 .dashboard-shell {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   padding: 28px 28px 72px 126px;
   color: var(--rhine-ink);
@@ -207,12 +227,20 @@
   clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
 }
 
+.next-due-banner,
+.pomodoro-panel,
+.dashboard-course,
+.dashboard-view > section {
+  background-color: var(--rhine-panel) !important;
+  backdrop-filter: blur(12px) saturate(1.04);
+}
+
 .next-due-banner {
   overflow: hidden;
   border-left: 7px solid var(--rhine-orange);
   background:
     linear-gradient(110deg, transparent 0 62%, rgb(228 111 36 / 0.08) 62% 63%, transparent 63%),
-    var(--color-db-banner-bg);
+    var(--rhine-panel);
 }
 
 .next-due-banner::after,
@@ -318,10 +346,20 @@
   to { background-position: 0 calc(100vh + 240px); }
 }
 
+@keyframes dashboard-atmosphere {
+  0% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(1.5%, 1%, 0) scale(1.035);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .dueboard-dashboard {
     --rhine-ink: #eeeae0;
     --rhine-paper: #1d1c19;
+    --rhine-panel: rgb(31 31 31 / 0.84);
     --rhine-line: rgb(238 234 224 / 0.15);
   }
 
@@ -337,6 +375,16 @@
 
   .dashboard-onboarding-panel {
     background: rgb(29 28 25 / 0.9);
+  }
+
+  .dueboard-dashboard::after {
+    background:
+      radial-gradient(circle at 12% 18%, rgb(228 111 36 / 0.12), transparent 26%),
+      radial-gradient(circle at 85% 12%, rgb(39 113 145 / 0.14), transparent 30%),
+      radial-gradient(circle at 58% 82%, rgb(173 132 48 / 0.085), transparent 34%),
+      radial-gradient(circle at 84% 68%, transparent 0 130px, rgb(58 139 168 / 0.095) 131px 133px, transparent 134px),
+      radial-gradient(circle at 18% 72%, transparent 0 90px, rgb(228 111 36 / 0.085) 91px 93px, transparent 94px),
+      linear-gradient(128deg, transparent 0 42%, rgb(238 234 224 / 0.035) 42.1% 42.25%, transparent 42.35%);
   }
 }
 
@@ -407,6 +455,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dueboard-dashboard::before,
+  .dueboard-dashboard::after {
+    animation: none;
+  }
+
   .dueboard-dashboard::before {
     display: none;
   }
