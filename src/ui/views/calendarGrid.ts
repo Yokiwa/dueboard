@@ -1,5 +1,5 @@
 import { addDays, format, startOfMonth, startOfWeek } from 'date-fns';
-import type { Item } from '../../core/types';
+import type { Item, Meeting } from '../../core/types';
 
 /** Local calendar date key, e.g. "2026-11-04". */
 export const dayKey = (d: Date) => format(d, 'yyyy-MM-dd');
@@ -28,4 +28,24 @@ export function itemsByDay(items: Item[]): Map<string, Item[]> {
   }
   for (const list of map.values()) list.sort((a, b) => Date.parse(a.dueAt!) - Date.parse(b.dueAt!));
   return map;
+}
+
+/** Class meetings grouped by the local day they start on, each day sorted by start. */
+export function meetingsByDay(meetings: Meeting[]): Map<string, Meeting[]> {
+  const map = new Map<string, Meeting[]>();
+  for (const m of meetings) {
+    const key = dayKey(new Date(m.startAt));
+    const list = map.get(key) ?? [];
+    list.push(m);
+    map.set(key, list);
+  }
+  for (const list of map.values()) list.sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  return map;
+}
+
+/** "9:30–10:20 AM", or "11:30 AM–12:20 PM" when the class crosses noon. */
+export function timeRange(startAt: string, endAt: string): string {
+  const s = new Date(startAt);
+  const e = new Date(endAt);
+  return format(s, 'a') === format(e, 'a') ? `${format(s, 'h:mm')}–${format(e, 'h:mm a')}` : `${format(s, 'h:mm a')}–${format(e, 'h:mm a')}`;
 }

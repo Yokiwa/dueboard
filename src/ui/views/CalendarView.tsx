@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { addMonths, addWeeks, format, isSameDay, isSameMonth } from 'date-fns';
 import type { Dashboard } from '../../core/dashboard';
-import type { Course, Item } from '../../core/types';
+import type { Course, Item, Meeting } from '../../core/types';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { iconBtn, secondaryBtn } from '../forms';
 import { useT } from '../i18n';
-import { dayKey, itemsByDay, monthCells, weekDays } from './calendarGrid';
+import { dayKey, itemsByDay, meetingsByDay, monthCells, timeRange, weekDays } from './calendarGrid';
 
 type Mode = 'week' | 'month';
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -41,11 +41,32 @@ function Chip({ item, course, now }: { item: Item; course: Course | undefined; n
   );
 }
 
+/** A class meeting (week view only): the course's color, lighter, with its time range. Not work: no checkbox, no state. */
+function MeetingChip({ meeting, course }: { meeting: Meeting; course: Course | undefined }) {
+  const range = timeRange(meeting.startAt, meeting.endAt);
+  const label = course ? `${course.code} · ${meeting.title}` : meeting.title;
+  return (
+    <a
+      href={meeting.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-kind="meeting"
+      title={`${label} · ${range}`}
+      className="db-press flex min-w-0 flex-col gap-0.5 rounded-lg px-2.5 py-1.5 text-db-muted no-underline hover:text-db-text"
+      style={{ background: course?.color ? `color-mix(in srgb, ${course.color} 16%, transparent)` : undefined }}
+    >
+      <span className="min-w-0 break-words caption-4 leading-snug">{label}</span>
+      <span className="font-mono caption-5 tabular-nums">{range}</span>
+    </a>
+  );
+}
+
 export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Date }) {
   const t = useT();
   const [mode, setMode] = useState<Mode>('week');
   const [anchor, setAnchor] = useState(now);
   const byDay = useMemo(() => itemsByDay(dashboard.items), [dashboard.items]);
+  const classesByDay = useMemo(() => meetingsByDay(dashboard.meetings ?? []), [dashboard.meetings]);
   const courseOf = useMemo(() => new Map(dashboard.courses.map((c) => [c.id, c])), [dashboard.courses]);
 
   const days = mode === 'week' ? weekDays(anchor) : monthCells(anchor);
@@ -124,6 +145,9 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                       <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} now={now} />
                     ))}
                     {list.length > shown.length && <span className="px-2 py-1 caption-4 text-db-faint">{t('cal.more', { n: list.length - shown.length })}</span>}
+                    {/* Class meetings, under the day's work, in the week view only. */}
+                    {mode === 'week' &&
+                      (classesByDay.get(dayKey(day)) ?? []).map((m) => <MeetingChip key={m.id} meeting={m} course={courseOf.get(m.courseId)} />)}
                   </div>
                 );
               })}

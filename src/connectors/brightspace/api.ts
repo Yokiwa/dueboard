@@ -23,6 +23,8 @@ export interface CalendarEvent {
   Description?: string | null;
   StartDateTime: string | null;
   EndDateTime: string | null;
+  /** Brightspace's all-day flag (an all-day event has no time of its own). */
+  IsAllDayEvent?: boolean;
   AssociatedEntity: { AssociatedEntityType: string; AssociatedEntityId: number; Link?: string | null } | null;
   CalendarEventViewUrl?: string | null;
 }

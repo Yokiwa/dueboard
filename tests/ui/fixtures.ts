@@ -13,4 +13,4 @@ export const item = (id: string, courseId: string, title: string, dueAt: string 
 export const link = (courseId: string, label: string, category: CourseLink['category'], url = `https://x/${label}`): CourseLink => ({
   courseId, label, url, category, source: 'brightspace',
 });
-export const dash = (p: Partial<Dashboard>): Dashboard => ({ courses: [], items: [], links: [], nextDue: null, ...p });
+export const dash = (p: Partial<Dashboard>): Dashboard => ({ courses: [], items: [], links: [], nextDue: null, meetings: [], ...p });

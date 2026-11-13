@@ -114,6 +114,18 @@ describe('brightspace connector', () => {
     expect(calls.find((c) => c.includes('myEvents'))).toContain('orgUnitIdsCSV=101,102');
   });
 
+  it('calendar meetings come back in meetings, not items', async () => {
+    const { result } = await run();
+    if (!result.ok) throw new Error('expected ok');
+    // Events 503 and 507: "Lecture", 14:30–15:20 in course 102.
+    expect(result.meetings?.map((m) => m.sourceId).sort()).toEqual(['event:503', 'event:507']);
+    expect(result.meetings?.find((m) => m.sourceId === 'event:503')).toEqual({
+      source: 'brightspace', sourceId: 'event:503', sourceCourseId: '102', title: 'Lecture',
+      startAt: '2026-11-05T14:30:00.000Z', endAt: '2026-11-05T15:20:00.000Z', url: `${B}/d2l/le/calendar/102`,
+    });
+    expect(result.items.some((i) => i.sourceItemId === 'event:503' || i.sourceItemId === 'event:507')).toBe(false);
+  });
+
   it('collects toc topic links recursively', async () => {
     const { result } = await run();
     if (!result.ok) throw new Error('expected ok');
