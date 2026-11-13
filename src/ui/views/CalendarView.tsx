@@ -5,7 +5,7 @@ import type { Course, Item, Meeting } from '../../core/types';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { iconBtn, secondaryBtn } from '../forms';
 import { useT } from '../i18n';
-import { dayKey, itemsByDay, meetingsByDay, monthCells, timeRange, weekDays } from './calendarGrid';
+import { dayKey, itemsByDay, layoutDay, monthCells, timeRange, weekDays, weekHours, type PlacedMeeting } from './calendarGrid';
 
 type Mode = 'week' | 'month';
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -41,8 +41,12 @@ function Chip({ item, course, now }: { item: Item; course: Course | undefined; n
   );
 }
 
-/** A class meeting (week view only): the course's color, lighter, with its time range. Not work: no checkbox, no state. */
-function MeetingChip({ meeting, course }: { meeting: Meeting; course: Course | undefined }) {
+/** Pixels per minute in the week's class grid (one hour = 60 px). */
+const PX_PER_MIN = 1;
+
+/** A class meeting in the week grid: placed by its time, in a light version of its course's color. Not work. */
+function MeetingBlock({ placed, course, from }: { placed: PlacedMeeting; course: Course | undefined; from: number }) {
+  const { meeting, top, height, col, cols } = placed;
   const range = timeRange(meeting.startAt, meeting.endAt);
   const label = course ? `${course.code} · ${meeting.title}` : meeting.title;
   return (
@@ -52,11 +56,18 @@ function MeetingChip({ meeting, course }: { meeting: Meeting; course: Course | u
       rel="noopener noreferrer"
       data-kind="meeting"
       title={`${label} · ${range}`}
-      className="db-press flex min-w-0 flex-col gap-0.5 rounded-lg px-2.5 py-1.5 text-db-muted no-underline hover:text-db-text"
-      style={{ background: course?.color ? `color-mix(in srgb, ${course.color} 16%, transparent)` : undefined }}
+      className="db-press absolute flex flex-col overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-db-text no-underline hover:brightness-95"
+      style={{
+        top: `${(top - from * 60) * PX_PER_MIN}px`,
+        height: `${height * PX_PER_MIN}px`,
+        left: `calc(${(col / cols) * 100}% + 2px)`,
+        width: `calc(${100 / cols}% - 4px)`,
+        borderLeftColor: course?.color,
+        background: course?.color ? `color-mix(in srgb, ${course.color} 18%, var(--color-db-surface))` : undefined,
+      }}
     >
-      <span className="min-w-0 break-words caption-4 leading-snug">{label}</span>
-      <span className="font-mono caption-5 tabular-nums">{range}</span>
+      <span className="truncate caption-4 leading-tight">{label}</span>
+      {height >= 36 && <span className="truncate font-mono caption-5 text-db-muted tabular-nums">{range}</span>}
     </a>
   );
 }
@@ -66,7 +77,6 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
   const [mode, setMode] = useState<Mode>('week');
   const [anchor, setAnchor] = useState(now);
   const byDay = useMemo(() => itemsByDay(dashboard.items), [dashboard.items]);
-  const classesByDay = useMemo(() => meetingsByDay(dashboard.meetings ?? []), [dashboard.meetings]);
   const courseOf = useMemo(() => new Map(dashboard.courses.map((c) => [c.id, c])), [dashboard.courses]);
 
   const days = mode === 'week' ? weekDays(anchor) : monthCells(anchor);
@@ -75,6 +85,12 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
   const title = mode === 'week' ? `${format(first, 'MMM d')} – ${format(last, 'MMM d')}` : format(anchor, 'MMMM yyyy');
   const step = (dir: 1 | -1) => setAnchor((a) => (mode === 'week' ? addWeeks(a, dir) : addMonths(a, dir)));
   const rows = mode === 'week' ? [days] : Array.from({ length: 6 }, (_, r) => days.slice(r * 7, r * 7 + 7));
+  const meetings = dashboard.meetings ?? [];
+  // Week view: work in a "Due" row on top; class meetings below in a time grid (none when the week has no class).
+  const hours = mode === 'week' ? weekHours(meetings, days) : null;
+  const week = mode === 'week';
+  const cols = week ? 'grid grid-cols-[56px_repeat(7,minmax(0,1fr))] gap-px bg-db-border-soft' : 'grid grid-cols-7 gap-px bg-db-border-soft';
+  const nowMin = now.getHours() * 60 + now.getMinutes();
 
   return (
     <section className="db-rise overflow-hidden rounded-2xl border border-db-border bg-db-surface shadow-sm">
@@ -110,7 +126,8 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
 
       <div className="overflow-x-auto p-3 sm:p-4">
         <div role="grid" className="min-w-[980px] overflow-hidden rounded-xl border border-db-border-soft bg-db-border-soft">
-          <div role="row" className="grid grid-cols-7 gap-px bg-db-border-soft">
+          <div role="row" className={cols}>
+            {week && <span aria-hidden="true" className="bg-db-subtle" />}
             {WEEKDAY.map((w) => (
               <span key={w} role="columnheader" className="bg-db-subtle px-3 py-2 text-right caption-4 uppercase tracking-wide text-db-faint">
                 {w}
@@ -118,7 +135,8 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
             ))}
           </div>
           {rows.map((row) => (
-            <div key={dayKey(row[0]!)} role="row" className="grid grid-cols-7 gap-px bg-db-border-soft">
+            <div key={dayKey(row[0]!)} role="row" aria-label={week ? t('cal.due') : undefined} className={cols}>
+              {week && <span className="bg-db-subtle px-2 py-3 text-right caption-4 uppercase tracking-wide text-db-faint">{t('cal.due')}</span>}
               {row.map((day) => {
                 const list = byDay.get(dayKey(day)) ?? [];
                 const shown = mode === 'month' ? list.slice(0, MONTH_LIMIT) : list;
@@ -130,7 +148,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                     role="gridcell"
                     aria-label={format(day, 'MMM d')}
                     aria-current={isToday ? 'date' : undefined}
-                    className={`flex flex-col gap-2 p-2.5 ${mode === 'week' ? 'min-h-72' : 'min-h-44'} ${
+                    className={`flex flex-col gap-2 p-2.5 ${week ? (hours ? 'min-h-36' : 'min-h-72') : 'min-h-44'} ${
                       isToday ? 'bg-db-accent-soft' : 'bg-db-surface'
                     } ${outside ? 'opacity-45' : ''}`}
                   >
@@ -145,14 +163,50 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                       <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} now={now} />
                     ))}
                     {list.length > shown.length && <span className="px-2 py-1 caption-4 text-db-faint">{t('cal.more', { n: list.length - shown.length })}</span>}
-                    {/* Class meetings, under the day's work, in the week view only. */}
-                    {mode === 'week' &&
-                      (classesByDay.get(dayKey(day)) ?? []).map((m) => <MeetingChip key={m.id} meeting={m} course={courseOf.get(m.courseId)} />)}
                   </div>
                 );
               })}
             </div>
           ))}
+          {hours && (
+            <div role="row" aria-label={t('cal.classes')} className={cols}>
+              <div aria-hidden="true" className="relative bg-db-subtle" style={{ height: `${(hours.to - hours.from) * 60 * PX_PER_MIN}px` }}>
+                {Array.from({ length: hours.to - hours.from }, (_, i) => (
+                  <span key={i} className="absolute right-2 -translate-y-1/2 caption-5 text-db-faint tabular-nums" style={{ top: `${i * 60 * PX_PER_MIN}px` }}>
+                    {i === 0 ? '' : format(new Date(2000, 0, 1, hours.from + i), 'h a')}
+                  </span>
+                ))}
+              </div>
+              {days.map((day) => {
+                const isToday = isSameDay(day, now);
+                const showNow = isToday && nowMin >= hours.from * 60 && nowMin <= hours.to * 60;
+                return (
+                  <div
+                    key={dayKey(day)}
+                    role="gridcell"
+                    aria-label={t('cal.dayClasses', { day: format(day, 'MMM d') })}
+                    className={`relative ${isToday ? 'bg-db-accent-soft' : 'bg-db-surface'}`}
+                    style={{
+                      height: `${(hours.to - hours.from) * 60 * PX_PER_MIN}px`,
+                      backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${60 * PX_PER_MIN - 1}px, var(--color-db-border-soft) ${60 * PX_PER_MIN - 1}px, var(--color-db-border-soft) ${60 * PX_PER_MIN}px)`,
+                    }}
+                  >
+                    {layoutDay(meetings, day).map((p) => (
+                      <MeetingBlock key={p.meeting.id} placed={p} course={courseOf.get(p.meeting.courseId)} from={hours.from} />
+                    ))}
+                    {showNow && (
+                      <span
+                        data-testid="now-line"
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 h-0.5 bg-db-urgent-fg"
+                        style={{ top: `${(nowMin - hours.from * 60) * PX_PER_MIN}px` }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </section>
