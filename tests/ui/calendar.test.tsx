@@ -29,12 +29,14 @@ describe('CalendarView', () => {
     expect(within(today).getByText('Quiz 6')).toBeTruthy();
   });
 
-  it('item chip uses course color, shows time, and opens url', () => {
+  it('item card uses course color and shows the class under the task', () => {
     renderIn('en', <CalendarView dashboard={d} now={NOW} />);
     const chip = screen.getByRole('link', { name: /Project 3/ }) as HTMLAnchorElement;
     expect(chip.href).toBe('https://x/i1');
     expect(chip.target).toBe('_blank');
     expect(chip.textContent).toContain('11:59 PM');
+    expect(within(chip).getByTestId('chip-course').textContent).toBe('CS 18000');
+    expect(chip.className).toContain('flex-col');
     const dot = chip.querySelector('[data-testid="chip-dot"]') as HTMLElement;
     expect(dot.style.background.toLowerCase()).toMatch(/#ea580c|rgb\(234, 88, 12\)/);
   });
@@ -62,7 +64,7 @@ describe('CalendarView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Month' }));
     const cell = screen.getByRole('gridcell', { name: 'Nov 20' });
     expect(within(cell).getAllByRole('link')).toHaveLength(3);
-    expect(within(cell).getByText('+2')).toBeTruthy();
+    expect(within(cell).getByText('+2 more')).toBeTruthy();
   });
 
   it('english labels', () => {

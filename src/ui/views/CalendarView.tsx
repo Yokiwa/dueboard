@@ -12,6 +12,7 @@ const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_LIMIT = 3;
 
 function Chip({ item, course, now }: { item: Item; course: Course | undefined; now: Date }) {
+  const t = useT();
   const done = item.doneByUser || item.submitted;
   const overdue = !done && Date.parse(item.dueAt!) <= now.getTime();
   const time = format(new Date(item.dueAt!), 'h:mm a');
@@ -23,13 +24,19 @@ function Chip({ item, course, now }: { item: Item; course: Course | undefined; n
       data-done={String(done)}
       data-overdue={String(overdue)}
       title={course ? `${course.code} · ${item.title}` : item.title}
-      className={`db-press flex min-w-0 items-center gap-1 rounded-md bg-db-subtle px-2 py-1 caption-4 hover:bg-db-hover ${
+      className={`db-press flex min-w-0 flex-col gap-1 rounded-lg border border-db-border-soft border-l-[3px] bg-db-subtle px-2.5 py-2 hover:bg-db-hover ${
         done ? 'text-db-faint line-through' : overdue ? 'text-db-urgent-fg no-underline' : 'text-db-text no-underline'
       }`}
+      style={{ borderLeftColor: course?.color }}
     >
-      <span data-testid="chip-dot" aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
-      <span className="shrink-0 font-mono caption-5 text-db-faint tabular-nums">{time}</span>
-      <span className="truncate">{item.title}</span>
+      <span className="flex min-w-0 items-start gap-2">
+        <span data-testid="chip-dot" aria-hidden="true" className="mt-1 size-2 shrink-0 rounded-full" style={{ background: course?.color }} />
+        <span className="min-w-0 break-words caption-3 leading-snug">{item.title}</span>
+      </span>
+      <span className="flex min-w-0 items-center justify-between gap-2 pl-4 text-db-faint">
+        <span data-testid="chip-course" className="min-w-0 truncate caption-5 no-underline">{course?.code ?? t('cal.noCourse')}</span>
+        <span className="shrink-0 font-mono caption-5 tabular-nums no-underline">{time}</span>
+      </span>
     </a>
   );
 }
@@ -49,8 +56,8 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
   const rows = mode === 'week' ? [days] : Array.from({ length: 6 }, (_, r) => days.slice(r * 7, r * 7 + 7));
 
   return (
-    <section className="db-rise flex flex-col gap-4 rounded-2xl border border-db-border bg-db-surface p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="db-rise overflow-hidden rounded-2xl border border-db-border bg-db-surface shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-db-border-soft px-5 py-4">
         <div className="flex items-center gap-2">
           <button type="button" className={iconBtn} aria-label={t(mode === 'week' ? 'cal.prevWeek' : 'cal.prevMonth')} onClick={() => step(-1)}>
             <CaretLeft aria-hidden="true" size={16} weight="bold" />
@@ -80,17 +87,17 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div role="grid" className="min-w-[700px]">
-          <div role="row" className="grid grid-cols-7 gap-1 pb-2">
+      <div className="overflow-x-auto p-3 sm:p-4">
+        <div role="grid" className="min-w-[980px] overflow-hidden rounded-xl border border-db-border-soft bg-db-border-soft">
+          <div role="row" className="grid grid-cols-7 gap-px bg-db-border-soft">
             {WEEKDAY.map((w) => (
-              <span key={w} role="columnheader" className="px-2 caption-3 text-db-faint">
+              <span key={w} role="columnheader" className="bg-db-subtle px-3 py-2 text-right caption-4 uppercase tracking-wide text-db-faint">
                 {w}
               </span>
             ))}
           </div>
           {rows.map((row) => (
-            <div key={dayKey(row[0]!)} role="row" className="grid grid-cols-7 gap-1">
+            <div key={dayKey(row[0]!)} role="row" className="grid grid-cols-7 gap-px bg-db-border-soft">
               {row.map((day) => {
                 const list = byDay.get(dayKey(day)) ?? [];
                 const shown = mode === 'month' ? list.slice(0, MONTH_LIMIT) : list;
@@ -102,12 +109,12 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                     role="gridcell"
                     aria-label={format(day, 'MMM d')}
                     aria-current={isToday ? 'date' : undefined}
-                    className={`flex flex-col gap-1 rounded-xl border p-2 ${mode === 'week' ? 'min-h-48' : 'min-h-24'} ${
-                      isToday ? 'border-db-accent bg-db-accent-soft' : 'border-db-border-soft'
-                    } ${outside ? 'opacity-50' : ''}`}
+                    className={`flex flex-col gap-2 p-2.5 ${mode === 'week' ? 'min-h-72' : 'min-h-44'} ${
+                      isToday ? 'bg-db-accent-soft' : 'bg-db-surface'
+                    } ${outside ? 'opacity-45' : ''}`}
                   >
                     <span
-                      className={`inline-flex size-6 items-center justify-center rounded-full caption-3 tabular-nums ${
+                      className={`ml-auto inline-flex size-7 items-center justify-center rounded-full caption-3 tabular-nums ${
                         isToday ? 'bg-db-accent text-db-on-accent' : 'text-db-muted'
                       }`}
                     >
@@ -116,7 +123,7 @@ export function CalendarView({ dashboard, now }: { dashboard: Dashboard; now: Da
                     {shown.map((it) => (
                       <Chip key={it.id} item={it} course={courseOf.get(it.courseId)} now={now} />
                     ))}
-                    {list.length > shown.length && <span className="px-2 caption-4 text-db-faint">{`+${list.length - shown.length}`}</span>}
+                    {list.length > shown.length && <span className="px-2 py-1 caption-4 text-db-faint">{t('cal.more', { n: list.length - shown.length })}</span>}
                   </div>
                 );
               })}
