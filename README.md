@@ -17,10 +17,10 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **One sign-in.** You only sign in to Brightspace. DueBoard reads your courses and discovers which homework platforms they use.
 - **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
 - **Next deadline.** The nearest deadline is emphasized at the top with a live countdown, an *Open* button and a *Done* button.
-- **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off.
+- **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off, grouped into Overdue, Today, This week and Later with a count on each group.
 - **Handed-in work ticks itself off, with its score.** Brightspace (your submission or gradebook grade), Gradescope, Pearson MyLab and other homework pages say whether you handed the work in; DueBoard ticks it off and shows the score. Untick something DueBoard ticked and it stays unticked.
-- **Overdue for the whole term.** Every past-due assignment, quiz and homework since the course started, not only last week's. Work no source has said anything about carries a **Not sure** tag until one does, or until you tick it.
-- **Focus timer.** A built-in Pomodoro timer supports 25-minute focus sessions and 5-minute breaks, and remembers its state while you use the dashboard.
+- **Overdue for the whole term.** Every past-due assignment, quiz and homework since the course started, not only last week's. Work no source has said anything about moves into a collapsed **Not sure if handed in** section of the to-do list until one does, or until you tick it.
+- **Focus timer.** A built-in Pomodoro timer on the dashboard and in the toolbar popup, with 25-minute focus sessions and 5-minute breaks by default (each adjustable from 1 to 180 minutes). Both share one timer, and a short chime plays when a session ends, even if DueBoard isn't open.
 - **Study themes.** Switch between Nightowl, Morning Dew, Noon Cafe and Dusk Lullaby, or let Automatic choose for the time of day. Theme changes fade smoothly without interrupting your work.
 - **Focused settings flow.** Settings open in the current DueBoard tab, with a back button that returns to the dashboard.
 - **Any homework platform.** For homework that Brightspace launches on another platform, DueBoard opens your Brightspace link in a hidden frame inside the extension, reads the "Due …" line and closes it, in the background with no window or tab. Pages that can't be read that way fall back to a small minimized window (you can turn it off in Settings). Known platforms work out of the box; DueBoard asks you to allow a site only the first time it finds one it doesn't know.
@@ -39,7 +39,7 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 | Dusk Lullaby | 6 PM–11 PM | Aubergine, rose and muted sunset tones for the evening |
 | Automatic | All day | Follows the schedule above and fades into the next theme |
 
-Use the theme button in the dashboard header to cycle through all five choices. The selected theme is saved across reloads and can also be changed from **Settings → Appearance**.
+Use the theme button in the dashboard header to cycle through all five choices. The selected theme is saved across reloads and can also be changed from **Settings → Appearance**. The toolbar popup follows the same theme.
 
 ### Where due dates come from
 
@@ -53,7 +53,7 @@ Use the theme button in the dashboard header to cycle through all five choices. 
 | Syllabus (Simple Syllabus, PDF or web page in Content) | Shown as suggestions you can add or hide |
 | Anything else | Add it by hand; it stays until you remove it |
 
-A date from Brightspace always wins over one read on a platform page, and every platform date says where it was read ("Read from ALEKS"). The same sources say whether the work was handed in; a score of 0 on its own doesn't count, since platforms show 0 for missing work.
+A date from Brightspace always wins over one read on a platform page, and every platform date says where it was read ("Read from ALEKS", shown when you hover over the item in the to-do list). The same sources say whether the work was handed in; a score of 0 on its own doesn't count, since platforms show 0 for missing work.
 
 ## Install
 
