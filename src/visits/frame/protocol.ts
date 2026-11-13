@@ -38,6 +38,8 @@ export interface FrameResult {
   host?: string;
   landed?: string;
   found?: FoundDue;
+  /** Rendered Pearson assignment table; transient, not a log entry. */
+  sessionHtml?: string;
   /** Whether the page showed the work done (check mode; or found together with the date in due mode). */
   check?: CheckAnswer;
   lines?: string[];

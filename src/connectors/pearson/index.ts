@@ -5,6 +5,8 @@ import { createLimiter } from '../limit';
 export interface PearsonOptions {
   /** Runs parsePearson where a DOM exists (offscreen document in the service worker). */
   parse(html: string): Promise<PearsonPage>;
+  /** Already rendered in an authenticated hidden frame; used only for this resync. */
+  sessionHtml?: string;
   fetchImpl?: typeof fetch;
   now?: () => Date;
   /** What is already known, so rows known done are asked again only for regrades (see addScores). */
@@ -68,11 +70,17 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
     );
   }
   async function fetchAll(): Promise<ConnectorResult> {
+    const result = await fetchPage();
+    // Some browsers let the frame authenticate without sharing its session with a worker fetch.
+    return !result.ok && opts.sessionHtml !== undefined ? readPage(opts.sessionHtml) : result;
+  }
+
+  async function fetchPage(): Promise<ConnectorResult> {
     let res: Response;
     try {
       // Don't follow redirects: without a session Pearson bounces to its sign-in site, which the extension may not
       // be allowed to reach — following would surface as an opaque network error instead of "please reopen Pearson".
-      res = await fetchImpl(PEARSON_ASSIGNMENTS_URL, { credentials: 'include', redirect: 'manual' });
+      res = await fetchImpl(PEARSON_ASSIGNMENTS_URL, { credentials: 'include', redirect: 'manual', signal: AbortSignal.timeout(15_000) });
     } catch (e) {
       return { ok: false, reason: 'network', detail: String(e) };
     }
@@ -83,6 +91,10 @@ export function createPearsonConnector(opts: PearsonOptions): Connector {
     if (!res.ok) return { ok: false, reason: 'network', detail: `HTTP ${res.status}` };
     if (res.redirected && !/DoAssignments/i.test(res.url)) return { ok: false, reason: 'not_logged_in', detail: `redirected to ${res.url}` };
     const html = await res.text();
+    return readPage(html);
+  }
+
+  async function readPage(html: string): Promise<ConnectorResult> {
     if (!/gridAssignments|assignement-list-table/.test(html)) {
       return SIGN_IN.test(html)
         ? { ok: false, reason: 'not_logged_in', detail: 'sign-in page' }

@@ -48,7 +48,7 @@ describe('dashboard App', () => {
     render(<App />);
     await waitFor(() => screen.getByRole('heading', { name: 'Welcome to DueBoard' }));
     expect(screen.queryByRole('link', { name: 'Open Brightspace' })).toBeNull();
-    expect(screen.queryByText(/Gradescope|Pearson|Wiley/)).toBeNull();
+    expect(screen.queryByText(/may briefly use this tab/)).toBeNull();
     expect(screen.getByText('Already signed in? This starts reading your courses right away.')).toBeTruthy();
     vi.mocked(sendToBackground).mockResolvedValueOnce({ signedIn: true }).mockResolvedValueOnce({ brightspace: 'not_logged_in', gradescope: 'not_logged_in' });
     fireEvent.click(screen.getByRole('button', { name: 'Log in to Brightspace' }));

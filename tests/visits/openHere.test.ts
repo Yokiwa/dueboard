@@ -166,3 +166,23 @@ describe('open here: links clicked by a script', () => {
     expect(root.getElementById('l')!.getAttribute('target')).toBe('_self');
   });
 });
+
+describe('blank popup documents stay inside a real child frame', () => {
+  it('preserves document writes and returns a genuine child window instead of discarding launch forms', () => {
+    const write = vi.fn();
+    const child = { ...fake(), document: { write, addEventListener: vi.fn() } };
+    const frame = { contentWindow: child, style: { cssText: '' }, setAttribute: vi.fn(), remove: vi.fn(), width: '', height: '', name: '' };
+    const parent = { appendChild: vi.fn() };
+    const doc = { createElement: vi.fn(() => frame), body: parent, addEventListener: vi.fn() };
+    const win = { ...fake(), document: doc };
+    installOpenHere(win as unknown as Window);
+    const popup = win.open('', '_blank') as typeof child;
+    expect(popup).toBe(child);
+    popup.document.write('<form method="post" action="/launch"></form>');
+    expect(write).toHaveBeenCalledWith('<form method="post" action="/launch"></form>');
+    expect(frame.setAttribute).toHaveBeenCalledWith('sandbox', 'allow-scripts allow-same-origin allow-forms');
+    expect(parent.appendChild).toHaveBeenCalledWith(frame);
+    expect(frame.width).toBe('1280');
+    expect(win.location.assign).not.toHaveBeenCalled();
+  });
+});

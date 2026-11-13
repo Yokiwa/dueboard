@@ -1,5 +1,4 @@
 import { browser } from 'wxt/browser';
-import { IS_FIREFOX } from '../core/env';
 import { setVisitWindow } from '../storage/store';
 import { FINDER_FILE, stripUrl, type VisitMessage } from './messages';
 import { launchTargetHost, SIGN_IN, type Landing, type VisitApi } from './runner';
@@ -96,15 +95,8 @@ function onPage(url: string | undefined): boolean {
 export function createBrowserVisitApi(): VisitApi {
   return {
     async openWindow() {
-      // Firefox can't open a window without focusing it; give focus back to the window the student was using.
-      const before = IS_FIREFOX ? await browser.windows.getLastFocused().catch(() => undefined) : undefined;
-      const win = await browser.windows.create({ url: 'about:blank', state: 'minimized', ...(IS_FIREFOX ? {} : { focused: false }), type: 'normal' });
-      if (before?.id !== undefined) await browser.windows.update(before.id, { focused: true }).catch(() => undefined);
-      const tabId = win?.tabs?.[0]?.id;
-      if (win?.id === undefined || tabId === undefined) throw new Error('could not open the visit window');
-      ours.add(win.id);
-      setVisitTab(tabId);
-      return { windowId: win.id, tabId };
+      // Kept on the legacy runner interface for cleanup compatibility. No caller may open a visit window.
+      throw new Error('DueBoard reads platforms in hidden frames only; visit windows are disabled.');
     },
 
     async navigate(tabId, url) {
@@ -217,23 +209,31 @@ export function createBrowserVisitApi(): VisitApi {
     async inject(tabId, mode, platform) {
       // Homework visits may press "open the assignment"; sign-in visits one link (Pearson's Assignments).
       const allowOpen = mode === 'due' || mode === 'check' || mode === 'session';
-      if (allowOpen) {
-        // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
-        await browser.scripting
-          .executeScript({ target: { tabId, allFrames: true }, world: 'MAIN', func: installOpenHere })
-          .catch(() => undefined);
+      // Read the top document first. An ungranted analytics/advertising subframe must not prevent
+      // the course page's own Assignments control from being read.
+      for (const allFrames of [false, true]) {
+        try {
+          if (allowOpen) {
+            // DueBoard's own hidden tab: a page that would open the assignment in a new tab opens it here instead.
+            await browser.scripting
+              .executeScript({ target: { tabId, allFrames }, world: 'MAIN', func: installOpenHere })
+              .catch(() => undefined);
+          }
+          await browser.scripting.executeScript({
+            target: { tabId, allFrames },
+            func: (m: string, p: string | null, open: boolean) => {
+              const w = window as unknown as { __dueboardMode?: string; __dueboardPlatform?: string; __dueboardAllowOpen?: boolean };
+              w.__dueboardMode = m;
+              if (p) w.__dueboardPlatform = p;
+              w.__dueboardAllowOpen = open;
+            },
+            args: [mode, platform ?? null, allowOpen],
+          });
+          await browser.scripting.executeScript({ target: { tabId, allFrames }, files: [FINDER_FILE] });
+        } catch (e) {
+          if (!allFrames) throw e;
+        }
       }
-      await browser.scripting.executeScript({
-        target: { tabId, allFrames: true },
-        func: (m: string, p: string | null, open: boolean) => {
-          const w = window as unknown as { __dueboardMode?: string; __dueboardPlatform?: string; __dueboardAllowOpen?: boolean };
-          w.__dueboardMode = m;
-          if (p) w.__dueboardPlatform = p;
-          w.__dueboardAllowOpen = open;
-        },
-        args: [mode, platform ?? null, allowOpen],
-      });
-      await browser.scripting.executeScript({ target: { tabId, allFrames: true }, files: [FINDER_FILE] });
     },
 
     nextMessage(_tabId, timeoutMs) {

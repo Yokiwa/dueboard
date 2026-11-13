@@ -281,3 +281,48 @@ describe('syncAndVisit status line', () => {
     expect(steps2.at(-1)).toBeNull();
   });
 });
+
+describe('first sync uses the authenticated hidden Pearson page', () => {
+  it('passes the rendered assignment list to resync without another button press', async () => {
+    const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Pearson MyLab', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
+    const sessionHtml = '<table class="assignement-list-table"><tr><th scope="row">HW 1</th></tr></table>';
+    const { d } = deps(store, [{ key: 'pearson:session', status: 'landed', host: 'mylab.pearson.com', via: 'frame', sessionHtml }], { sync: vi.fn(async () => ({ brightspace: 'ok' as const, pearson: 'not_logged_in' as const })) });
+    expect((await syncAndVisit(d, 'auto')).pearson).toBe('ok');
+    expect(d.resync).toHaveBeenCalledWith('pearson', sessionHtml);
+  });
+  it('rechecks the connector even when its frame could not confirm the landing', async () => {
+    const { d } = deps(withHomework(), [{ key: 'pearson:session', status: 'failed', reason: 'frame' }], { sync: vi.fn(async () => ({ brightspace: 'ok' as const, pearson: 'not_logged_in' as const })) });
+    expect((await syncAndVisit(d, 'auto')).pearson).toBe('ok');
+    expect(d.resync).toHaveBeenCalledWith('pearson');
+  });
+});
+
+describe('Pearson failure never navigates the dashboard', () => {
+  it('does not invoke an obsolete foreground recovery callback', async () => {
+    const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Access Pearson', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
+    const forbidden = vi.fn(async () => ({ pearson: 'ok' as const }));
+    const { d } = deps(store, [{ key: 'pearson:session', status: 'failed', reason: 'frame' }], {
+      sync: vi.fn(async () => ({ brightspace: 'ok' as const, pearson: 'not_logged_in' as const })),
+      resync: vi.fn(async () => ({ pearson: 'not_logged_in' as const })),
+    });
+    Object.assign(d, { recoverInitialPearson: forbidden });
+    expect((await syncAndVisit(d, 'auto')).pearson).toBe('not_logged_in');
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe('source recovery after the separate homework pass', () => {
+  it('still rereads Gradescope reached by homework when Pearson had its own session pass', async () => {
+    const store = withHomework({ syncMeta: { pearson: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } }, gradescope: { lastError: { at: now.toISOString(), reason: 'not_logged_in' } } } });
+    store.snapshots.brightspace!.links = [{ source: 'brightspace', sourceCourseId: '1', title: 'Access Pearson', url: `${B}/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=P` }];
+    const { d } = deps(store, [], {
+      sync: vi.fn(async () => ({ brightspace: 'ok' as const, pearson: 'not_logged_in' as const, gradescope: 'not_logged_in' as const })),
+      visit: vi.fn(async (targets: VisitTarget[]) => targets[0]?.mode === 'session' ? [{ key: 'pearson:session', status: 'landed' as const, host: 'mylab.pearson.com' }] : [{ key: 'brightspace:topic:1', status: 'none' as const, host: 'www.gradescope.com' }]),
+    });
+    const report = await syncAndVisit(d, 'auto');
+    expect(report).toEqual({ brightspace: 'ok', pearson: 'ok', gradescope: 'ok' });
+    expect(d.resync).toHaveBeenCalledWith('gradescope');
+  });
+});

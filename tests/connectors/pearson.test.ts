@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parsePearson, parseScoreAnswer, PearsonParseError, PEARSON_ASSIGNMENTS_URL } from '../../src/connectors/pearson/parse';
 import { createPearsonConnector } from '../../src/connectors/pearson';
@@ -252,4 +252,20 @@ describe('pearson scores', () => {
     expect(r.items.find((i) => i.sourceItemId === '100')!.score).toBeUndefined();
   });
 
+});
+
+describe('Pearson rendered session fallback', () => {
+  it('reads math deadlines from the hidden page even when worker requests remain signed out', async () => {
+    const fetchImpl = vi.fn(async () => new Response(login));
+    const result = await createPearsonConnector({ parse: async (html) => parsePearson(html), fetchImpl, sessionHtml: page }).fetchAll();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.items).toHaveLength(42);
+      expect(result.items.every((item) => item.dueAt)).toBe(true);
+    }
+  });
+  it('does not call an unrecognized loading shell a successful read', async () => {
+    const result = await createPearsonConnector({ parse: async (html) => parsePearson(html), fetchImpl: fakeFetch({ [PEARSON_ASSIGNMENTS_URL]: { body: login } }).impl, sessionHtml: '<h1>Loading</h1>' }).fetchAll();
+    expect(result).toMatchObject({ ok: false, reason: 'parse_error' });
+  });
 });

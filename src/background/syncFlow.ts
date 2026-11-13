@@ -31,7 +31,7 @@ export interface SyncAndVisitDeps {
   /** Reads syllabus files and checks course navigation bars; returns what changed. */
   syllabus?: (store: StoreShape) => Promise<Pick<StoreShape, 'syllabus' | 'syllabusNav'>>;
   /** Reads one background source again (after its sign-in was restored through Brightspace). */
-  resync: (source: 'gradescope' | 'pearson') => Promise<SyncReport>;
+  resync: (source: 'gradescope' | 'pearson', sessionHtml?: string) => Promise<SyncReport>;
   now: () => Date;
   /**
    * The dashboard's status line, kept for the whole run: Brightspace and the other sources, then syllabi; the visit
@@ -116,31 +116,38 @@ async function readAndVisit(
   const store = await deps.load();
   const targets = dueVisits(store, deps.now(), trigger, await deps.granted());
   if (targets.length === 0) return report;
-  const outcomes = await deps.visit(targets).catch((e: unknown) => {
+  const sessions = targets.filter((target) => target.mode === 'session');
+  const homework = targets.filter((target) => target.mode !== 'session');
+  const visit = (ts: VisitTarget[]) => deps.visit(ts).catch((e: unknown) => {
     console.warn('DueBoard: platform visits stopped early', e);
     return [] as VisitOutcome[];
   });
-  // A visit that reached Gradescope or Pearson signed the student in there (sign-in visits often end on pages DueBoard
-  // can't see): read that platform again in this same run.
-  for (const src of ['gradescope', 'pearson'] as const) {
-    if (report[src] === 'ok') continue;
-    const session = outcomes.find((o) => o.key === `${src}:session`);
-    const sessionTried = session?.status === 'landed' || (session?.status === 'failed' && session.reason === 'timeout');
-    const reached = outcomes.some((o) => 'host' in o && platformByHost(o.host)?.id === src);
-    if (!sessionTried && !reached) continue;
-    const again = await deps.resync(src);
-    Object.assign(report, again);
-    if (!session) continue;
-    const { visitState } = await deps.load();
-    const prev = visitState.sessions?.[src];
-    const at = prev?.at ?? deps.now().toISOString();
-    const ok = again[src] === 'ok';
-    const failures = ok ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
-    // A hidden frame that "signed in" without the platform noticing: next time go straight to the window.
-    // The mark is cleared only by a successful resync; otherwise a window attempt leaves it as it was.
-    const frame = ok ? undefined : session.status === 'landed' && session.via === 'frame' ? ('failed' as const) : prev?.frame;
-    const entry = frame ? { at, failures, frame } : { at, failures };
-    await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: entry } } });
-  }
+  // Restore source sessions before the longer homework scan so source assignments arrive in this sync.
+  const outcomes = await visit(sessions.length ? sessions : targets);
+  await reconcile(outcomes);
+  if (sessions.length && homework.length) await reconcile(await visit(homework));
   return report;
+
+  async function reconcile(outcomes: VisitOutcome[]): Promise<void> {
+    for (const src of ['gradescope', 'pearson'] as const) {
+      if (report[src] === 'ok') continue;
+      const session = outcomes.find((o) => o.key === `${src}:session`);
+      const sessionTried = session?.status === 'landed' || session?.status === 'failed';
+      const reached = outcomes.some((o) => 'host' in o && platformByHost(o.host)?.id === src);
+      if (!sessionTried && !reached) continue;
+      const html = session?.status === 'landed' ? session.sessionHtml : undefined;
+      const again = html && src === 'pearson' ? await deps.resync(src, html) : await deps.resync(src);
+      Object.assign(report, again);
+      if (!session) continue;
+      const { visitState } = await deps.load();
+      const prev = visitState.sessions?.[src];
+      const at = prev?.at ?? deps.now().toISOString();
+      const ok = again[src] === 'ok';
+      const failures = ok ? 0 : session.status === 'landed' ? (prev?.failures ?? 0) + 1 : prev?.failures ?? 1;
+      // Retain failure diagnostics for older records; a failed session never enables window visits.
+      const frame = ok ? undefined : session.status === 'landed' && session.via === 'frame' ? ('failed' as const) : prev?.frame;
+      const entry = frame ? { at, failures, frame } : { at, failures };
+      await deps.save({ visitState: { ...visitState, sessions: { ...visitState.sessions, [src]: entry } } });
+    }
+  }
 }

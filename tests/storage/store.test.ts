@@ -131,10 +131,11 @@ describe('store', () => {
     expect((await loadStore()).userState).toMatchObject({ hidden: { 'brightspace:51': true }, shown: {} });
   });
 
-  it('migrate: windowFallback defaults to true and keeps a stored boolean; visitState.frame and session frame survive', () => {
-    expect(migrate({}).settings.windowFallback).toBe(true);
+  it('migrate: windowFallback is disabled even for legacy opt-ins; visitState.frame and session frame survive', () => {
+    expect(migrate({}).settings.windowFallback).toBe(false);
+    expect(migrate({ settings: { windowFallback: true } }).settings.windowFallback).toBe(false);
     expect(migrate({ settings: { windowFallback: false } }).settings.windowFallback).toBe(false);
-    expect(migrate({ settings: { windowFallback: 'no' } }).settings.windowFallback).toBe(true);
+    expect(migrate({ settings: { windowFallback: 'no' } }).settings.windowFallback).toBe(false);
     expect(migrate({}).visitState.frame).toEqual({});
     const v = migrate({ visitState: { frame: { aleks: { blocked: 2, skipUntil: 'x' }, bad: { blocked: 'y' } }, sessions: { pearson: { at: 'a', failures: 1, frame: 'failed' } } } }).visitState;
     expect(v.frame).toEqual({ aleks: { blocked: 2, skipUntil: 'x' } });
@@ -142,7 +143,7 @@ describe('store', () => {
   });
 
   it('migrate keeps valid settings', () => {
-    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: true, theme: 'automatic' });
+    expect(migrate({ settings: { visits: 'manual', syllabus: false, completed: 'section' } }).settings).toEqual({ visits: 'manual', syllabus: false, completed: 'section', windowFallback: false, theme: 'automatic' });
   });
 
   it('finished work shows in the course cards unless set to its own section', () => {
@@ -177,7 +178,7 @@ describe('store', () => {
 
   it('saveSettings merges into the current settings', async () => {
     await saveSettings({ visits: 'off' });
-    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card', windowFallback: true, theme: 'automatic' });
+    expect((await loadStore()).settings).toEqual({ visits: 'off', syllabus: true, completed: 'card', windowFallback: false, theme: 'automatic' });
   });
 
   it('patchVisitState merges into the current visit state', async () => {

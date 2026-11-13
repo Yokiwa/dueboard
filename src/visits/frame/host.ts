@@ -1,3 +1,5 @@
+import { platformByHost } from '../../core/platformRegistry';
+import { MAX_SESSION_HTML } from '../../connectors/pearson/sessionPage';
 import { BRIGHTSPACE_HOST, SIGN_IN, sessionDone } from '../hosts';
 import { isVisitMessage, stripUrl, type VisitMessage } from '../messages';
 import type { PageSample } from '../runner';
@@ -87,6 +89,8 @@ function checkInner(m: unknown): Inner | null {
       return isStr(o.frameUrl) && typeof o.top === 'boolean' && (o.found === null || isFoundShape(o.found)) && (o.check === undefined || isCheckShape(o.check)) ? o : null;
     case 'visitCheck':
       return isStr(o.frameUrl) && typeof o.top === 'boolean' && (o.check === null || isCheckShape(o.check)) ? o : null;
+    case 'visitSessionReady':
+      return isStr(o.frameUrl) && isStr(o.html) && o.html.length <= MAX_SESSION_HTML ? o : null;
     case 'visitText':
       return isStr(o.frameUrl) && isStrArray(o.lines) ? o : null;
   }
@@ -134,6 +138,8 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
     } else {
       at = v.startedAt + v.helloMs + v.readMs;
     }
+    // Progress may extend a multi-stage launcher, but never indefinitely.
+    at = Math.min(at, v.startedAt + (v.req.mode === 'session' ? 80_000 : 120_000));
     v.timer = setTimeout(() => v.finish(status), Math.max(0, at - timers.now()));
   };
 
@@ -146,20 +152,30 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
         if (host === BRIGHTSPACE_HOST || SIGN_IN.test(m.frameUrl)) return;
         // Brightspace shows a platform inside its own launch page, so the platform page is often a nested frame. It counts
         // until the iframe itself shows a platform page; frames nested in that one (ads, widgets) never move the landing.
-        if (!direct && v.hostDirect) return;
+        const launchedChild = v.clicked.length > 0 && platformByHost(host)?.id !== undefined && platformByHost(host)?.id === platformByHost(v.host ?? '')?.id;
+        if (!direct && v.hostDirect && !launchedChild) return;
+        const moved = stripUrl(m.frameUrl) !== v.landed;
         v.host = host;
         v.landed = m.frameUrl;
         if (direct) v.hostDirect = true;
         if (v.req.mode === 'session') {
-          if (sessionDone(v.req.platform, m.frameUrl)) return v.finish('landed');
+          if (v.req.platform !== 'pearson' && sessionDone(v.req.platform, m.frameUrl)) return v.finish('landed');
           return;
         }
-        if (v.readStart === undefined) {
+        if (platformByHost(host)?.id === 'wileyplus') v.readMs = Math.max(v.readMs, 40_000);
+        if (v.readStart === undefined || moved) {
           v.readStart = timers.now();
           arm(v);
         }
         return;
       }
+      case 'visitSessionReady':
+        if (v.req.mode === 'session' && v.req.platform === 'pearson' && hostnameOf(m.frameUrl) === 'mylab.pearson.com' && /\/Student\/DoAssignments\.aspx$/i.test(new URL(m.frameUrl).pathname)) {
+          v.host = 'mylab.pearson.com';
+          v.landed = m.frameUrl;
+          v.finish('landed', { sessionHtml: m.html });
+        }
+        return;
       case 'visitCheck':
         if (v.req.mode !== 'check') return;
         if (m.check) v.finish('checked', { check: m.check });
@@ -178,6 +194,7 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       case 'visitClick': {
         const host = hostnameOf(m.frameUrl);
         v.clicked.push(host ? `${m.label} (${host})` : m.label);
+        if (v.req.mode !== 'session' && v.readStart !== undefined) { v.readStart = timers.now(); arm(v); }
         return;
       }
       case 'visitSample': {
@@ -198,8 +215,10 @@ export function createFrameHost(doc: Document, timers: { now(): number } = { now
       return new Promise<FrameResult>((resolve) => {
         const iframe = doc.createElement('iframe');
         iframe.name = `dueboard-${req.token}`;
+        iframe.width = '1280';
+        iframe.height = '900';
         // No page in a hidden frame may open a tab or window, whatever way it tries (the browser enforces it for nested
-        // frames too): one that only works in a new tab is left to the minimized window instead of appearing in front
+        // frames too): one that only works in a new tab stays blocked instead of appearing in front
         // of the student. Same origin kept, so scripts, forms, cookies and DueBoard's handshake work as usual.
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
         iframe.src = req.url;

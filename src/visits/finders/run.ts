@@ -1,3 +1,6 @@
+import { pearsonSessionPage } from '../../connectors/pearson/sessionPage';
+import { PEARSON_ASSIGNMENTS_URL } from '../../connectors/pearson/parse';
+import { sessionDone } from '../hosts';
 import { stripUrl, type VisitMessage } from '../messages';
 import type { ListedTitle } from '../frame/protocol';
 import { findCompletion } from './completion';
@@ -40,7 +43,7 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   if (win.__dueboardReading) return;
   win.__dueboardReading = true;
   const pollMs = opts.pollMs ?? 500;
-  const maxMs = opts.maxMs ?? 10_000;
+  const maxMs = opts.maxMs ?? (/^https:\/\/(?:[^/]+\.)?(?:wiley\.com|wileyplus\.com)\//i.test(win.location.href) ? 30_000 : 10_000);
   const settleMs = opts.settleMs ?? 1_500;
   const top = win.top === win;
   const frameUrl = win.location.href;
@@ -49,8 +52,26 @@ export function runFinder(win: FinderWindow, send: (m: VisitMessage) => void, op
   // A session visit only needs to know the page loaded, unless the platform needs one more step to sign in (Pearson's
   // Assignments link): that link is pressed once, as soon as the page shows it.
   if (win.__dueboardMode === 'session') {
+    let lastPage = '';
+    let pageSince = started;
     const step = () => {
-      const link = sessionStep(win.document, win.__dueboardPlatform, hostOf(frameUrl));
+      if (win.__dueboardPlatform === 'pearson' && sessionDone('pearson', frameUrl)) {
+        const url = new URL(frameUrl);
+        if (!/\/Student\/DoAssignments\.aspx$/i.test(url.pathname) || url.searchParams.get('view') !== 'all') {
+          win.location.href = PEARSON_ASSIGNMENTS_URL;
+          return;
+        }
+        const html = pearsonSessionPage(win.document);
+        if (html !== lastPage) {
+          lastPage = html ?? '';
+          pageSince = Date.now();
+        }
+        if (html && Date.now() - pageSince >= settleMs) {
+          send({ type: 'visitSessionReady', html, frameUrl: stripUrl(frameUrl) });
+          return;
+        }
+      }
+      const link = sessionStep(win.document, win.__dueboardPlatform, hostOf(frameUrl), new URL(frameUrl).pathname);
       if (link) {
         send({ type: 'visitClick', label: link.label, frameUrl: stripUrl(frameUrl) });
         link.press();

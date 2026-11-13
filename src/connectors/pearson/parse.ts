@@ -1,3 +1,4 @@
+import { PEARSON_TABLE } from './sessionPage';
 import type { ItemType, RawItem, Score } from '../../core/types';
 
 export const PEARSON_ASSIGNMENTS_URL = 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all';
@@ -62,7 +63,7 @@ export function parsePearsonDate(raw: string): string | null {
  */
 export function parsePearson(html: string): PearsonPage {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const table = doc.querySelector('table[id$="gridAssignments"], table.assignement-list-table');
+  const table = doc.querySelector(PEARSON_TABLE);
   if (!table) throw new PearsonParseError('no assignments table');
   const courseId = html.match(/courseId\s*:\s*'(\d+)'/)?.[1] ?? html.match(/courseId'\s*:\s*'(\d+)'/)?.[1] ?? 'mylab';
 
@@ -103,6 +104,9 @@ export function parsePearson(html: string): PearsonPage {
       submitted: pastDue && !workable,
       ...(score ? { score } : {}),
     });
+  }
+  if (items.length === 0 && !/\bno assignments\b/i.test(table.textContent ?? '')) {
+    throw new PearsonParseError('assignments table has no readable rows (possibly still loading)');
   }
   const form: Record<string, string> = {};
   for (const el of doc.querySelectorAll('#aspnetForm input[name], #aspnetForm select[name], #aspnetForm textarea[name]')) {

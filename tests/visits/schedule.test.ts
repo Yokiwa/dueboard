@@ -53,16 +53,16 @@ describe('dueVisits', () => {
     expect(keys(store([topic(1, 'HW 1', { dueAt: '2026-11-10T04:59:00.000Z' }), topic(2, 'HW 2', { launchUrl: undefined })]))).toEqual([]);
   });
 
-  it('skips items a completion record says are done', () => {
+  it('backfills a missing date even when a score marks homework done', () => {
     const s = store([topic(1, 'HW 1')]);
     s.completion = { 'brightspace:topic:1': { state: 'done', by: 'score', source: 'Brightspace', checkedAt: ago(1) } };
-    expect(keys(s)).toEqual([]);
+    expect(keys(s)).toEqual(['brightspace:topic:1']);
   });
 
-  it('skips submitted and done items', () => {
+  it('backfills submitted undated homework while respecting a manual done choice', () => {
     const s = store([topic(1, 'HW 1', { submitted: true, submissionKnown: true }), topic(2)]);
     s.userState.done['brightspace:topic:2'] = true;
-    expect(keys(s)).toEqual([]);
+    expect(keys(s)).toEqual(['brightspace:topic:1']);
   });
 
   it('a found date more than 3 days away is rechecked every 3 days; a nearer one daily', () => {
@@ -182,6 +182,10 @@ describe('dueVisits: fixes from review', () => {
   it('retries the Pearson session at most every 6 hours', () => {
     expect(keys(pearsonStore({ at: ago(5), failures: 1 }))).toEqual([]);
     expect(keys(pearsonStore({ at: ago(7), failures: 1 }))).toEqual(['pearson:session']);
+  });
+
+  it('renews a newly expired session immediately after an earlier successful recovery', () => {
+    expect(keys(pearsonStore({ at: ago(0.2), failures: 0 }))).toEqual(['pearson:session']);
   });
 
   it('after 3 failed Pearson session attempts, only a manual refresh tries again', () => {

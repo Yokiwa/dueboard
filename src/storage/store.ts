@@ -21,7 +21,7 @@ function migrateSettings(v: unknown): Settings {
   return {
     visits: r.visits === 'auto' || r.visits === 'manual' || r.visits === 'off' ? r.visits : DEFAULT_SETTINGS.visits,
     syllabus: typeof r.syllabus === 'boolean' ? r.syllabus : DEFAULT_SETTINGS.syllabus,
-    windowFallback: typeof r.windowFallback === 'boolean' ? r.windowFallback : DEFAULT_SETTINGS.windowFallback,
+    windowFallback: false,
     completed: r.completed === 'card' || r.completed === 'section' ? r.completed : DEFAULT_SETTINGS.completed,
     theme:
       r.theme === 'nightowl' || r.theme === 'morning-dew' || r.theme === 'noon-cafe' || r.theme === 'dusk-lullaby' || r.theme === 'automatic'
@@ -298,7 +298,7 @@ export interface StoredVisitLogEntry {
   answer?: string;
   result: string;
   detail?: string;
-  mode?: 'frame' | 'window';
+  mode?: 'frame' | 'window' | 'existing-tab';
 }
 export async function appendVisitLog(entries: StoredVisitLogEntry[]): Promise<void> {
   if (entries.length === 0) return;

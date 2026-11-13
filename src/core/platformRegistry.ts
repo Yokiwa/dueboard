@@ -42,7 +42,7 @@ export const PLATFORMS: PlatformDef[] = [
     'pearson',
     'Pearson',
     'homework',
-    ['mylab.pearson.com', '*.pearson.com', '*.pearsoncmg.com', '*.pearsonmylabandmastering.com', '*.masteringphysics.com', '*.masteringchemistry.com'],
+    ['mylab.pearson.com', 'socket.pearsoned.com', '*.pearson.com', '*.pearsoncmg.com', '*.pearsonmylabandmastering.com', '*.masteringphysics.com', '*.masteringchemistry.com'],
     /pearson|mylab|mastering/i,
     'fetch',
   ),

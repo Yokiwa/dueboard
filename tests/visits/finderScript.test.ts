@@ -151,7 +151,7 @@ describe('runFinder describes a page it found nothing on (for the visit log)', (
     const w = fakeWindow(false);
     w.location = { href: 'https://education.wiley.com/was/ui/v2/lti-tool-launcher/index.html?launchId=X' };
     runFinder(w, (m) => sent.push(m));
-    await vi.advanceTimersByTimeAsync(11_000);
+    await vi.advanceTimersByTimeAsync(31_000);
     expect(sent.filter((m) => m.type === 'visitSample')).toEqual([
       {
         type: 'visitSample',
@@ -193,6 +193,35 @@ describe('runFinder on a sign-in visit (session mode)', () => {
     expect(pressed).toBe(1);
     expect(a.getAttribute('target')).toBe('_self');
     expect(clicks(sent)).toEqual([{ type: 'visitClick', label: 'Assignments', frameUrl: 'https://interop.pearson.com/launch' }]);
+  });
+
+  it('opens the Pearson gateway once, including when its accessible label describes a new tab', async () => {
+    document.body.innerHTML = '<p>Loading Pearson content. Please wait.</p>';
+    const sent: VisitMessage[] = [];
+    runFinder(session('https://socket.pearsoned.com/uiservice/opener'), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(2_000);
+    document.body.innerHTML = '<a id="gateway" href="https://console.pearson.com/courses/1/dashboard" target="_blank" aria-label="Open Pearson (opens in new tab)"><span>Open Pearson</span></a>';
+    const gateway = document.getElementById('gateway')!;
+    let pressed = 0;
+    gateway.addEventListener('click', (e) => { e.preventDefault(); pressed++; });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(pressed).toBe(1);
+    expect(gateway.getAttribute('target')).toBe('_self');
+    expect(clicks(sent)).toEqual([{ type: 'visitClick', label: 'Open Pearson (opens in new tab)', frameUrl: 'https://socket.pearsoned.com/uiservice/opener' }]);
+  });
+
+  it.each([
+    ['https://console.pearson.com/courses/1/dashboard', 'pearson', 'Open Pearson'],
+    ['https://socket.pearsoned.com/unrelated', 'pearson', 'Open Pearson'],
+    ['https://socket.pearsoned.com/uiservice/opener', 'gradescope', 'Open Pearson'],
+    ['https://socket.pearsoned.com/uiservice/opener', 'pearson', 'Open Pearson and submit'],
+    ['https://socket.pearsoned.com/uiservice/opener', 'pearson', 'Open Pearson account settings'],
+  ])('never treats an unrelated action as the gateway: %s %s %s', async (url, platform, label) => {
+    document.body.innerHTML = `<button>${label}</button>`;
+    const sent: VisitMessage[] = [];
+    runFinder(session(url, platform), (m) => sent.push(m));
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(clicks(sent)).toEqual([]);
   });
 
   it('also finds it by its accessible name', async () => {
@@ -359,5 +388,31 @@ describe('runFinder reads whether the work is done (check mode)', () => {
     const found = sent.find((m) => m.type === 'visitFound') as { check?: unknown };
     expect(found).toBeDefined();
     expect('check' in found).toBe(false);
+  });
+});
+
+describe('Pearson first-sync readiness', () => {
+  beforeEach(() => { vi.useFakeTimers(); document.body.innerHTML = '<h1>Loading…</h1>'; });
+  afterEach(() => vi.useRealTimers());
+  const session = () => ({ document, location: { href: 'https://mylab.pearson.com/Student/DoAssignments.aspx?view=all' }, top: {}, __dueboardMode: 'session', __dueboardPlatform: 'pearson' }) as FinderWindow;
+  it('waits for the assignment table rather than stopping when MyLab loads its shell', async () => {
+    const sent: VisitMessage[] = [];
+    runFinder(session(), (message) => sent.push(message));
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(sent.some((message) => message.type === 'visitSessionReady')).toBe(false);
+    document.body.innerHTML = '<script>const courseId = "ignore"</script><table class="assignement-list-table"><tr><td><div>11/10/26<br>11:59pm</div></td><th scope="row"><a href="javascript:doHomework(123)">HW 1</a></th></tr></table>';
+    await vi.advanceTimersByTimeAsync(2_000);
+    const ready = sent.find((message) => message.type === 'visitSessionReady');
+    expect(ready).toMatchObject({ type: 'visitSessionReady' });
+    if (ready?.type === 'visitSessionReady') {
+      expect(ready.html).toContain('HW 1');
+      expect(ready.html).not.toContain('<script');
+    }
+  });
+  it('opens the full assignment list in the same frame when MyLab lands on its home page', () => {
+    const win = session();
+    win.location.href = 'https://mylab.pearson.com/Student/Home.aspx';
+    runFinder(win, () => undefined);
+    expect(win.location.href).toBe('https://mylab.pearson.com/Student/DoAssignments.aspx?view=all');
   });
 });

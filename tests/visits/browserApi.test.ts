@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createBrowserVisitApi, deliverVisitMessage, onSessionPage, setVisitTab } from '../../src/visits/browserApi';
 import type { VisitMessage } from '../../src/visits/messages';
 
@@ -42,26 +42,9 @@ describe('visit window state', () => {
     return { api, at, w };
   };
 
-  it('the student taking over the window is a change from how it looked at the first check', async () => {
-    const { api, at } = await setup({ state: 'minimized', focused: false });
-    await api.openWindow();
-    expect(await api.windowState(1)).toBe('minimized');
-    at({ state: 'minimized', focused: false });
-    expect(await api.windowState(1)).toBe('minimized');
-    at({ state: 'normal', focused: false });
-    expect(await api.windowState(1)).toBe('open');
-    at({ state: 'minimized', focused: true });
-    expect(await api.windowState(1)).toBe('open');
-    at({ state: 'minimized', focused: false, tabs: [{}, {}] });
-    expect(await api.windowState(1)).toBe('open');
-  });
-
-  it('a system that could not minimize the window (it opened normal and focused, whatever create() echoed) does not stop the visits', async () => {
-    const { api, at } = await setup({ state: 'minimized', focused: false });
-    await api.openWindow();
-    at({ state: 'normal', focused: true }); // the system restored and focused it on its own, before the first check
-    expect(await api.windowState(1)).toBe('minimized');
-    expect(await api.windowState(1)).toBe('minimized');
+  it('refuses to create a visit window', async () => {
+    const { api } = await setup({});
+    await expect(api.openWindow()).rejects.toThrow('visit windows are disabled');
   });
 
   it('a window from an earlier run (no record of how it opened) counts as untouched only with a single tab', async () => {
@@ -134,5 +117,19 @@ describe('onSessionPage', () => {
     expect(onSessionPage('https://purdue.brightspace.com/d2l/lti/x', 'pearson')).toBe(false);
     expect(onSessionPage('about:blank', 'pearson')).toBe(false);
     expect(onSessionPage(undefined, 'pearson')).toBe(false);
+  });
+});
+
+describe('injecting the first-connection reader', () => {
+  it('still reads the top page when another embedded origin refuses injection', async () => {
+    const { browser } = await import('wxt/browser');
+    const execute = vi.spyOn(browser.scripting, 'executeScript').mockImplementation(async (options) => {
+      if (options.target.allFrames) throw new Error('Cannot access a third-party frame');
+      return [];
+    });
+    try {
+      await expect(createBrowserVisitApi().inject(7, 'session', 'pearson')).resolves.toBeUndefined();
+      expect(execute.mock.calls.some(([options]) => !options.target.allFrames && options.files?.includes('/visit-finder.js'))).toBe(true);
+    } finally { execute.mockRestore(); }
   });
 });

@@ -1,3 +1,4 @@
+// Historical window-runner harness; the e2e:visits command now runs e2e-frames.cjs.
 // End-to-end check of platform visits in a real Chromium with the built extension (npm run e2e:visits).
 // Brightspace and every platform are simulated with Playwright routes; nothing leaves the machine.
 // Needs Playwright with a Chromium (preinstalled in the DueBoard cloud dev environment).

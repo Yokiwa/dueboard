@@ -102,6 +102,9 @@ const html = (body, headers = {}) => ({ status: 200, headers: { 'content-type': 
 const notFound = () => ({ status: 404, headers: {}, body: '' });
 const handOffAfter = (to, ms) => html(`<p>Signing you in…</p><script>setTimeout(() => location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))})), ${ms})</script>`);
 const handOff = (to) => html(`<script>location.assign(atob(${JSON.stringify(Buffer.from(to).toString('base64'))}))</script>`);
+// Minimal real-flow-shaped LTI form: only synthetic values are used in tests.
+const authPost = (to, fields) => html(`<form id="lti-auth" action="${to}" method="post">${Object.entries(fields).map(([name,value]) => `<input type="hidden" name="${name}" value="${String(value).replaceAll('&','&amp;').replaceAll('"','&quot;')}">`).join('')}</form><script>document.getElementById('lti-auth').submit()</script>`);
+
 
 function createMocks({ scenario = 'default' } = {}) {
   const background = scenario === 'background';
@@ -110,9 +113,10 @@ function createMocks({ scenario = 'default' } = {}) {
     unknownSite2: false,
     frameless: false,
     frameless2: false,
-    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0, mylab: 0 },
+    hits: { aleks: 0, norton: 0, unknown: 0, wiley: 0, framed: 0, nodate: 0, mylab: 0, socket: 0, gatewayClick: 0 },
+    pearsonWorkerExpired: false, // only the rendered hidden page has an authenticated session
     pearson: false, // the course links to Pearson
-    pearsonFrameBroken: false, // Pearson's page can't be read in a hidden frame, so signing in needs the window
+    pearsonFrameBroken: false, // a deliberately failed hidden authentication response
     mylabSignedIn: false, // a MyLab page has been opened (the session the Pearson connector reads with)
     signedOut: false, // the session expires when the Worksheet 9 link is opened
     gradescopeSignedIn: false,
@@ -123,9 +127,15 @@ function createMocks({ scenario = 'default' } = {}) {
     if (u.includes('/users/whoami')) return state.signedOut ? { status: 401, headers: {}, body: '' } : json({ Identifier: '1', FirstName: 'Test' });
     if (u.endsWith('/d2l/api/versions/')) return json([{ ProductCode: 'lp', LatestVersion: '1.47' }, { ProductCode: 'le', LatestVersion: '1.80' }]);
     if (background && state.signedOut && u.includes('/d2l/api/')) return { status: 401, headers: {}, body: '' };
+    if (new URL(u).pathname === '/d2l/lti/authenticate') return authPost('https://interop.pearson.com/launch', { id_token: 'mock-id-token', state: 'mock-state' });
     if (background && u.includes('myenrollments'))
       return json({ PagingInfo: { Bookmark: '', HasMoreItems: false }, Items: [{ OrgUnit: { Id: 103, Name: 'CS 18000 Problem Solving', Code: 'CS-18000' }, Access: { IsActive: true, CanAccess: true, StartDate: null, EndDate: null } }] });
     if (background && u.startsWith(`${LE}/103/content/toc`)) return json(backgroundToc(state));
+    if (background && u.startsWith(`${LE}/103/grades/values/myGradeValues/`)) {
+      const grades = [{ GradeObjectIdentifier: '702', GradeObjectName: 'Embedded Launcher', PointsNumerator: 18, PointsDenominator: 25, DisplayedGrade: '18 / 25' }];
+      if (state.completion) grades.push({ GradeObjectIdentifier: '701', GradeObjectName: 'Quiz 4', PointsNumerator: 9, PointsDenominator: 10, DisplayedGrade: '9 / 10' });
+      return json(grades);
+    }
     if (background && state.completion) {
       // Four past-due assignments (one handed in, three not) and a quiz with a gradebook score.
       const ago = (d) => new Date(Date.now() - d * DAY).toISOString();
@@ -200,12 +210,17 @@ function createMocks({ scenario = 'default' } = {}) {
     if (u.endsWith('/lti-tool-launcher/index.html')) {
       const id = new URL(raw).searchParams.get('launchId');
       // L7: a launcher that took its own copy of window.open when it loaded and opens an empty window, then sets its address.
-      if (id === 'L7')
-        return html(`<h1>Launching your assignment</h1><script>const openTab = window.open.bind(window);</script><button onclick="const w = openTab('', '_blank'); w.location = '/was/hw12'">Open Assignment</button>`);
+      if (id === 'L7') {
+        const code = `const w = openTab('', '_blank'); w.document.open(); w.document.write('<form id="launch" action="https://education.wiley.com/was/ui/v2/assessment-player-launcher/index.html" method="post"></form>'); w.document.close(); w.document.getElementById('launch').submit();`;
+        return html(`<h1>Launching your assignment</h1><script>const openTab = window.open.bind(window);</script><button onclick="${code.replaceAll('"', '&quot;')}">OPEN ASSIGNMENT</button>`);
+      }
       // L5: a button that opens the assignment with window.open (a new tab); L6: a link with target=_blank.
       return html(id === 'L5'
         ? `<h1>Launching your assignment</h1><button onclick="window.open('/was/hw11','_blank')">Open Assignment</button><button>Start Over</button>`
         : `<h1>Launching your assignment</h1><a href="/was/hw10" target="_blank">Launch</a>`);
+    }
+    if (u.endsWith('/assessment-player-launcher/index.html')) {
+      return html(`<h1>Open Embedded Launcher</h1><button aria-label="Opens in a new window" onclick="window.open('/was/hw12','_blank')">Open Assignment</button>`);
     }
     if (u.endsWith('/was/hw11')) return html('<main><h1>PHYS 172H - HW11 - FA26</h1><span>Due Monday, Nov 16 at 11:59 PM (EST)</span></main>');
     if (u.endsWith('/was/hw12')) return html('<main><h1>Embedded Launcher</h1><span>Due Monday, Nov 23 at 11:59 PM (EST)</span></main>');
@@ -277,12 +292,36 @@ function createMocks({ scenario = 'default' } = {}) {
       case 'interop.pearson.com':
         // The first stop hands off at once (the moment DueBoard may be putting its reader on it), then on to Pearson's
         // course page.
-        if (url.pathname === '/security/login') return handOff('https://interop.pearson.com/launch');
+        if (url.pathname === '/security/login') return authPost('https://purdue.brightspace.com/d2l/lti/authenticate', {
+          lti_message_hint: 'mock-message', login_hint: 'mock-login', scope: 'openid', response_type: 'id_token', state: 'mock-state', redirect_uri: 'https://interop.pearson.com/launch', nonce: 'mock-nonce', prompt: 'none', client_id: 'mock-client', response_mode: 'form_post',
+        });
         if (via === 'server' && state.pearsonFrameBroken) return { status: 500, headers: { 'content-type': 'text/html' }, body: '' };
-        return handOff('https://console.pearson.com/courses/c1/dashboard?contextType=interop');
+        return authPost('https://socket.pearsoned.com/uiservice/opener', {
+          contextKey: 'mock-context', lti_version: 'LTI-1p0', callBackUrl: 'https://socket.pearsoned.com/v1/launch/contexts/mock/security/handler', oauth_signature: 'mock-signature', oauth_nonce: 'mock-oauth-nonce', oauth_callback: 'about:blank', lti_message_type: 'basic-lti-launch-request', oauth_consumer_key: 'mock-consumer', oauth_signature_method: 'HMAC-SHA1', oauth_timestamp: '1', oauth_version: '1.0',
+        });
+      case 'socket.pearsoned.com': {
+        state.hits.socket++;
+        if (req.method !== 'POST' || !new URLSearchParams(req.body ?? '').has('contextKey')) return { status: 400, headers: {}, body: '' };
+        // The live log showed this page waiting for Open Pearson, not redirecting automatically.
+        // Its exact vendor JavaScript is not captured; exercise a delayed popup here and a link in unit tests.
+        const response = html(`<p>Loading Pearson content. Please wait.</p><p>Open your Pearson course materials in a new browser tab.</p><div id="gateway"></div><script>
+          setTimeout(() => {
+            document.getElementById('gateway').innerHTML = '<button id="open-pearson" aria-label="Open Pearson (opens in new tab)">Open Pearson</button>';
+            document.getElementById('open-pearson').onclick = () => {
+              const popup = window.open('', '_blank');
+              setTimeout(() => { popup.location = 'https://console.pearson.com/courses/c1/dashboard?contextType=interop&gatewayClick=1'; }, 250);
+            };
+          }, 2000);
+        </script>`);
+        // Test-only embedding restrictions prove that this host must be covered by granted site access.
+        response.headers['x-frame-options'] = 'DENY';
+        response.headers['content-security-policy'] = "frame-ancestors 'none'";
+        return response;
+      }
       // Like Purdue's "Access Pearson for D2L Brightspace": a slow app whose Assignments link (href="#") opens an empty
       // new tab and then sends it to MyLab's launch address.
       case 'console.pearson.com':
+        if (url.searchParams.get('gatewayClick') === '1') state.hits.gatewayClick++;
         return html(`<h1>Access Pearson for D2L Brightspace</h1><div id="app">Loading…</div><script>setTimeout(() => { document.getElementById('app').innerHTML = '<article><a href="#" aria-label="Open (opens in a new tab)">Open</a></article><ul aria-label="Course links"><li><a id="as" class="link-text" href="#" aria-label="Assignments, , opens in new tab"><span>Assignments</span></a></li><li><a href="#" aria-label="Results, , opens in new tab"><span>Results</span></a></li></ul>'; document.getElementById('as').addEventListener('click', (e) => { e.preventDefault(); const w = window.open('', '_blank'); setTimeout(() => { w.location = 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch'; }, 300); }); }, 3000);</script>`);
       case 'mylab.pearson.com': {
         state.hits.mylab++;
@@ -294,8 +333,9 @@ function createMocks({ scenario = 'default' } = {}) {
         if (url.pathname.startsWith('/api/')) return handOffAfter('https://mylab.pearson.com/Student/DoAssignments.aspx?view=all&from=launch', 1500);
         // Opening MyLab from Pearson's Brightspace page signs the student in; DueBoard's own request reads with that session.
         if (url.searchParams.get('from') === 'launch') state.mylabSignedIn = true;
-        if (!state.mylabSignedIn) return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/login.html'), 'utf8'));
-        if (!state.pearson) return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td>08/29/26 11:59pm</td><td>Lesson 1</td></tr></table>');
+        const embedded = req.headers?.['sec-fetch-dest'] === 'iframe' || req.headers?.['sec-fetch-dest'] === 'document';
+        if (!state.mylabSignedIn || (state.pearsonWorkerExpired && !embedded)) return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/login.html'), 'utf8'));
+        if (!state.pearson) return html('<h1>Homework and Tests</h1><table class="assignement-list-table"><tr><td><div>08/29/26 11:59pm</div></td><th scope="row"><a href="javascript:doHomework(100)">Lesson 1</a></th></tr></table>');
         // The real page's form carries ASP.NET's hidden fields, which the "see score" callback sends back.
         return html(fs.readFileSync(path.join(ROOT, 'tests/fixtures/pearson/assignments.html'), 'utf8').replace('<form id="aspnetForm">', '<form id="aspnetForm"><input type="hidden" name="__VIEWSTATE" value="e2e">'));
       }

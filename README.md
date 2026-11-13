@@ -19,7 +19,7 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 
 ## What it does
 
-- **One sign-in.** You only sign in to Brightspace. DueBoard reads your courses and discovers which homework platforms they use.
+- **One sign-in.** Start with Brightspace. DueBoard reads your courses and discovers their platforms. Pearson sign-in and its Assignments link are followed inside a hidden reader. Automatic sync never navigates the dashboard or creates a tab or window. Vendor-required authentication or consent can still need your interaction.
 - **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
 - **Next deadline.** The nearest deadline is emphasized at the top with a live countdown, an *Open* button and a *Done* button.
 - **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off, grouped into Overdue, Today, This week and Later with a count on each group.
@@ -28,7 +28,7 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **Focus timer.** A built-in Pomodoro timer on the dashboard and in the toolbar popup, with 25-minute focus sessions and 5-minute breaks by default (each adjustable from 1 to 180 minutes). Both share one timer, and a short chime plays when a session ends, even if DueBoard isn't open.
 - **Study themes.** Switch between Nightowl, Morning Dew, Noon Cafe and Dusk Lullaby, or let Automatic choose for the time of day. Theme changes fade smoothly without interrupting your work.
 - **Focused settings flow.** Settings open in the current DueBoard tab, with a back button that returns to the dashboard.
-- **Any homework platform.** For homework that Brightspace launches on another platform, DueBoard opens your Brightspace link in a hidden frame inside the extension, reads the "Due …" line and closes it, in the background with no window or tab. Pages that can't be read that way fall back to a small minimized window (you can turn it off in Settings). Known platforms work out of the box; DueBoard asks you to allow a site only the first time it finds one it doesn't know.
+- **Background platform reading.** For homework that Brightspace launches on another platform, DueBoard attempts to read the link in a hidden frame inside the extension, without opening tabs or windows. Pages requiring interactive authentication may remain unavailable. Unknown sites require permission.
 - **Dates in titles.** A homework titled "HW11_due_Nov 11" gets that date.
 - **Syllabus suggestions.** Dated work found in your syllabus (Simple Syllabus, or a PDF in Content), to add with one click.
 - **Automatic sync** every 30 minutes, using the sessions already in your browser.
@@ -53,8 +53,8 @@ Use the theme button in the dashboard header to cycle through all five choices. 
 | Brightspace | Assignments, quizzes, calendar events and dated content items, read directly |
 | Gradescope | Read from your Gradescope course pages when you are signed in |
 | Pearson MyLab & Mastering | Read from MyLab when a course links to Pearson; if the session expired, DueBoard reopens it through Brightspace |
-| WileyPLUS, ALEKS, Norton (InQuizitive, Smartwork), WebAssign, McGraw-Hill Connect, Achieve, Cengage, zyBooks, Top Hat, Perusall, Packback, Hawkes, Vista Higher Learning, Sapling, Expert TA, Knewton Alta, PrairieLearn, Vocareum, GoReact, LabFlow, BeyondLabz, Circuit, Variate | Read in the background from the assignment page your Brightspace homework link opens |
-| Any other platform Brightspace launches | Same as above, once you allow the site the first time DueBoard finds it |
+| WileyPLUS, ALEKS, Norton (InQuizitive, Smartwork), WebAssign, McGraw-Hill Connect, Achieve, Cengage, zyBooks, Top Hat, Perusall, Packback, Hawkes, Vista Higher Learning, Sapling, Expert TA, Knewton Alta, PrairieLearn, Vocareum, GoReact, LabFlow, BeyondLabz, Circuit, Variate | Attempted in a hidden frame through your Brightspace homework link; compatibility varies |
+| Any other platform Brightspace launches | Requires site access and a compatible background reader; an unknown site may remain unavailable |
 | Syllabus (Simple Syllabus, PDF or web page in Content) | Shown as suggestions you can add or hide |
 | Anything else | Add it by hand; it stays until you remove it |
 
@@ -72,7 +72,7 @@ DueBoard currently supports `purdue.brightspace.com`.
 
 - Everything stays in your browser. Nothing is uploaded, collected or analyzed.
 - DueBoard never sees your password; it only reuses sessions your browser already has, and only sends read requests.
-- Platform pages are opened only through your own Brightspace links and only read — DueBoard never types or submits anything. They load in hidden frames inside the extension (or, as a fallback, a small minimized window) and appear in your browser history like pages you open yourself.
+- Background reading creates no tabs or windows. Hidden pages use your Brightspace links and existing sessions; readers may follow assignment launch links, but never type answers or submit work. A failed read preserves previously saved dates.
 - Timed or proctored exam tools (ExamSoft, Respondus LockDown Browser, Honorlock, Examity) are never opened automatically, so DueBoard never starts an exam attempt.
 - Hidden frames can't open tabs or windows. While reading, DueBoard removes the "do not embed" headers only from its own hidden frame requests on homework sites; your own tabs are never affected.
 - Uninstalling removes all data.

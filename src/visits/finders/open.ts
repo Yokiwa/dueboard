@@ -26,7 +26,7 @@ function labelOf(el: Element): string {
   return raw.replace(/\s+/g, ' ').trim();
 }
 
-const CLICKABLE = 'button, a[href], [role="button"], [role="link"], input[type="button"]';
+const CLICKABLE = 'button, a[href], [role="button"], [role="link"], input[type="button"], input[type="submit"]';
 
 function pressable(el: Element, label: string): OpenButton {
   return {
@@ -43,9 +43,12 @@ function pressable(el: Element, label: string): OpenButton {
 export function openButton(doc: Document): OpenButton | null {
   for (const el of Array.from(doc.querySelectorAll(CLICKABLE))) {
     if (hidden(el) || (el as HTMLButtonElement).disabled) continue;
-    const label = labelOf(el);
-    if (!label || label.length > MAX_LABEL || !OPEN.test(label) || NEVER.test(label)) continue;
-    return pressable(el, label);
+    const labels = [labelOf(el), (el as HTMLInputElement).value ?? '', (el.textContent ?? '').replace(/\s+/g, ' ').trim()];
+    // Some launchers label the button "Opens in a new window", while its text says "Open Assignment".
+    // Reject dangerous wording in either representation, even if the other one looks safe.
+    if (labels.some((label) => NEVER.test(label))) continue;
+    const label = labels.find((label) => label && label.length <= MAX_LABEL && OPEN.test(label));
+    if (label) return pressable(el, label);
   }
   return null;
 }
@@ -53,18 +56,24 @@ export function openButton(doc: Document): OpenButton | null {
 /**
  * The step a platform's sign-in through Brightspace needs on the way to the site DueBoard reads. Pearson's Brightspace
  * page ("Access Pearson for D2L Brightspace") signs the student in to MyLab only when its Assignments link is opened.
- * Exact labels only.
+ * Its preceding socket gateway may require Open Pearson first. Exact labels only.
  */
 const SESSION_STEPS: Partial<Record<string, RegExp>> = { pearson: /^assignments\b(?!\s+\w)|^assignments\b[\s,(–-]+opens? in/i };
 
 /** On a sign-in visit's page (not on the session host itself): the link to press, if the page shows it. */
-export function sessionStep(doc: Document, platform: string | undefined, pageHost: string): OpenButton | null {
-  const label = platform ? SESSION_STEPS[platform] : undefined;
+export function sessionStep(doc: Document, platform: string | undefined, pageHost: string, pagePath = ''): OpenButton | null {
+  // Pearson's LTI gateway can wait for this button before the course dashboard exists.
+  // Do not apply the generic homework Open matcher to sign-in pages.
+  const gateway = platform === 'pearson' && pageHost === 'socket.pearsoned.com' && pagePath === '/uiservice/opener';
+  const label = gateway
+    ? /^open pearson(?:\s*\(opens? in (?:a )?new (?:tab|window)\))?$/i
+    : platform ? SESSION_STEPS[platform] : undefined;
   if (!label || !platform || pageHost === SESSION_HOSTS[platform]) return null;
   for (const el of Array.from(doc.querySelectorAll(CLICKABLE))) {
     if (hidden(el) || (el as HTMLButtonElement).disabled) continue;
     // Its text or its accessible name ("Assignments, opens in a new window").
-    const texts = [labelOf(el), (el.textContent ?? '').replace(/\s+/g, ' ').trim()];
+    const texts = [labelOf(el), (el as HTMLInputElement).value ?? '', (el.textContent ?? '').replace(/\s+/g, ' ').trim()];
+    if (texts.some((s) => NEVER.test(s))) continue;
     const text = texts.find((s) => s.length <= MAX_LABEL && label.test(s));
     if (text) return pressable(el, text);
   }

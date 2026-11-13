@@ -48,6 +48,8 @@ describe('frame host', () => {
     expect(iframes().length).toBe(1);
     expect(iframes()[0]!.src).toBe('https://www.aleks.com/hw');
     expect(iframes()[0]!.name).toBe('dueboard-t1');
+    expect(iframes()[0]!.width).toBe('1280');
+    expect(iframes()[0]!.height).toBe('900');
     // Sandboxed so that no page in it can open a tab or window, whatever way it tries; it keeps its own origin
     // (scripts, forms and cookies work as usual) and may not navigate the extension page.
     expect(iframes()[0]!.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-forms');
@@ -257,7 +259,7 @@ describe('frame host', () => {
   });
 
   it('session mode waits for the platform session host (Pearson: mylab.pearson.com), nested or not', async () => {
-    const { host, child, hello, frame } = setup();
+    const { host, child, hello, frame, send } = setup();
     const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
     const direct = child();
     hello(direct, n(1));
@@ -270,11 +272,14 @@ describe('frame host', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(done).toBe(false);
     frame(n(2), 'https://mylab.pearson.com/Student/DoAssignments.aspx');
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(done).toBe(false);
+    send(n(2), { type: 'visitSessionReady', html: '<table class="assignement-list-table"></table>', frameUrl: 'https://mylab.pearson.com/Student/DoAssignments.aspx' });
     await expect(p).resolves.toMatchObject({ status: 'landed', host: 'mylab.pearson.com' });
   });
 
   it("session mode keeps waiting on MyLab's launch address (/api/...), which hands off once more", async () => {
-    const { host, child, hello, frame } = setup();
+    const { host, child, hello, frame, send } = setup();
     const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
     hello(child(), n(1));
     frame(n(1), 'https://mylab.pearson.com/api/v1/courses/1/links/assignments/launch');
@@ -283,11 +288,27 @@ describe('frame host', () => {
     await vi.advanceTimersByTimeAsync(2_000);
     expect(done).toBe(false);
     frame(n(1), 'https://mylab.pearson.com/Student/DoAssignments.aspx');
+    send(n(1), { type: 'visitSessionReady', html: '<table class="assignement-list-table"></table>', frameUrl: 'https://mylab.pearson.com/Student/DoAssignments.aspx' });
     await expect(p).resolves.toMatchObject({ status: 'landed', landed: 'https://mylab.pearson.com/Student/DoAssignments.aspx' });
   });
 
+  it('rejects session data from another host and oversized payloads', async () => {
+    const { host, child, hello, frame, send } = setup();
+    const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
+    hello(child(), n(1));
+    frame(n(1), 'https://mylab.pearson.com/Student/DoAssignments.aspx');
+    let finished = false;
+    void p.then(() => { finished = true; });
+    send(n(1), { type: 'visitSessionReady', html: '<table></table>', frameUrl: 'https://evil.example/Student/DoAssignments.aspx' });
+    send(n(1), { type: 'visitSessionReady', html: 'x'.repeat(1_000_001), frameUrl: 'https://mylab.pearson.com/Student/DoAssignments.aspx' });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(finished).toBe(false);
+    host.reset();
+    await expect(p).resolves.toMatchObject({ status: 'blocked' });
+  });
+
   it('session mode that never reaches the session host ends blocked (the window tries next)', async () => {
-    const { host, child, hello, frame } = setup();
+    const { host, child, hello, frame, send } = setup();
     const p = host.visit(req({ mode: 'session', platform: 'pearson' }));
     hello(child(), n(1));
     frame(n(1), 'https://interop.pearson.com/security/login');
@@ -434,7 +455,7 @@ describe('frame host: a page that says it has no date', () => {
     void p.then(() => (done = true));
     await vi.advanceTimersByTimeAsync(10_000);
     expect(done).toBe(false);
-    await vi.advanceTimersByTimeAsync(12_000);
+    await vi.advanceTimersByTimeAsync(30_000);
     await expect(p).resolves.toMatchObject({ status: 'none', clicked: ['Open Assignment (education.wiley.com)'] });
   });
 });
