@@ -1,0 +1,20 @@
+# 谁负责审核哪些文件。改到这些路径的 PR 会自动请对应的人 review。
+# 规则：后面的行优先于前面的行。
+
+*                 @Yokiwa
+
+# UI / 设计
+/src/ui/          @Yokiwa @VNzia
+/design/          @Yokiwa @VNzia
+
+# 逻辑 / bug
+/src/core/        @Yokiwa @ricecooker669
+/src/connectors/  @Yokiwa @ricecooker669
+/src/background/  @Yokiwa @ricecooker669
+/src/sync/        @Yokiwa @ricecooker669
+/tests/           @Yokiwa @ricecooker669
+
+# 管理文件只由负责人改
+/.github/         @Yokiwa
+/package.json     @Yokiwa
+/CHANGELOG.md     @Yokiwa

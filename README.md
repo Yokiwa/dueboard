@@ -56,6 +56,8 @@ DueBoard currently supports `purdue.brightspace.com`.
 
 ## Development
 
+Working on DueBoard with the team? Read [CONTRIBUTING.md](CONTRIBUTING.md) first (branches, pull requests, who owns which folder).
+
 Requires Node.js 22.
 
 ```bash

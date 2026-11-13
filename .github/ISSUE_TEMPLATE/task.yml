@@ -1,0 +1,27 @@
+name: ✅ 任务 / 新功能
+description: 要做的事情或新功能 / A task or feature
+labels: [feature]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标 / Goal
+      description: 做完以后用户能看到 / 做到什么
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 怎样算完成 / Done when
+      placeholder: |
+        - [ ] …
+        - [ ] …
+  - type: dropdown
+    id: who
+    attributes:
+      label: 谁负责 / Owner
+      options:
+        - Raymond
+        - Kaiyi（bug / 逻辑）
+        - VNzia（UI）
+        - 还没定 / TBD
