@@ -7,58 +7,152 @@
   <meta name="description" content="Every assignment, deadline and course platform from Brightspace on one page. Sign in to Brightspace once; DueBoard finds Gradescope, Pearson, WileyPLUS and more.">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="site.css">
+  <script src="theme.js"></script>
 </head>
 <body>
   <div class="wrap">
     <header class="top">
       <a class="brand" href="./"><img src="assets/icon.svg" alt="">DueBoard</a>
-      <nav>
-        <a href="install.html">Install</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="https://github.com/Yokiwa/dueboard">GitHub</a>
-      </nav>
+      <div class="top-tools">
+        <nav>
+          <a href="#features">Features</a>
+          <a href="#themes">Themes</a>
+          <a href="install.html">Install</a>
+          <a href="privacy.html">Privacy</a>
+          <a href="https://github.com/Yokiwa/dueboard">GitHub</a>
+        </nav>
+        <button type="button" class="theme-switch" data-theme-switch hidden>
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span data-theme-name>Automatic</span>
+        </button>
+      </div>
     </header>
 
     <section class="hero">
-      <h1>Every deadline,<br>one page.</h1>
-      <p>Stop clicking through every course in Brightspace and opening Gradescope, Pearson, WileyPLUS, ALEKS and the rest one by one. Sign in to Brightspace once — DueBoard finds the rest and puts every due date in one place.</p>
-      <a class="btn" href="https://chromewebstore.google.com/detail/lbmhglpjaedaijknkngdpoacagdgmoji">Add to Chrome</a>
-      <a class="btn secondary" href="#features">See what it does</a>
-      <p class="note">Free · Open source · Chrome, Edge and Firefox · Currently for Purdue's Brightspace</p>
+      <div>
+        <p class="eyebrow">New: study themes and a focus timer</p>
+        <h1>Every deadline,<br><em>one page.</em></h1>
+        <p>Stop clicking through every course in Brightspace and opening Gradescope, Pearson, WileyPLUS, ALEKS and the rest one by one. Sign in to Brightspace once — DueBoard finds the rest and puts every due date in one place.</p>
+        <div class="cta">
+          <a class="btn" href="https://chromewebstore.google.com/detail/lbmhglpjaedaijknkngdpoacagdgmoji">Add to Chrome</a>
+          <a class="btn secondary" href="#features">See what it does</a>
+        </div>
+        <p class="note">Free · Open source · Chrome, Edge and Firefox · Currently for Purdue's Brightspace</p>
+      </div>
+
+      <div class="preview" aria-label="Example of the DueBoard dashboard">
+        <div class="card next-card">
+          <p class="label"><span class="pulse" aria-hidden="true"></span>NEXT DEADLINE</p>
+          <h3><span class="swatch" aria-hidden="true"></span>CS 18000 · Project 3</h3>
+          <p class="sub">Brightspace · Tomorrow, 11:59 PM</p>
+          <span class="countdown mono" role="timer" data-demo-countdown>1d 02:14:37</span>
+          <div class="card-actions">
+            <span class="btn small">Open</span>
+            <span class="btn small secondary">✓ Done</span>
+          </div>
+        </div>
+
+        <div class="card timer-card" data-demo-timer>
+          <div>
+            <div class="modes" role="group" aria-label="Timer mode">
+              <button type="button" data-mode="focus" aria-pressed="true">Focus</button>
+              <button type="button" data-mode="break" aria-pressed="false">Break</button>
+            </div>
+            <div class="clock mono" role="timer" data-clock>25:00</div>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="btn small" data-toggle>Start</button>
+            <button type="button" class="btn small secondary" data-reset>Reset</button>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <img class="shot" src="assets/screenshot.png" width="1280" height="800" alt="DueBoard course cards with a live countdown to the next deadline">
+    <figure class="shot-frame">
+      <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <img class="shot" data-shot="morning-dew" src="assets/dashboard-morning-dew.png" width="1280" height="800" alt="The DueBoard dashboard in the Morning Dew theme: the next deadline with a live countdown, the focus timer and course cards">
+      <img class="shot" data-shot="noon-cafe" src="assets/dashboard-noon-cafe.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Noon Cafe theme: the next deadline with a live countdown, the focus timer and course cards">
+      <img class="shot" data-shot="dusk-lullaby" src="assets/dashboard-dusk-lullaby.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Dusk Lullaby theme: the next deadline with a live countdown, the focus timer and course cards">
+      <img class="shot" data-shot="nightowl" src="assets/dashboard-nightowl.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Nightowl theme: the next deadline with a live countdown, the focus timer and course cards">
+    </figure>
 
-    <section class="features" id="features">
+    <div class="section-head" id="features">
+      <h2>What it does</h2>
+      <p>One page for every course, built to keep you calm about what's next.</p>
+    </div>
+    <section class="features">
       <div class="feature">
-        <h2>One sign-in</h2>
+        <h3>One sign-in</h3>
         <p>Brightspace is the only account you connect. DueBoard reads your courses and discovers which homework platforms they use.</p>
       </div>
       <div class="feature">
-        <h2>Any homework platform</h2>
-        <p>WileyPLUS, ALEKS, InQuizitive, WebAssign and others: when you click Refresh, DueBoard opens your Brightspace homework link in a minimized window, reads the due date and closes it. You allow each platform once.</p>
+        <h3>Any homework platform</h3>
+        <p>WileyPLUS, ALEKS, InQuizitive, WebAssign and others: DueBoard opens your Brightspace homework link in a hidden frame in the background, reads the due date and closes it. You allow a new platform once.</p>
       </div>
       <div class="feature">
-        <h2>Syllabus dates</h2>
+        <h3>Syllabus dates</h3>
         <p>Exams and due dates written in your syllabus show up as suggestions. Add the real deadlines with one click.</p>
       </div>
       <div class="feature">
-        <h2>Next deadline</h2>
+        <h3>Next deadline</h3>
         <p>The nearest deadline is always on top with a live countdown. Open it in one click, or mark it done and see what's next.</p>
       </div>
       <div class="feature">
-        <h2>Calendar and to-do</h2>
-        <p>Week and month views show which days pile up. Tick work off in the to-do list; submitted work is ticked for you.</p>
+        <h3>Focus timer <span class="new">New</span></h3>
+        <p>A Pomodoro timer for 25-minute focus sessions and 5-minute breaks, on the dashboard and in the toolbar popup. It keeps running while you work.</p>
       </div>
       <div class="feature">
-        <h2>Course cards</h2>
+        <h3>Calendar and to-do</h3>
+        <p>Week and month views show which days pile up. Tick work off in the to-do list; work you handed in is ticked for you.</p>
+      </div>
+      <div class="feature">
+        <h3>Course cards</h3>
         <p>Each course shows what's due next and shortcuts to Gradescope, Pearson, WileyPLUS, Achieve, Piazza, Ed and more.</p>
+      </div>
+      <div class="feature">
+        <h3>Study themes <span class="new">New</span></h3>
+        <p>Four palettes for the time of day, chosen for you automatically and fading smoothly from one to the next.</p>
       </div>
     </section>
 
+    <div class="section-head" id="themes">
+      <h2>A theme for every hour</h2>
+      <p>The same themes as the dashboard. Click one to try it on this page.</p>
+    </div>
+    <section class="themes">
+      <button type="button" class="theme-card" data-theme="morning-dew" data-theme-pick="morning-dew" aria-pressed="false">
+        <span class="time">5 AM – 12 PM</span>
+        <strong>Morning Dew</strong>
+        <span class="chips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="mini" aria-hidden="true"><span>04:12:09</span></span>
+      </button>
+      <button type="button" class="theme-card" data-theme="noon-cafe" data-theme-pick="noon-cafe" aria-pressed="false">
+        <span class="time">12 PM – 6 PM</span>
+        <strong>Noon Cafe</strong>
+        <span class="chips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="mini" aria-hidden="true"><span>02:48:51</span></span>
+      </button>
+      <button type="button" class="theme-card" data-theme="dusk-lullaby" data-theme-pick="dusk-lullaby" aria-pressed="false">
+        <span class="time">6 PM – 11 PM</span>
+        <strong>Dusk Lullaby</strong>
+        <span class="chips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="mini" aria-hidden="true"><span>00:59:30</span></span>
+      </button>
+      <button type="button" class="theme-card" data-theme="nightowl" data-theme-pick="nightowl" aria-pressed="false">
+        <span class="time">11 PM – 5 AM</span>
+        <strong>Nightowl</strong>
+        <span class="chips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="mini" aria-hidden="true"><span>00:07:44</span></span>
+      </button>
+    </section>
+    <p class="themes-note">Automatic follows the clock and is the default. <button type="button" class="link-btn" data-theme-pick="automatic" aria-pressed="false">Go back to Automatic</button>.</p>
+
     <section class="privacy">
-      <h2>Your data stays on your computer</h2>
-      <p>DueBoard uploads, collects and analyzes nothing, and never sees your password. Uninstall it and the data is gone. <a href="privacy.html">Read the privacy policy</a></p>
+      <div>
+        <h2>Your data stays on your computer</h2>
+        <p>DueBoard uploads, collects and analyzes nothing, and never sees your password. Uninstall it and the data is gone.</p>
+      </div>
+      <a class="btn secondary" href="privacy.html">Read the privacy policy</a>
     </section>
 
     <footer>
