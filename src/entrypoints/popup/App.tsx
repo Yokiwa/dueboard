@@ -13,7 +13,6 @@ import type { Dashboard } from '../../core/dashboard';
 import type { StoreShape } from '../../core/types';
 import { DevTools } from '../../ui/components/DevTools';
 import { useVisitProgress } from '../../ui/hooks/useVisitProgress';
-import { PomodoroTimer } from '../../ui/components/PomodoroTimer';
 import { MusicPlayer } from '../../ui/components/MusicPlayer';
 import { displayedTheme } from '../../core/theme';
 
@@ -36,7 +35,6 @@ function Body({ dashboard, now, store }: { dashboard: Dashboard; now: Date; stor
         </button>
       </div>
       {progress && <p className="m-0 caption-2 text-db-muted">{t('sync.visiting', { done: progress.done, total: progress.total })}</p>}
-      <PomodoroTimer now={now} compact />
       <MusicPlayer compact />
       <NextDueBanner item={next} course={dashboard.courses.find((c) => c.id === next?.courseId)} now={now} />
       {upcoming.length > 0 ? (

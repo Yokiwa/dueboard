@@ -15,24 +15,6 @@
   min-height: 0;
 }
 
-.dueboard-popup .pomodoro-panel {
-  min-height: 0;
-  border-radius: 18px !important;
-}
-
-.dueboard-popup .pomodoro-panel-compact {
-  align-items: stretch;
-  padding: 14px !important;
-}
-
-.dueboard-popup .pomodoro-panel-compact .pomodoro-clock {
-  font-size: 2rem;
-}
-
-.dueboard-popup .pomodoro-duration-fields {
-  grid-template-columns: 1fr 1fr;
-}
-
 .dueboard-popup .music-player-compact {
   border-radius: 18px !important;
   padding: 14px !important;

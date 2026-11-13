@@ -68,7 +68,7 @@ export async function ensureOffscreenDocument(): Promise<void> {
       url,
       reasons: [browser.offscreen.Reason.DOM_PARSER, browser.offscreen.Reason.WORKERS, browser.offscreen.Reason.DOM_SCRAPING, browser.offscreen.Reason.AUDIO_PLAYBACK],
       justification:
-        "Parse course pages, read due dates from the student's assignment pages, and play Pomodoro and focus-audio cues",
+        "Parse course pages, read due dates from the student's assignment pages, and play focus audio",
     })
     .finally(() => {
       creating = null;

@@ -36,6 +36,14 @@ describe('dashboard App', () => {
     expect(screen.getByText('1 due in 48 h')).toBeTruthy();
   });
 
+  it('has no Pomodoro timer (removed)', async () => {
+    await seed();
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('CS 18000 · Project 3')).toBeTruthy());
+    expect(screen.queryByRole('group', { name: 'Timer mode' })).toBeNull();
+    expect(screen.queryByText(/Pomodoro/i)).toBeNull();
+  });
+
   it('remembers the chosen view in localStorage', async () => {
     await seed();
     render(<App />);
