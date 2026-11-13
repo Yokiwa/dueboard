@@ -125,7 +125,8 @@ describe('date origin in the to-do list', () => {
     };
     const course = { id: 'brightspace:1', code: 'MA 16100', name: 'MA 16100', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
     render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
-    const caption = screen.getByText('MA 16100 · Read from ALEKS');
+    // The To-do line shows the course only; where the date was read is its tooltip.
+    const caption = screen.getByText('MA 16100');
     expect(caption.getAttribute('title')).toBe("Read from ALEKS: 'Due: 11/10/2026 11:59 PM'");
   });
 });
@@ -152,7 +153,7 @@ describe('date origin: title', () => {
     };
     const course = { id: 'brightspace:7', code: 'CHM 11510', name: 'CHM 11510', sources: {}, color: '#000', hidden: false, url: '', partial: false, isCourse: true };
     render(<TodoView dashboard={{ courses: [course], items: [item], links: [], nextDue: null }} now={now} />);
-    expect(screen.getByText('CHM 11510 · Date from title')).toBeTruthy();
+    expect(screen.getByText('CHM 11510').getAttribute('title')).toBe('Date from title');
     render(<ItemRow item={item} now={now} />);
     expect(screen.getByText(/^Date from title · /)).toBeTruthy();
   });

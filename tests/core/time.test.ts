@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { urgency, relativeDue, formatDueAt, formatCountdown } from '../../src/core/time';
+import { urgency, relativeDue, relativeLate, formatDueAt, formatCountdown } from '../../src/core/time';
 
 const now = new Date('2026-11-04T12:00:00-05:00'); // Wed noon, Indiana (EST)
 const plus = (ms: number) => new Date(now.getTime() + ms);
@@ -59,4 +59,11 @@ describe('formatCountdown', () => {
   it('under a day', () => expect(formatCountdown(plus(5 * H + 42 * MIN + 18_000), now)).toBe('05:42:18'));
   it('days prefix', () => expect(formatCountdown(plus(2 * D + 3 * H), now)).toBe('2d 03:00:00'));
   it('past clamps to zero', () => expect(formatCountdown(plus(-H), now)).toBe('00:00:00'));
+});
+
+describe('relativeLate (how late past-due work is, for the To-do list)', () => {
+  it('minutes', () => expect(relativeLate(plus(-20 * MIN), now)).toBe('20 min late'));
+  it('hours the same day', () => expect(relativeLate(plus(-3 * H), now)).toBe('3 h late'));
+  it('one day', () => expect(relativeLate(new Date('2026-11-03T23:59:00-05:00'), now)).toBe('1 day late'));
+  it('days', () => expect(relativeLate(new Date('2026-10-28T23:59:00-04:00'), now)).toBe('7 days late'));
 });

@@ -100,8 +100,9 @@ const check = (ok, msg) => {
 
   await page.reload();
   await page.getByRole('tab', { name: 'To-do' }).click();
-  await page.getByText('Read from ALEKS').first().waitFor({ timeout: 10000 });
-  check(true, 'dashboard shows "Read from ALEKS"');
+  // The To-do line shows the course; where the date was read is its tooltip.
+  await page.locator('[title^="Read from ALEKS"]').first().waitFor({ timeout: 10000 });
+  check(true, 'the To-do says the date was "Read from ALEKS" (tooltip)');
   await page.getByText('DueBoard found example-unknown.com in your courses').waitFor({ timeout: 10000 });
   check(true, 'dashboard offers access for example-unknown.com');
   await page.getByRole('heading', { name: 'From syllabus' }).waitFor({ timeout: 10000 });

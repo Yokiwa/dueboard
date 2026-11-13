@@ -1,4 +1,4 @@
-import { relativeDue, urgency } from '../../core/time';
+import { relativeDue, relativeLate, urgency } from '../../core/time';
 import type { Item } from '../../core/types';
 import { useT } from '../i18n';
 
@@ -20,9 +20,11 @@ export interface DueBadgeProps {
   /** Where done work was seen, for the hint. */
   doneBy?: Item['doneBy'];
   now: Date;
+  /** Past-due work says how late it is ("2 days late") instead of "Overdue" (lists already headed "Overdue"). */
+  showLate?: boolean;
 }
 
-export function DueBadge({ dueAt, done, submitted = false, score, doneBy, now }: DueBadgeProps) {
+export function DueBadge({ dueAt, done, submitted = false, score, doneBy, now, showLate = false }: DueBadgeProps) {
   const t = useT();
   let tone: Tone;
   let label: string;
@@ -31,7 +33,7 @@ export function DueBadge({ dueAt, done, submitted = false, score, doneBy, now }:
   else if (!dueAt) [tone, label] = ['normal', t('badge.noDue')];
   else {
     const d = new Date(dueAt);
-    [tone, label] = [urgency(d, now), relativeDue(d, now)];
+    [tone, label] = [urgency(d, now), showLate && d.getTime() <= now.getTime() ? relativeLate(d, now) : relativeDue(d, now)];
   }
   const showScore = tone === 'done' && score;
   if (showScore) label = `${label} · ${score.text}`;
