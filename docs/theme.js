@@ -92,58 +92,6 @@
     setInterval(tick, 1000);
   }
 
-  function startDemoTimer() {
-    var box = document.querySelector('[data-demo-timer]');
-    if (!box) return;
-    var clock = box.querySelector('[data-clock]');
-    var toggle = box.querySelector('[data-toggle]');
-    var reset = box.querySelector('[data-reset]');
-    var modes = box.querySelectorAll('[data-mode]');
-    var lengths = { focus: 25 * 60, break: 5 * 60 };
-    var mode = 'focus';
-    var left = lengths.focus;
-    var timer = null;
-
-    function render() {
-      clock.textContent = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
-      toggle.textContent = timer ? 'Pause' : left < lengths[mode] ? 'Resume' : 'Start';
-      for (var i = 0; i < modes.length; i++) {
-        modes[i].setAttribute('aria-pressed', String(modes[i].getAttribute('data-mode') === mode));
-      }
-    }
-    function stop() {
-      clearInterval(timer);
-      timer = null;
-    }
-    function setMode(next) {
-      stop();
-      mode = next;
-      left = lengths[mode];
-      render();
-    }
-    toggle.addEventListener('click', function () {
-      if (timer) {
-        stop();
-      } else {
-        timer = setInterval(function () {
-          left -= 1;
-          if (left <= 0) setMode(mode === 'focus' ? 'break' : 'focus');
-          else render();
-        }, 1000);
-      }
-      render();
-    });
-    reset.addEventListener('click', function () {
-      setMode(mode);
-    });
-    for (var i = 0; i < modes.length; i++) {
-      modes[i].addEventListener('click', function (e) {
-        setMode(e.currentTarget.getAttribute('data-mode'));
-      });
-    }
-    render();
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     paint();
     var switches = document.querySelectorAll('[data-theme-switch]');
@@ -159,6 +107,5 @@
       });
     }
     startDemoDeadline();
-    startDemoTimer();
   });
 })();

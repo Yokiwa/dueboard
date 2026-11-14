@@ -13,6 +13,15 @@
 
 > DueBoard is a student-built, open-source project and is **not affiliated with Purdue University, D2L Brightspace, Gradescope, Pearson, Wiley or any other platform it reads**.
 
+## What's new in 1.6.0
+
+- **Your classes in the calendar, not among your work.** Lectures, recitations and office hours that courses post in the Brightspace calendar ("Lec21", "LEC 22", "Lecture") no longer show up on course cards, in the to-do list or in the counts.
+- **A week view laid out by time.** What's due each day sits in a *Due* row on top; your classes fill a time grid below, in each course's color, side by side when they overlap, with a line at the current time.
+- **A tidier to-do list**, a redesigned dashboard with four study themes, and background reading that never opens a tab or window.
+- **New site access:** `socket.pearsoned.com` (Pearson's sign-in gateway). Chrome asks you to approve it when DueBoard updates.
+
+Full list in the [changelog](CHANGELOG.md); downloads on the [releases page](https://github.com/Yokiwa/dueboard/releases).
+
 ## Why
 
 At Purdue every course lives in Brightspace, but homework is spread across Gradescope, Pearson MyLab, WileyPLUS, ALEKS, InQuizitive, WebAssign and more — each with its own list of due dates. DueBoard collects them so you can see what is due next without clicking through every course.
@@ -22,7 +31,7 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 - **One sign-in.** Start with Brightspace. DueBoard reads your courses and discovers their platforms. Pearson sign-in and its Assignments link are followed inside a hidden reader. Automatic sync never navigates the dashboard or creates a tab or window. Vendor-required authentication or consent can still need your interaction.
 - **Course cards.** Upcoming work per course with countdowns, plus one-click shortcuts to each course's platforms.
 - **Next deadline.** The nearest deadline is emphasized at the top with a live countdown, an *Open* button and a *Done* button.
-- **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off, grouped into Overdue, Today, This week and Later with a count on each group. Class meetings your courses post in the Brightspace calendar (lectures, recitations) appear in the week view only, never among your work.
+- **Calendar and to-do views.** Animated switching between course cards, week and month calendars, and a to-do list you can tick off, grouped into Overdue, Today, This week and Later with a count on each group. The week view lists what's due each day on top and your class meetings below in a time grid; classes appear only there, never among your work.
 - **Handed-in work ticks itself off, with its score.** Brightspace (your submission or gradebook grade), Gradescope, Pearson MyLab and other homework pages say whether you handed the work in; DueBoard ticks it off and shows the score. Untick something DueBoard ticked and it stays unticked.
 - **Overdue for the whole term.** Every past-due assignment, quiz and homework since the course started, not only last week's. Work no source has said anything about moves into a collapsed **Not sure if handed in** section of the to-do list until one does, or until you tick it.
 - **Study themes.** Switch between Nightowl, Morning Dew, Noon Cafe and Dusk Lullaby, or let Automatic choose for the time of day. Theme changes fade smoothly without interrupting your work.
@@ -45,17 +54,30 @@ At Purdue every course lives in Brightspace, but homework is spread across Grade
 
 Use the theme button in the dashboard header to cycle through all five choices. The selected theme is saved across reloads and can also be changed from **Settings → Appearance**. The toolbar popup follows the same theme.
 
-### Where due dates come from
+### Platforms DueBoard reads
 
-| Platform | How DueBoard gets the due date |
+**Read directly** (most reliable):
+
+| Platform | What DueBoard reads |
 |---|---|
-| Brightspace | Assignments, quizzes, calendar events and dated content items, read directly |
-| Gradescope | Read from your Gradescope course pages when you are signed in |
-| Pearson MyLab & Mastering | Read from MyLab when a course links to Pearson; if the session expired, DueBoard reopens it through Brightspace |
-| WileyPLUS, ALEKS, Norton (InQuizitive, Smartwork), WebAssign, McGraw-Hill Connect, Achieve, Cengage, zyBooks, Top Hat, Perusall, Packback, Hawkes, Vista Higher Learning, Sapling, Expert TA, Knewton Alta, PrairieLearn, Vocareum, GoReact, LabFlow, BeyondLabz, Circuit, Variate | Attempted in a hidden frame through your Brightspace homework link; compatibility varies |
-| Any other platform Brightspace launches | Requires site access and a compatible background reader; an unknown site may remain unavailable |
-| Syllabus (Simple Syllabus, PDF or web page in Content) | Shown as suggestions you can add or hide |
-| Anything else | Add it by hand; it stays until you remove it |
+| Brightspace | Courses, assignments, quizzes, calendar events (class meetings go to the calendar only), dated content items, whether you handed work in, and your gradebook scores |
+| Gradescope | Assignments, due dates, submission status ("Submitted" / "No Submission") and scores, from your course pages when you are signed in |
+| Pearson MyLab & Mastering | Assignment list, due dates and scores when a course links to Pearson; if the session expired, DueBoard signs back in through Brightspace in the background |
+
+**Read in a hidden frame through your Brightspace homework link** (the due date, and for past-due work whether the page shows a score or "Submitted"):
+
+- Confirmed with real accounts: **WileyPLUS**, **Macmillan Achieve**
+- Same reader, tested on sample pages only: **ALEKS**, **Norton** (InQuizitive, Smartwork), **WebAssign**, **McGraw-Hill Connect**, **Cengage** (MindTap, OWL), **zyBooks**, **Top Hat**, **Perusall**, **Packback**, **Hawkes Learning**, **Vista Higher Learning**, **Sapling**, **Expert TA**, **Knewton Alta**, **PrairieLearn**, **Vocareum**, **GoReact**, **LabFlow**, **BeyondLabz**, **Circuit** and **Variate** (the last two recognized by the link's title)
+
+**Syllabus:** Simple Syllabus, and syllabus PDFs or web pages in course Content. Dates found there are shown as suggestions you can add or hide.
+
+**Recognized, no due dates** (shown as course shortcuts): Piazza, Ed, Campuswire, iClicker, Google Forms, Turnitin.
+
+**Never opened** (so DueBoard can't start a timed or proctored attempt): ExamSoft, Respondus (LockDown Browser), Honorlock, Examity, and any link whose title says quiz, exam, midterm or test.
+
+**Any other platform** Brightspace launches: DueBoard names the site and asks for access to it; with access, the same hidden-frame reader tries it, and whether it finds a date depends on the page. **Anything else** can be added by hand and stays until you remove it.
+
+If your course uses one of the "sample pages only" platforms, an export of the visit log (Settings → Diagnostics → Download visit log) shows whether it reads correctly; please attach it to an issue.
 
 A date from Brightspace always wins over one read on a platform page, and every platform date says where it was read ("Read from ALEKS", shown when you hover over the item in the to-do list). The same sources say whether the work was handed in; a score of 0 on its own doesn't count, since platforms show 0 for missing work.
 
@@ -64,6 +86,7 @@ A date from Brightspace always wins over one read on a platform page, and every 
 - **Chrome Web Store:** [Add to Chrome](https://chromewebstore.google.com/detail/lbmhglpjaedaijknkngdpoacagdgmoji) (also works in Microsoft Edge, Brave, Arc and Opera).
 - **Firefox Add-ons:** link coming soon (needs Firefox 140 or later).
 - **Manual install (testers, about two minutes):** follow the [illustrated install guide](https://yokiwa.github.io/dueboard/install.html). The same steps are in [docs/guide/01-install.md](docs/guide/01-install.md).
+- **Focus edition:** a special build of 1.6.0 with a Pomodoro timer (its own *Timer* tab, below To-do) and a music player (a *Music* tab below it, ambient sounds, your own files and YouTube Music links). It is not on the stores; download `dueboard-1.6.0-focus-*.zip` from the [releases page](https://github.com/Yokiwa/dueboard/releases) and install it the manual way. Don't install it next to the regular version.
 
 DueBoard currently supports `purdue.brightspace.com`.
 
