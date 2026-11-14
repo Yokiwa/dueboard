@@ -3,19 +3,27 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { renderIn } from './render';
 
-vi.mock('../../src/ui/messaging', () => ({ sendToBackground: vi.fn(async () => true) }));
+const { play, pause, setVolume } = vi.hoisted(() => ({
+  play: vi.fn(async () => true),
+  pause: vi.fn(),
+  setVolume: vi.fn(),
+}));
+vi.mock('../../src/music/player', () => ({
+  musicEngine: { play, pause, setVolume, playing: false, currentId: null },
+}));
 vi.mock('../../src/music/library', () => ({
   addMusicFiles: vi.fn(async () => [{ id: 'song-1', name: 'Study mix', size: 12, type: 'audio/mp3' }]),
   deleteMusicFiles: vi.fn(async () => undefined),
 }));
 
 import { MusicPlayer } from '../../src/ui/components/MusicPlayer';
-import { sendToBackground } from '../../src/ui/messaging';
 
 describe('MusicPlayer', () => {
   beforeEach(() => {
     fakeBrowser.reset();
-    vi.mocked(sendToBackground).mockClear();
+    play.mockClear();
+    pause.mockClear();
+    setVolume.mockClear();
   });
 
   it('offers rain, airplane cabin, playback, volume and playlist upload', async () => {
@@ -28,7 +36,19 @@ describe('MusicPlayer', () => {
     expect(screen.getByRole('slider', { name: 'Volume' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
-    await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'musicControl', action: 'play', trackId: 'rain' }));
+    await waitFor(() => expect(play).toHaveBeenCalledWith('rain', 0.45));
+    fireEvent.change(screen.getByRole('slider', { name: 'Volume' }), { target: { value: '0.7' } });
+    expect(setVolume).toHaveBeenCalledWith(0.7);
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await waitFor(() => expect(pause).toHaveBeenCalledOnce());
+  });
+
+  it('shows an error and does not pretend to play when audio startup fails', async () => {
+    play.mockRejectedValueOnce(new Error('autoplay blocked'));
+    renderIn('en', <MusicPlayer />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('could not be played'));
+    expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
   });
 
   it('adds selected audio files to the personal playlist', async () => {
@@ -40,15 +60,16 @@ describe('MusicPlayer', () => {
     expect(screen.getByRole('button', { name: 'Clear playlist' })).toBeTruthy();
   });
 
-  it('links a YouTube Music song in the full Music tab', async () => {
+  it('saves a YouTube Music song and opens it on the official site', async () => {
     renderIn('en', <MusicPlayer />);
     fireEvent.change(screen.getByRole('textbox', { name: 'YouTube Music link' }), {
       target: { value: 'https://music.youtube.com/watch?v=dQw4w9WgXcQ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Link' }));
-    const player = await screen.findByTitle('YouTube Music player') as HTMLIFrameElement;
-    expect(player.src).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ?playsinline=1');
-    expect(screen.getByRole('link', { name: /Open in YouTube Music/ }).getAttribute('href')).toContain('music.youtube.com/watch');
+    const link = await screen.findByRole('link', { name: /Open in YouTube Music/ });
+    expect(link.getAttribute('href')).toContain('music.youtube.com/watch');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(screen.queryByTitle('YouTube Music player')).toBeNull();
   });
 
   it('rejects invalid links and keeps the compact player small', () => {

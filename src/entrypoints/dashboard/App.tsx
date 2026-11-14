@@ -21,6 +21,7 @@ import { useT, type MessageKey } from '../../ui/i18n';
 import { CoursesView } from '../../ui/views/CoursesView';
 import { CalendarView } from '../../ui/views/CalendarView';
 import { TodoView } from '../../ui/views/TodoView';
+import { MusicPlayer } from '../../ui/components/MusicPlayer';
 import type { Dashboard } from '../../core/dashboard';
 import { syllabusSuggestions, unreadableSyllabi } from '../../core/syllabusSuggestions';
 import type { SyllabusView } from '../../ui/components/SyllabusSuggestions';
@@ -32,6 +33,7 @@ const VIEW_LABEL: Record<View, MessageKey> = {
   courses: 'tabs.courses',
   calendar: 'tabs.calendar',
   todo: 'tabs.todo',
+  music: 'tabs.music',
 };
 
 /** Oldest successful sync across platforms that have synced at least once. */
@@ -46,7 +48,8 @@ export function lastSynced(store: StoreShape): string | null {
 function ViewBody({ view, dashboard, now, syllabus, completed }: { view: View; dashboard: Dashboard; now: Date; syllabus: SyllabusView; completed: CompletedPlacement }) {
   if (view === 'courses') return <CoursesView dashboard={dashboard} now={now} syllabus={syllabus} completed={completed} />;
   if (view === 'calendar') return <CalendarView dashboard={dashboard} now={now} />;
-  return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;
+  if (view === 'todo') return <TodoView dashboard={dashboard} now={now} syllabus={syllabus} />;
+  return <MusicPlayer />;
 }
 
 export function App() {

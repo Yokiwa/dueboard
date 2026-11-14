@@ -1,42 +1,46 @@
 import { getMusicBlob } from './library';
-import { loadMusicState, saveMusicState, type MusicState } from './state';
 
-export type MusicAction =
-  | { action: 'play'; trackId: string }
-  | { action: 'pause' }
-  | { action: 'volume'; volume: number };
+export type AmbientTrackId = 'rain' | 'cabin';
 
-type AudioNodeWithStop = AudioBufferSourceNode | OscillatorNode;
+type StoppableNode = AudioBufferSourceNode | OscillatorNode;
 
-class MusicEngine {
+const clampVolume = (value: number) => Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0.45));
+
+/**
+ * Plays focus audio in the visible dashboard page.
+ *
+ * Creating/resuming the AudioContext synchronously from the Play click is important:
+ * Chrome can reject audio started later from a background or offscreen extension page.
+ */
+export class MusicEngine {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
-  private nodes: AudioNodeWithStop[] = [];
-  private audio: HTMLAudioElement | null = null;
-  private objectUrl: string | null = null;
+  private nodes: StoppableNode[] = [];
+  private playingId: string | null = null;
 
-  private async audioContext(): Promise<AudioContext> {
-    this.context ??= new AudioContext();
-    await this.context.resume();
-    return this.context;
+  constructor(
+    private readonly createContext: () => AudioContext = () => new AudioContext(),
+    private readonly readBlob: (id: string) => Promise<Blob | null> = getMusicBlob,
+  ) {}
+
+  get currentId(): string | null {
+    return this.playingId;
   }
 
-  private stopSource(): void {
+  get playing(): boolean {
+    return this.playingId !== null;
+  }
+
+  private stopNodes(): void {
     for (const node of this.nodes) {
-      try { node.stop(); } catch { /* The node already stopped. */ }
+      node.onended = null;
+      try { node.stop(); } catch { /* It may already have ended. */ }
       node.disconnect();
     }
     this.nodes = [];
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.removeAttribute('src');
-      this.audio.load();
-      this.audio = null;
-    }
-    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = null;
     this.gain?.disconnect();
     this.gain = null;
+    this.playingId = null;
   }
 
   private noise(context: AudioContext, brown: boolean): AudioBufferSourceNode {
@@ -48,7 +52,7 @@ class MusicEngine {
       for (let i = 0; i < data.length; i++) {
         const white = Math.random() * 2 - 1;
         previous = brown ? (previous + 0.02 * white) / 1.02 : white;
-        data[i] = brown ? previous * 3.4 : white;
+        data[i] = brown ? previous * 0.7 : white * 0.12;
       }
     }
     const source = context.createBufferSource();
@@ -57,17 +61,11 @@ class MusicEngine {
     return source;
   }
 
-  private async playPreset(id: 'rain' | 'cabin', volume: number): Promise<void> {
-    const context = await this.audioContext();
-    const master = context.createGain();
-    master.gain.value = volume * (id === 'rain' ? 0.36 : 0.48);
-    master.connect(context.destination);
-    this.gain = master;
-
+  private playPreset(context: AudioContext, id: AmbientTrackId, master: GainNode): void {
     const noise = this.noise(context, id === 'cabin');
     const filter = context.createBiquadFilter();
     filter.type = id === 'rain' ? 'bandpass' : 'lowpass';
-    filter.frequency.value = id === 'rain' ? 2600 : 420;
+    filter.frequency.value = id === 'rain' ? 2_600 : 420;
     filter.Q.value = id === 'rain' ? 0.45 : 0.7;
     noise.connect(filter);
     filter.connect(master);
@@ -79,7 +77,7 @@ class MusicEngine {
       const humGain = context.createGain();
       hum.type = 'sine';
       hum.frequency.value = 74;
-      humGain.gain.value = 0.035;
+      humGain.gain.value = 0.025;
       hum.connect(humGain);
       humGain.connect(master);
       hum.start();
@@ -87,67 +85,48 @@ class MusicEngine {
     }
   }
 
-  private async playUpload(id: string, state: MusicState): Promise<boolean> {
-    const blob = await getMusicBlob(id);
-    if (!blob) return false;
-    const audio = new Audio();
-    this.objectUrl = URL.createObjectURL(blob);
-    audio.src = this.objectUrl;
-    audio.volume = state.volume;
-    audio.onended = () => void this.playNextUpload(id);
-    this.audio = audio;
-    await audio.play();
+  async play(trackId: string, volume: number): Promise<boolean> {
+    // This happens before the first await so the browser can associate it with the user's click.
+    this.context ??= this.createContext();
+    const context = this.context;
+    await context.resume();
+
+    let decoded: AudioBuffer | null = null;
+    if (trackId !== 'rain' && trackId !== 'cabin') {
+      const blob = await this.readBlob(trackId);
+      if (!blob) return false;
+      decoded = await context.decodeAudioData(await blob.arrayBuffer());
+    }
+
+    this.stopNodes();
+    const master = context.createGain();
+    master.gain.value = clampVolume(volume);
+    master.connect(context.destination);
+    this.gain = master;
+
+    if (trackId === 'rain' || trackId === 'cabin') {
+      this.playPreset(context, trackId, master);
+    } else {
+      const source = context.createBufferSource();
+      source.buffer = decoded;
+      source.connect(master);
+      source.onended = () => {
+        if (this.playingId === trackId) this.stopNodes();
+      };
+      source.start();
+      this.nodes.push(source);
+    }
+    this.playingId = trackId;
     return true;
   }
 
-  private async playNextUpload(currentId: string): Promise<void> {
-    const state = await loadMusicState();
-    const index = state.uploaded.findIndex((track) => track.id === currentId);
-    if (index < 0 || state.uploaded.length === 0) {
-      await this.pause();
-      return;
-    }
-    await this.play(state.uploaded[(index + 1) % state.uploaded.length]!.id);
+  pause(): void {
+    this.stopNodes();
   }
 
-  async play(trackId: string): Promise<boolean> {
-    this.stopSource();
-    const state = await loadMusicState();
-    const isPreset = trackId === 'rain' || trackId === 'cabin';
-    const started = isPreset
-      ? await this.playPreset(trackId, state.volume).then(() => true)
-      : await this.playUpload(trackId, state);
-    await saveMusicState({ ...state, currentId: started ? trackId : 'rain', playing: started });
-    return started;
-  }
-
-  async pause(): Promise<void> {
-    this.stopSource();
-    const state = await loadMusicState();
-    await saveMusicState({ ...state, playing: false });
-  }
-
-  async setVolume(volume: number): Promise<void> {
-    const value = Math.min(1, Math.max(0, volume));
-    if (this.gain) this.gain.gain.value = value * 0.4;
-    if (this.audio) this.audio.volume = value;
-    const state = await loadMusicState();
-    await saveMusicState({ ...state, volume: value });
-  }
-
-  async control(message: MusicAction): Promise<boolean> {
-    if (message.action === 'play') return this.play(message.trackId);
-    if (message.action === 'pause') {
-      await this.pause();
-      return true;
-    }
-    await this.setVolume(message.volume);
-    return true;
+  setVolume(volume: number): void {
+    if (this.gain) this.gain.gain.value = clampVolume(volume);
   }
 }
 
-const engine = new MusicEngine();
-
-export function handleMusicControl(message: MusicAction): Promise<boolean> {
-  return engine.control(message);
-}
+export const musicEngine = new MusicEngine();

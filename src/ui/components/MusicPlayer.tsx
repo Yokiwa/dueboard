@@ -2,9 +2,9 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { ArrowSquareOut, LinkSimple, MusicNotes, Pause, Play, SkipBack, SkipForward, Trash, UploadSimple, X } from '@phosphor-icons/react';
 import { addMusicFiles, deleteMusicFiles } from '../../music/library';
 import { DEFAULT_MUSIC_STATE, loadMusicState, saveMusicState, subscribeMusicState, type MusicState } from '../../music/state';
+import { musicEngine } from '../../music/player';
 import { primaryBtn, secondaryBtn } from '../forms';
 import { useT } from '../i18n';
-import { sendToBackground } from '../messaging';
 import { parseYouTubeMusicUrl } from '../../music/youtube';
 
 export function MusicPlayer({ compact = false }: { compact?: boolean }) {
@@ -12,6 +12,7 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
   const headingId = useId();
   const [state, setState] = useState<MusicState>(DEFAULT_MUSIC_STATE);
   const [error, setError] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeError, setYoutubeError] = useState(false);
   const youtube = useMemo(() => parseYouTubeMusicUrl(state.youtubeUrl ?? ''), [state.youtubeUrl]);
@@ -23,7 +24,13 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => {
     let active = true;
-    void loadMusicState().then((saved) => active && setState(saved));
+    void loadMusicState().then((saved) => {
+      if (!active) return;
+      setState({
+        ...saved,
+        playing: musicEngine.playing && musicEngine.currentId === saved.currentId,
+      });
+    });
     const unsubscribe = subscribeMusicState(setState);
     return () => {
       active = false;
@@ -33,21 +40,41 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => setYoutubeInput(state.youtubeUrl ?? ''), [state.youtubeUrl]);
 
-  const send = async (message: Record<string, unknown>) => {
+  const playTrack = async (trackId: string) => {
+    if (busy) return;
     setError(false);
+    setBusy(true);
     try {
-      const ok = await sendToBackground<boolean>({ type: 'musicControl', ...message });
+      const ok = await musicEngine.play(trackId, state.volume);
+      const next = { ...state, currentId: ok ? trackId : state.currentId, playing: ok };
+      setState(next);
+      await saveMusicState(next);
       if (!ok) setError(true);
     } catch {
       setError(true);
+      const next = { ...state, playing: false };
+      setState(next);
+      await saveMusicState(next);
+    } finally {
+      setBusy(false);
     }
   };
 
+  const pause = async () => {
+    musicEngine.pause();
+    const next = { ...state, playing: false };
+    setState(next);
+    await saveMusicState(next);
+  };
+
   const pick = async (trackId: string) => {
+    if (state.playing) {
+      await playTrack(trackId);
+      return;
+    }
     const next = { ...state, currentId: trackId };
     setState(next);
     await saveMusicState(next);
-    if (state.playing) await send({ action: 'play', trackId });
   };
 
   const step = (direction: -1 | 1) => {
@@ -56,16 +83,13 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
     if (track) void pick(track.id);
   };
 
-  const toggle = () => {
-    setState((current) => ({ ...current, playing: !current.playing }));
-    void send(state.playing ? { action: 'pause' } : { action: 'play', trackId: state.currentId });
-  };
+  const toggle = () => void (state.playing ? pause() : playTrack(state.currentId));
 
   const volume = (value: number) => {
     const next = { ...state, volume: value };
     setState(next);
     void saveMusicState(next);
-    void send({ action: 'volume', volume: value });
+    musicEngine.setVolume(value);
   };
 
   const upload = async (files: FileList | null) => {
@@ -88,7 +112,7 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
   const clearUploads = async () => {
     const ids = state.uploaded.map((track) => track.id);
     if (ids.length === 0) return;
-    if (ids.includes(state.currentId) && state.playing) await send({ action: 'pause' });
+    if (ids.includes(state.currentId) && state.playing) musicEngine.pause();
     await deleteMusicFiles(ids);
     const next = { ...state, currentId: ids.includes(state.currentId) ? 'rain' : state.currentId, playing: ids.includes(state.currentId) ? false : state.playing, uploaded: [] };
     setState(next);
@@ -134,7 +158,7 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
 
       <div className="mt-3 flex items-center gap-2">
         <button type="button" className={secondaryBtn} aria-label={t('music.previous')} onClick={() => step(-1)}><SkipBack aria-hidden="true" size={16} weight="fill" /></button>
-        <button type="button" className={primaryBtn} aria-label={t(state.playing ? 'music.pause' : 'music.play')} onClick={toggle}>
+        <button type="button" className={primaryBtn} aria-label={t(state.playing ? 'music.pause' : 'music.play')} onClick={toggle} disabled={busy}>
           {state.playing ? <Pause aria-hidden="true" size={17} weight="fill" /> : <Play aria-hidden="true" size={17} weight="fill" />}
         </button>
         <button type="button" className={secondaryBtn} aria-label={t('music.next')} onClick={() => step(1)}><SkipForward aria-hidden="true" size={16} weight="fill" /></button>
@@ -181,16 +205,8 @@ export function MusicPlayer({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
 
-        {youtube && <div className="mt-4 overflow-hidden rounded-xl border border-db-border-soft bg-db-subtle">
-          <iframe
-            src={youtube.embedUrl}
-            title={t('music.youtubePlayer')}
-            className="aspect-video min-h-[200px] w-full border-0"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-          <div className="flex items-center justify-between gap-3 px-3 py-2">
+        {youtube && <div className="mt-4 rounded-xl border border-db-border-soft bg-db-subtle">
+          <div className="flex items-center justify-between gap-3 px-3 py-3">
             <a href={youtube.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 caption-4 text-db-accent no-underline hover:underline">
               {t('music.youtubeOpen')}<ArrowSquareOut aria-hidden="true" size={14} />
             </a>

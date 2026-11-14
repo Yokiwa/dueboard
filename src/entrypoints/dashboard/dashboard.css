@@ -395,6 +395,17 @@
   color: var(--theme-ink);
 }
 
+.music-player {
+  border-color: transparent !important;
+  background: var(--theme-panel) !important;
+  box-shadow: none !important;
+}
+
+.music-player select,
+.music-player input[type='range'] {
+  color-scheme: inherit;
+}
+
 .dashboard-view {
   position: relative;
   display: flex;
