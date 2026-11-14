@@ -30,14 +30,14 @@
 
     <section class="hero">
       <div>
-        <p class="eyebrow">New: study themes and a focus timer</p>
+        <p class="eyebrow">New in 1.6.0: your classes in the calendar</p>
         <h1>Every deadline,<br><em>one page.</em></h1>
         <p>Stop clicking through every course in Brightspace and opening Gradescope, Pearson, WileyPLUS, ALEKS and the rest one by one. Sign in to Brightspace once — DueBoard finds the rest and puts every due date in one place.</p>
         <div class="cta">
           <a class="btn" href="https://chromewebstore.google.com/detail/lbmhglpjaedaijknkngdpoacagdgmoji">Add to Chrome</a>
           <a class="btn secondary" href="#features">See what it does</a>
         </div>
-        <p class="note">Free · Open source · Chrome, Edge and Firefox · Currently for Purdue's Brightspace</p>
+        <p class="note">Version 1.6.0 · Free · Open source · Chrome, Edge and Firefox · Currently for Purdue's Brightspace</p>
       </div>
 
       <div class="preview" aria-label="Example of the DueBoard dashboard">
@@ -52,28 +52,23 @@
           </div>
         </div>
 
-        <div class="card timer-card" data-demo-timer>
-          <div>
-            <div class="modes" role="group" aria-label="Timer mode">
-              <button type="button" data-mode="focus" aria-pressed="true">Focus</button>
-              <button type="button" data-mode="break" aria-pressed="false">Break</button>
-            </div>
-            <div class="clock mono" role="timer" data-clock>25:00</div>
-          </div>
-          <div class="card-actions">
-            <button type="button" class="btn small" data-toggle>Start</button>
-            <button type="button" class="btn small secondary" data-reset>Reset</button>
-          </div>
+        <div class="card week-card" aria-label="Example of the calendar's week view">
+          <p class="label">THURSDAY</p>
+          <ul class="week-list">
+            <li class="due"><span class="dot" aria-hidden="true"></span>MA 26100 · Homework 11<span class="mono">Due 11:59 PM</span></li>
+            <li class="class"><span class="mono">9:30–10:20</span>CS 18000 · Lec21</li>
+            <li class="class"><span class="mono">1:30–2:20</span>PHYS 17200 · Recitation</li>
+          </ul>
         </div>
       </div>
     </section>
 
     <figure class="shot-frame">
       <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-      <img class="shot" data-shot="morning-dew" src="assets/dashboard-morning-dew.png" width="1280" height="800" alt="The DueBoard dashboard in the Morning Dew theme: the next deadline with a live countdown, the focus timer and course cards">
-      <img class="shot" data-shot="noon-cafe" src="assets/dashboard-noon-cafe.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Noon Cafe theme: the next deadline with a live countdown, the focus timer and course cards">
-      <img class="shot" data-shot="dusk-lullaby" src="assets/dashboard-dusk-lullaby.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Dusk Lullaby theme: the next deadline with a live countdown, the focus timer and course cards">
-      <img class="shot" data-shot="nightowl" src="assets/dashboard-nightowl.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Nightowl theme: the next deadline with a live countdown, the focus timer and course cards">
+      <img class="shot" data-shot="morning-dew" src="assets/dashboard-morning-dew.png" width="1280" height="800" alt="The DueBoard dashboard in the Morning Dew theme: the next deadline with a live countdown and course cards">
+      <img class="shot" data-shot="noon-cafe" src="assets/dashboard-noon-cafe.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Noon Cafe theme: the next deadline with a live countdown and course cards">
+      <img class="shot" data-shot="dusk-lullaby" src="assets/dashboard-dusk-lullaby.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Dusk Lullaby theme: the next deadline with a live countdown and course cards">
+      <img class="shot" data-shot="nightowl" src="assets/dashboard-nightowl.png" width="1280" height="800" loading="lazy" alt="The DueBoard dashboard in the Nightowl theme: the next deadline with a live countdown and course cards">
     </figure>
 
     <div class="section-head" id="features">
@@ -98,12 +93,12 @@
         <p>The nearest deadline is always on top with a live countdown. Open it in one click, or mark it done and see what's next.</p>
       </div>
       <div class="feature">
-        <h3>Focus timer <span class="new">New</span></h3>
-        <p>A Pomodoro timer for 25-minute focus sessions and 5-minute breaks, on the dashboard and in the toolbar popup. It keeps running while you work.</p>
+        <h3>Your classes in the calendar <span class="new">New</span></h3>
+        <p>Lectures and recitations your courses post in Brightspace appear in the week view at their real times, never among your work. What's due each day sits on top.</p>
       </div>
       <div class="feature">
         <h3>Calendar and to-do</h3>
-        <p>Week and month views show which days pile up. Tick work off in the to-do list; work you handed in is ticked for you.</p>
+        <p>The week view shows what's due each day above your class times; the month view shows which days pile up. Tick work off in the to-do list; work you handed in is ticked for you.</p>
       </div>
       <div class="feature">
         <h3>Course cards</h3>
