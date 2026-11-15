@@ -56,6 +56,9 @@
   --color-db-hero-to: var(--theme-muted);
   --color-db-urgent-bg: var(--theme-course-2);
   --color-db-urgent-fg: var(--theme-ink);
+  /* Alert banners use urgent-fg text, so their background follows the theme too, not the system light/dark mode. */
+  --color-db-alert-bg: var(--theme-surface);
+  --color-db-alert-border: var(--theme-accent);
   --color-db-soon-bg: var(--theme-course-3);
   --color-db-soon-fg: var(--theme-ink);
   --color-db-normal-bg: var(--theme-accent-soft);

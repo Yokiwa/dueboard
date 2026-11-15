@@ -38,3 +38,43 @@ describe('BrandMark', () => {
     expect(svg.getAttribute('class') ?? '').not.toMatch(/text-db-accent/);
   });
 });
+
+describe('alert banners in every dashboard theme', () => {
+  /** `--name: value` declarations of a block, later ones winning. */
+  const decls = (body: string) =>
+    Object.fromEntries([...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]));
+  const block = (source: string, selector: string) => decls(rules(source, selector).join(';'));
+  const lightTokens = decls(/@theme\s*\{([^{}]*)\}/.exec(tokens)![1]!);
+  const darkTokens = block(tokens, ':root');
+  const themed = block(css, '.dueboard-themed');
+  const themes = ['morning-dew', 'noon-cafe', 'dusk-lullaby', 'nightowl'];
+
+  const resolve = (vars: Record<string, string>, name: string): string => {
+    const v = vars[name];
+    expect(v, name).toBeDefined();
+    const ref = /^var\((--[\w-]+)\)$/.exec(v!);
+    return ref ? resolve(vars, ref[1]!) : v!;
+  };
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi! + 0.05) / (lo! + 0.05);
+  };
+
+  for (const theme of themes) {
+    for (const [mode, system] of [['light', lightTokens], ['dark', { ...lightTokens, ...darkTokens }]] as const) {
+      it(`${theme} theme, ${mode} system mode: banner text is readable on the banner background`, () => {
+        const vars = { ...system, ...themed, ...block(css, `.dueboard-themed[data-theme='${theme}']`) };
+        const fg = resolve(vars, '--color-db-urgent-fg');
+        const bg = resolve(vars, '--color-db-alert-bg');
+        expect(contrast(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  }
+});
