@@ -59,6 +59,19 @@ Show the student's own assignments, deadlines and course resource links from Bri
 - Signing back in: when Gradescope or Pearson MyLab reports the student signed out, DueBoard opens that platform's entry in one of the student's Brightspace courses (at most every 6 hours, or on Refresh). Pearson's entry shows its course page first; there DueBoard presses only its "Assignments" link, which signs the student in to MyLab. It never presses anything else on that page.
 - Optional host permission https://*/*: never granted at install. When DueBoard finds a homework platform in the user's Brightspace courses that is not in the list above, it names the site and asks for access to that site only, on the user's click ("Allow"). With it, DueBoard reads the assignment page's heading and due-date line the same way, in a hidden frame; it never opens a window or tab. On a platform page that waits for a click, it may press that page's one "open the assignment" button (Open, Launch, View assignment); it never types, and never presses anything that starts, continues or submits work. Access can be removed in DueBoard's Settings.
 
+### Host permission justification (one field in the dashboard, max 1,000 characters)
+The dashboard has one box for all host permissions, too small for the list above. Paste this shorter version (copy from the code block so the `*` stay):
+
+```
+purdue.brightspace.com: read the student's own courses, assignments, quizzes, calendar, content, submissions and gradebook grades.
+*.gradescope.com: read the student's own courses, assignments, due dates, submission status and scores.
+mylab.pearson.com: only if a course links to Pearson MyLab, read the assignment list, due dates and the student's scores.
+socket.pearsoned.com: only when MyLab reports the student signed out, press "Open Pearson" on Pearson's sign-in gateway in a hidden frame to sign back in. Never types.
+education.wiley.com: when the student opens a WileyPLUS assignment, read its title and due date.
+The other homework platform sites in the manifest (*.aleks.com, *.webassign.net, *.mheducation.com, etc.): read the due date and handed-in status on the student's own assignment pages, in hidden frames.
+Optional https://*/*: never granted at install; asked one site at a time, on the student's click, for a platform not listed above.
+```
+
 ### Remote code
 No remote code. All code ships inside the extension package.
 
