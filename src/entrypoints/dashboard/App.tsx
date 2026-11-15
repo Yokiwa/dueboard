@@ -6,7 +6,8 @@ import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
-import { failingSources, SourceBanners } from '../../ui/components/SourceBanners';
+import { failingSources, LOGIN_URLS, SourceBanners } from '../../ui/components/SourceBanners';
+import { sendToBackground } from '../../ui/messaging';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
 import { useGranted } from '../../ui/hooks/useGranted';
@@ -74,6 +75,24 @@ export function App() {
       applyTheme();
     }
   }, [activeTheme, selectedTheme]);
+  const onboarding = !store || Object.keys(store.snapshots).length === 0;
+  // Back from signing in (?start=1) to the dashboard rather than the first-run guide: read the courses at once.
+  useEffect(() => {
+    if (onboarding) return;
+    const url = new URL(location.href);
+    if (!url.searchParams.has('start')) return;
+    url.searchParams.delete('start');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+    refresh();
+  }, [onboarding, refresh]);
+  // The same sign-in as the first-run guide: this tab goes to Brightspace and the background brings it back here.
+  const signInBrightspace = () => {
+    sendToBackground<{ signedIn?: boolean } | null>({ type: 'beginLogin' })
+      .then((res) => {
+        if (res?.signedIn) refresh();
+      })
+      .catch(() => window.open(LOGIN_URLS.brightspace, '_blank', 'noopener'));
+  };
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {
     return <Onboarding />;
@@ -100,7 +119,7 @@ export function App() {
           </div>
         </Header>
         {granted && <SiteAccessBanner granted={granted} />}
-        <SourceBanners store={store} now={now} busy={syncing || progress !== null} />
+        <SourceBanners store={store} now={now} busy={syncing || progress !== null} onBrightspaceSignIn={signInBrightspace} />
         {granted && <PlatformAccess store={store} granted={granted} now={now} />}
         <div className="dashboard-priority" data-has-deadline={Boolean(dashboard.nextDue)}>
           <NextDueBanner item={dashboard.nextDue} course={nextCourse} now={now} />

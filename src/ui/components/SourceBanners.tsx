@@ -26,7 +26,18 @@ export function failingSources(store: StoreShape): { src: SourceId; name: string
  * One line per platform whose most recent sync attempt failed. None while a sync runs (`busy`): it may sign the student
  * back in by itself, so a line appears only once DueBoard has tried.
  */
-export function SourceBanners({ store, now, busy = false }: { store: StoreShape; now: Date; busy?: boolean }) {
+export function SourceBanners({
+  store,
+  now,
+  busy = false,
+  onBrightspaceSignIn,
+}: {
+  store: StoreShape;
+  now: Date;
+  busy?: boolean;
+  /** Signs in to Brightspace and comes back to DueBoard; without it, the sign-in page opens in a new tab. */
+  onBrightspaceSignIn?: () => void;
+}) {
   const t = useT();
   const launches = launchLinks(store);
   const rows = failingSources(store).flatMap(({ src, name, signedOut, err }) => {
@@ -41,7 +52,11 @@ export function SourceBanners({ store, now, busy = false }: { store: StoreShape;
             <WarningCircle aria-hidden="true" size={18} weight="fill" className="shrink-0" />
             {launched ? t('source.reopen', { name }) : t('source.relogin', { name })}
           </span>
-          <button type="button" onClick={() => window.open(target, '_blank', 'noopener')} className={primaryBtn}>
+          <button
+            type="button"
+            onClick={() => (src === 'brightspace' && onBrightspaceSignIn ? onBrightspaceSignIn() : window.open(target, '_blank', 'noopener'))}
+            className={primaryBtn}
+          >
             {launched ? t('source.openPlatform', { name }) : t('source.loginButton')}
           </button>
         </div>,
