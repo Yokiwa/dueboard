@@ -366,6 +366,13 @@
   border: 24px solid var(--theme-overlay);
   border-radius: 50%;
   content: '';
+  pointer-events: none;
+}
+
+/* The ring above is decoration: the deadline, countdown and Open/Done buttons are drawn over it. */
+.next-due-banner > * {
+  position: relative;
+  z-index: 1;
 }
 
 .next-due-banner .heading-6 {

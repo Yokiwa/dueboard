@@ -23,6 +23,17 @@ describe('dashboard styles', () => {
   });
 });
 
+describe('next-deadline banner ring', () => {
+  it('never takes clicks meant for Open and Done', () => {
+    expect(rules(css, '.next-due-banner::after').join(';')).toMatch(/pointer-events:\s*none/);
+  });
+  it('is drawn behind the banner content, not over the buttons', () => {
+    const content = rules(css, '.next-due-banner > *').join(';');
+    expect(content).toMatch(/position:\s*relative/);
+    expect(content).toMatch(/z-index:\s*1/);
+  });
+});
+
 describe('BrandMark', () => {
   it('uses the extension icon colors (src/assets/icon.svg) in every theme, not the theme accent', async () => {
     const { render } = await import('@testing-library/react');
