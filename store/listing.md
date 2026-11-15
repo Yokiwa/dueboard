@@ -27,7 +27,7 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own: anything DueBoard can't read can be added by hand
 • Four study themes (Morning Dew, Noon Cafe, Dusk Lullaby, Nightowl) that follow the time of day, or pick the one you like
-• Syncs every 30 minutes using the sessions already in your browser, and tells you right away when a platform needs you to sign in again
+• Syncs every 30 minutes using the sessions already in your browser, and tells you right away when Brightspace needs you to sign in again (the only account you ever sign in to)
 
 Privacy: everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password.
 
