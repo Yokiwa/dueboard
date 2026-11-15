@@ -1,30 +1,26 @@
 import type { SourceId, StoreShape } from '../../core/types';
-import { launchLinks, relevantSources } from '../../core/platforms';
 import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
 import { useT } from '../i18n';
 
-const NAMES: Record<SourceId, string> = { brightspace: 'Brightspace', gradescope: 'Gradescope', pearson: 'Pearson' };
-export const LOGIN_URLS: Record<SourceId, string> = {
-  brightspace: 'https://purdue.brightspace.com/d2l/login',
-  gradescope: 'https://www.gradescope.com/login',
-  pearson: 'https://purdue.brightspace.com/d2l/home',
-};
+export const BRIGHTSPACE_LOGIN_URL = 'https://purdue.brightspace.com/d2l/login';
 
-/** Platforms the student uses whose most recent sync attempt failed (an error newer than the last success). */
+/**
+ * Brightspace when its most recent sync attempt failed (an error newer than the last success). Only Brightspace: the
+ * student signs in to nothing else. Every other platform is read through Brightspace by DueBoard itself, so its
+ * failures are never the student's to fix and are not shown (they are retried on the next sync).
+ */
 export function failingSources(store: StoreShape): { src: SourceId; name: string; signedOut: boolean; err: { at: string; reason: string; detail?: string } }[] {
-  return relevantSources(store).flatMap((src) => {
-    const meta = store.syncMeta[src];
-    const err = meta?.lastError;
-    if (!err) return [];
-    if (meta.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return [];
-    return [{ src, name: NAMES[src], signedOut: err.reason === 'not_logged_in', err }];
-  });
+  const meta = store.syncMeta.brightspace;
+  const err = meta?.lastError;
+  if (!err) return [];
+  if (meta.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return [];
+  return [{ src: 'brightspace', name: 'Brightspace', signedOut: err.reason === 'not_logged_in', err }];
 }
 
 /**
- * One line per platform whose most recent sync attempt failed. None while a sync runs (`busy`): it may sign the student
- * back in by itself, so a line appears only once DueBoard has tried.
+ * One line when the most recent Brightspace sync failed. None while a sync runs (`busy`): it may sign the student back
+ * in by itself, so a line appears only once DueBoard has tried.
  */
 export function SourceBanners({
   store,
@@ -39,29 +35,24 @@ export function SourceBanners({
   onBrightspaceSignIn?: () => void;
 }) {
   const t = useT();
-  const launches = launchLinks(store);
   const rows = failingSources(store).flatMap(({ src, name, signedOut, err }) => {
     if (signedOut) {
-      // Purdue reaches its platforms through Brightspace: re-opening that launch signs the student back in.
-      const launch = src === 'brightspace' ? undefined : launches[src];
-      const launched = Boolean(launch);
-      const target = launch ?? LOGIN_URLS[src];
       return [
         <div key={src} role="alert" className="db-rise flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-alert-border bg-db-alert-bg py-2 pr-2 pl-4">
           <span className="flex items-center gap-2 body-5 text-db-urgent-fg">
             <WarningCircle aria-hidden="true" size={18} weight="fill" className="shrink-0" />
             <span className="flex flex-col">
-              {launched ? t('source.reopen', { name }) : t('source.relogin', { name })}
+              {t('source.relogin', { name })}
               {/* Everything else is read through Brightspace, so a sync stops after it: say so. */}
-              {src === 'brightspace' && <span className="caption-4">{t('source.brightspaceFirst')}</span>}
+              <span className="caption-4">{t('source.brightspaceFirst')}</span>
             </span>
           </span>
           <button
             type="button"
-            onClick={() => (src === 'brightspace' && onBrightspaceSignIn ? onBrightspaceSignIn() : window.open(target, '_blank', 'noopener'))}
+            onClick={() => (onBrightspaceSignIn ? onBrightspaceSignIn() : window.open(BRIGHTSPACE_LOGIN_URL, '_blank', 'noopener'))}
             className={primaryBtn}
           >
-            {launched ? t('source.openPlatform', { name }) : t('source.loginButton')}
+            {t('source.loginButton')}
           </button>
         </div>,
       ];

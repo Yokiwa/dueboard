@@ -6,7 +6,7 @@ import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
-import { failingSources, LOGIN_URLS, SourceBanners } from '../../ui/components/SourceBanners';
+import { BRIGHTSPACE_LOGIN_URL, failingSources, SourceBanners } from '../../ui/components/SourceBanners';
 import { sendToBackground } from '../../ui/messaging';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
@@ -91,7 +91,7 @@ export function App() {
       .then((res) => {
         if (res?.signedIn) refresh();
       })
-      .catch(() => window.open(LOGIN_URLS.brightspace, '_blank', 'noopener'));
+      .catch(() => window.open(BRIGHTSPACE_LOGIN_URL, '_blank', 'noopener'));
   };
   if (!store || !dashboard) return null;
   if (Object.keys(store.snapshots).length === 0) {

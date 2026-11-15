@@ -5,7 +5,7 @@ import { Header } from '../../src/ui/components/Header';
 import { NextDueBanner } from '../../src/ui/components/NextDueBanner';
 import { StatChips } from '../../src/ui/components/StatChips';
 import { ViewTabs } from '../../src/ui/components/ViewTabs';
-import { SourceBanners } from '../../src/ui/components/SourceBanners';
+import { failingSources, SourceBanners } from '../../src/ui/components/SourceBanners';
 import { DueBadge } from '../../src/ui/components/DueBadge';
 import { ErrorBoundary } from '../../src/ui/components/ErrorBoundary';
 import { migrate } from '../../src/storage/store';
@@ -124,18 +124,12 @@ describe('SourceBanners', () => {
     expect(screen.getByText('Brightspace needs you to sign in again')).toBeTruthy();
     expect(screen.getByText('Homework platforms and syllabi update after you sign in.')).toBeTruthy();
   });
-  it('another platform signed out: no Brightspace hint', () => {
-    const store = migrate({ snapshots: linkedTo('Gradescope', 'https://www.gradescope.com/courses/9'), syncMeta: { gradescope: { lastSuccess: minsAgo(120), lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
-    render(<SourceBanners store={store} now={now} />);
-    expect(screen.queryByText(/update after you sign in/)).toBeNull();
-  });
-  it('shows relogin button when lastError.reason is not_logged_in', () => {
+  it('Brightspace sign-in button opens the Brightspace sign-in page', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const store = migrate({ snapshots: linkedTo('Gradescope', 'https://www.gradescope.com/courses/9'), syncMeta: { gradescope: { lastSuccess: minsAgo(120), lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    const store = migrate({ syncMeta: { brightspace: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
     renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(screen.getByText('Gradescope needs you to sign in again')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(open).toHaveBeenCalledWith('https://www.gradescope.com/login', '_blank', 'noopener');
+    expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/login', '_blank', 'noopener');
   });
   it('shows stale notice with age for other errors', () => {
     const store = migrate({
@@ -179,63 +173,42 @@ describe('ErrorBoundary', () => {
   });
 });
 
-describe('SourceBanners for Pearson', () => {
-  it('asks to reopen Pearson and the button uses the course launch link', () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+describe('SourceBanners: only Brightspace ever asks the student for anything', () => {
+  // Every other platform is read through Brightspace by DueBoard itself: the student never signs in to it.
+  const gradescope = { ...linkedTo('Gradescope', '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G') };
+  it.each([
+    ['Gradescope signed out', migrate({ snapshots: gradescope, syncMeta: { gradescope: { lastSuccess: minsAgo(120), lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } })],
+    ['Pearson signed out', migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } })],
+    ['Pearson failed', migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(2), reason: 'network', detail: 'TypeError: Failed to fetch' } } } })],
+  ])('%s: no banner and nothing next to the sync time', (_, store) => {
+    const { container } = renderIn('en', <SourceBanners store={store} now={now} />);
+    expect(container.textContent).toBe('');
+    expect(failingSources(store)).toEqual([]);
+  });
+  it('the screenshot case: all three signed out shows the Brightspace line alone', () => {
+    const err = { lastError: { at: minsAgo(1), reason: 'not_logged_in' } };
+    const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { brightspace: err, gradescope: err, pearson: err } });
     renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(screen.getByText('Pearson session expired — open it once from Brightspace')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Pearson' }));
-    expect(open).toHaveBeenCalledWith(`https://purdue.brightspace.com${PEARSON_LINK}`, '_blank', 'noopener');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByText('Brightspace needs you to sign in again')).toBeTruthy();
+    expect(failingSources(store).map((f) => f.name)).toEqual(['Brightspace']);
   });
   it('waits while a sync is running (DueBoard may sign back in by itself)', () => {
-    const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    const store = migrate({ syncMeta: { brightspace: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
     const { container } = renderIn('en', <SourceBanners store={store} now={now} busy />);
     expect(container.textContent).toBe('');
   });
 });
 
 describe('SourceBanners error details', () => {
-  it('a failed sync can be expanded to show what went wrong', () => {
-    const store = migrate({ snapshots: linkedTo('Access Pearson', PEARSON_LINK), syncMeta: { pearson: { lastError: { at: minsAgo(2), reason: 'network', detail: 'TypeError: Failed to fetch' } } } });
+  it('a failed Brightspace sync can be expanded to show what went wrong', () => {
+    const store = migrate({ syncMeta: { brightspace: { lastError: { at: minsAgo(2), reason: 'network', detail: 'TypeError: Failed to fetch' } } } });
     renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(screen.getByText('Pearson sync failed')).toBeTruthy();
+    expect(screen.getByText('Brightspace sync failed')).toBeTruthy();
     const details = screen.getByText('Details').closest('details')!;
     expect(details.textContent).toContain('network');
     expect(details.textContent).toContain('TypeError: Failed to fetch');
   });
-});
-
-describe('SourceBanners only for platforms this student uses', () => {
-  it('a Gradescope sign-in problem stays quiet when no course links Gradescope and it has no data', () => {
-    const store = migrate({ syncMeta: { gradescope: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
-    const { container } = renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(container.textContent).toBe('');
-  });
-  it('shows it once Brightspace links Gradescope, and the button opens Gradescope through Brightspace', () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const store = migrate({
-      snapshots: { brightspace: { syncedAt: 'x', partial: [], items: [], courses: [], links: [{ source: 'brightspace', sourceCourseId: '1', title: 'Gradescope', url: '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G' }] } },
-      syncMeta: { gradescope: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } },
-    });
-    renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(screen.getByText('Gradescope session expired — open it once from Brightspace')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Gradescope' }));
-    expect(open).toHaveBeenCalledWith('https://purdue.brightspace.com/d2l/common/dialogs/quickLink/quickLink.d2l?ou=1&type=lti&rcode=G', '_blank', 'noopener');
-  });
-
-  it('falls back to the platform sign-in page when no course has a Brightspace launch for it', () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const store = migrate({
-      snapshots: { gradescope: { syncedAt: 'x', partial: [], items: [], links: [], courses: [{ source: 'gradescope', sourceCourseId: '9', name: 'CS 180', code: 'CS 18000', url: 'u' }] } },
-      syncMeta: { gradescope: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } },
-    });
-    renderIn('en', <SourceBanners store={store} now={now} />);
-    expect(screen.getByText('Gradescope needs you to sign in again')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(open).toHaveBeenCalledWith('https://www.gradescope.com/login', '_blank', 'noopener');
-  });
-
 });
 
 describe('Settings button', () => {

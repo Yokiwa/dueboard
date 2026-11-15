@@ -61,7 +61,7 @@ Use the theme button in the dashboard header to cycle through all five choices. 
 | Platform | What DueBoard reads |
 |---|---|
 | Brightspace | Courses, assignments, quizzes, calendar events (class meetings go to the calendar only), dated content items, whether you handed work in, and your gradebook scores |
-| Gradescope | Assignments, due dates, submission status ("Submitted" / "No Submission") and scores, from your course pages when you are signed in |
+| Gradescope | Assignments, due dates, submission status ("Submitted" / "No Submission") and scores, from your course pages; if the session expired, DueBoard signs back in through Brightspace in the background |
 | Pearson MyLab & Mastering | Assignment list, due dates and scores when a course links to Pearson; if the session expired, DueBoard signs back in through Brightspace in the background |
 
 **Read in a hidden frame through your Brightspace homework link** (the due date, and for past-due work whether the page shows a score or "Submitted"):
