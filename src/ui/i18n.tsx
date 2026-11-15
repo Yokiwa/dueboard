@@ -21,6 +21,8 @@ const messages = {
   'header.noneWeek': (v: Vars) => `${v.greet}, nothing due this week`,
   'sync.synced': (v: Vars) => `Synced · ${v.ago}`,
   'sync.never': 'Not synced yet',
+  'sync.signedOut': (v: Vars) => `${v.name} signed out`,
+  'sync.failedShort': (v: Vars) => `${v.name} failed`,
   'sync.syncing': 'Syncing…',
   'badge.scoreFrom': (v: Vars) => `Score from ${v.from}`,
   'badge.submittedOn': (v: Vars) => `${v.source} shows it as submitted`,

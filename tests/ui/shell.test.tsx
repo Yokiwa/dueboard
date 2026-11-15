@@ -20,6 +20,18 @@ const linkedTo = (title: string, url: string) => ({
 const PEARSON_LINK = '/d2l/common/dialogs/quickLink/quickLink.d2l?ou=98&type=lti&rcode=X';
 
 describe('Header', () => {
+  it('names a platform whose last sync failed next to the sync time', () => {
+    const { rerender } = renderIn('en', <Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} failing={[{ name: 'Brightspace', signedOut: true }]} onRefresh={() => {}} />);
+    expect(screen.getByText('Synced · 5 min ago · Brightspace signed out')).toBeTruthy();
+    rerender(<Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing={false} failing={[{ name: 'Brightspace', signedOut: true }, { name: 'Gradescope', signedOut: false }]} onRefresh={() => {}} />);
+    expect(screen.getByText('Synced · 5 min ago · Brightspace signed out · Gradescope failed')).toBeTruthy();
+    rerender(<Header now={now} pendingWeek={1} lastSynced={null} syncing={false} failing={[{ name: 'Brightspace', signedOut: true }]} onRefresh={() => {}} />);
+    expect(screen.getByText('Not synced yet · Brightspace signed out')).toBeTruthy();
+  });
+  it('says nothing about failures while a sync runs', () => {
+    renderIn('en', <Header now={now} pendingWeek={1} lastSynced={minsAgo(5)} syncing failing={[{ name: 'Brightspace', signedOut: true }]} onRefresh={() => {}} />);
+    expect(screen.queryByText(/signed out/)).toBeNull();
+  });
   it('shows date, greeting with pending count, sync status', () => {
     renderIn('en', <Header now={now} pendingWeek={9} lastSynced={minsAgo(5)} syncing={false} onRefresh={() => {}} />);
     expect(screen.getByText('Wednesday, November 4')).toBeTruthy();
