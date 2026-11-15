@@ -6,7 +6,7 @@ import { Onboarding } from '../../ui/components/Onboarding';
 import { AppShell } from '../../ui/components/AppShell';
 import { Header } from '../../ui/components/Header';
 import { NextDueBanner } from '../../ui/components/NextDueBanner';
-import { LOGIN_URLS, SourceBanners } from '../../ui/components/SourceBanners';
+import { failingSources, LOGIN_URLS, SourceBanners } from '../../ui/components/SourceBanners';
 import { sendToBackground } from '../../ui/messaging';
 import { PlatformAccess } from '../../ui/components/PermissionBanner';
 import { SiteAccessBanner } from '../../ui/components/SiteAccessBanner';
@@ -112,7 +112,7 @@ export function App() {
   return (
     <DoneToastProvider>
       <AppShell nav={<ViewTabs view={view} onChange={changeView} />}>
-        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => window.location.assign(browser.runtime.getURL('/options.html'))}>
+        <Header now={now} pendingWeek={counts.week} lastSynced={lastSynced(store)} failing={failingSources(store)} syncing={syncing} progress={progress} onRefresh={refresh} onSettings={() => window.location.assign(browser.runtime.getURL('/options.html'))}>
           <div className="dashboard-header-tools">
             <StatChips within48={counts.within48} week={counts.week} />
             <ThemeSwitcher theme={store.settings.theme} onChange={(theme) => void saveSettings({ theme })} />

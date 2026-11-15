@@ -16,6 +16,8 @@ export interface HeaderProps {
   onRefresh(): void;
   /** Opens DueBoard's settings page. */
   onSettings?(): void;
+  /** Platforms whose last sync failed, named after the sync time so "Synced" never hides them. */
+  failing?: { name: string; signedOut: boolean }[];
   /** Optional row under the heading (the dashboard puts the stat chips here). */
   children?: ReactNode;
 }
@@ -27,10 +29,12 @@ function greetingKey(now: Date) {
   return 'greeting.evening' as const;
 }
 
-export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefresh, onSettings, children }: HeaderProps) {
+export function Header({ now, pendingWeek, lastSynced, syncing, progress, failing = [], onRefresh, onSettings, children }: HeaderProps) {
   const t = useT();
   const date = format(now, 'EEEE, MMMM d');
   const greet = t(greetingKey(now));
+  const busy = syncing || Boolean(progress);
+  const failed = busy ? [] : failing.map((f) => (f.signedOut ? t('sync.signedOut', { name: f.name }) : t('sync.failedShort', { name: f.name })));
   const title = pendingWeek > 0 ? t('header.pendingWeek', { greet, n: pendingWeek }) : t('header.noneWeek', { greet });
   return (
     <header className="dashboard-header db-rise flex flex-wrap items-end justify-between gap-6">
@@ -45,7 +49,7 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
         <span className="flex items-center gap-2 caption-2 text-db-muted">
           <span
             aria-hidden="true"
-            className={`size-2 shrink-0 rounded-full ${syncing || progress ? 'animate-pulse bg-db-accent' : lastSynced ? 'bg-db-ok' : 'bg-db-faint'}`}
+            className={`size-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-db-accent' : failed.length ? 'bg-db-flame' : lastSynced ? 'bg-db-ok' : 'bg-db-faint'}`}
           />
           {progress?.phase === 'sources' || (syncing && !progress)
             ? t('sync.fetching')
@@ -53,9 +57,7 @@ export function Header({ now, pendingWeek, lastSynced, syncing, progress, onRefr
             ? t('sync.syllabi')
             : progress
             ? t('sync.visiting', { done: progress.done, total: progress.total })
-            : lastSynced
-              ? t('sync.synced', { ago: t('ago', { iso: lastSynced, now }) })
-              : t('sync.never')}
+            : [lastSynced ? t('sync.synced', { ago: t('ago', { iso: lastSynced, now }) }) : t('sync.never'), ...failed].join(' · ')}
         </span>
         <button type="button" onClick={onRefresh} disabled={syncing} className={secondaryBtn}>
           <ArrowClockwise aria-hidden="true" size={16} weight="bold" />

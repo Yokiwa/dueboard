@@ -1,4 +1,4 @@
-import { ALL_SOURCES, type SourceId, type StoreShape } from '../../core/types';
+import type { SourceId, StoreShape } from '../../core/types';
 import { launchLinks, relevantSources } from '../../core/platforms';
 import { ArrowsClockwise, WarningCircle } from '@phosphor-icons/react';
 import { primaryBtn } from '../forms';
@@ -10,6 +10,17 @@ export const LOGIN_URLS: Record<SourceId, string> = {
   gradescope: 'https://www.gradescope.com/login',
   pearson: 'https://purdue.brightspace.com/d2l/home',
 };
+
+/** Platforms the student uses whose most recent sync attempt failed (an error newer than the last success). */
+export function failingSources(store: StoreShape): { src: SourceId; name: string; signedOut: boolean; err: { at: string; reason: string; detail?: string } }[] {
+  return relevantSources(store).flatMap((src) => {
+    const meta = store.syncMeta[src];
+    const err = meta?.lastError;
+    if (!err) return [];
+    if (meta.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return [];
+    return [{ src, name: NAMES[src], signedOut: err.reason === 'not_logged_in', err }];
+  });
+}
 
 /**
  * One line per platform whose most recent sync attempt failed. None while a sync runs (`busy`): it may sign the student
@@ -28,15 +39,9 @@ export function SourceBanners({
   onBrightspaceSignIn?: () => void;
 }) {
   const t = useT();
-  const relevant = relevantSources(store);
   const launches = launchLinks(store);
-  const rows = ALL_SOURCES.filter((src) => relevant.includes(src)).flatMap((src) => {
-    const meta = store.syncMeta[src];
-    const err = meta?.lastError;
-    if (!err) return [];
-    if (meta.lastSuccess && Date.parse(meta.lastSuccess) >= Date.parse(err.at)) return [];
-    const name = NAMES[src];
-    if (err.reason === 'not_logged_in') {
+  const rows = failingSources(store).flatMap(({ src, name, signedOut, err }) => {
+    if (signedOut) {
       // Purdue reaches its platforms through Brightspace: re-opening that launch signs the student back in.
       const launch = src === 'brightspace' ? undefined : launches[src];
       const launched = Boolean(launch);

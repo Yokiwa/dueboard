@@ -134,6 +134,19 @@ describe('dashboard App: site access', () => {
     await waitFor(() => expect(screen.getByText('DueBoard found ALEKS in your courses. Allow it to read their due dates?')).toBeTruthy());
     expect(screen.getByText(/^DueBoard can't reach .*Gradescope.*Pearson.*\. Allow access to keep syncing\.$/)).toBeTruthy();
   });
+  it('the sync status names Brightspace when only another platform synced', async () => {
+    await saveSnapshot('gradescope', {
+      syncedAt: new Date().toISOString(),
+      courses: [{ source: 'gradescope', sourceCourseId: '9', name: 'FA26', code: 'CHM 11510', url: 'https://www.gradescope.com/courses/9' }],
+      items: [],
+      links: [],
+      partial: [],
+    });
+    await patchStore({ syncMeta: { gradescope: { lastSuccess: new Date().toISOString() }, brightspace: { lastError: { at: new Date().toISOString(), reason: 'not_logged_in' } } } });
+    render(<App />);
+    await waitFor(() => expect(screen.getByText('Synced · just now · Brightspace signed out')).toBeTruthy());
+  });
+
   describe('Brightspace signed out after another platform synced (onboarding no longer shows)', () => {
     async function seedSignedOut() {
       await saveSnapshot('gradescope', {
