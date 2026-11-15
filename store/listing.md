@@ -26,7 +26,8 @@ Stop clicking through every course in Brightspace and signing in to platform aft
 • Due dates from other homework platforms: DueBoard opens your Brightspace homework link in a hidden frame inside the extension, reads the "Due" line (and, for past-due work, whether the page shows a score or "Submitted") and closes it, automatically and without opening a window or tab. Pages that can't be read that way keep their last known dates.
 • Syllabus suggestions: dated work found in your syllabus, to add with one click
 • Add your own: anything DueBoard can't read can be added by hand
-• Syncs every 30 minutes using the sessions already in your browser
+• Four study themes (Morning Dew, Noon Cafe, Dusk Lullaby, Nightowl) that follow the time of day, or pick the one you like
+• Syncs every 30 minutes using the sessions already in your browser, and tells you right away when a platform needs you to sign in again
 
 Privacy: everything stays in your browser. Nothing is uploaded, collected or analyzed, and DueBoard never sees your password.
 
@@ -34,7 +35,8 @@ Currently works with Purdue University's Brightspace (purdue.brightspace.com).
 DueBoard is an open-source student project and is not affiliated with Purdue University, D2L or any homework platform it reads.
 
 ## Screenshots (1280×800)
-store/screenshots/1-courses.png, 2-calendar.png, 3-todo.png
+Upload in this order: store/screenshots/1-courses.png, 2-calendar.png, 3-todo.png, 4-themes.png
+(Made-up demo courses, taken from the built extension; retake them when the interface changes.)
 
 ## Privacy practices
 
@@ -48,7 +50,7 @@ Show the student's own assignments, deadlines and course resource links from Bri
 - declarativeNetRequestWithHostAccess (homework platforms forbid being embedded): while DueBoard is reading, one session rule removes the `X-Frame-Options` and `Content-Security-Policy` response headers from page loads inside DueBoard's own hidden frames (requests that belong to no browser tab) on the homework sites it has access to; it never applies to the student's tabs, and it is removed when reading ends.
 - activeTab, scripting: only when the user clicks “Export this page” in the popup, read the current tab and save it as a local file to help add support for another homework platform.
 - Host permission https://purdue.brightspace.com/*: read the user's own courses, assignments, quizzes, calendar, course content listing, their own submissions (handed in or not) and their own gradebook grades.
-- Host permission https://www.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
+- Host permission https://*.gradescope.com/*: read the user's own courses, assignments, due dates and submission status.
 - Host permission https://socket.pearsoned.com/*: only when Pearson MyLab reports the student signed out, open Pearson's sign-in gateway (reached from the student's own Brightspace link) inside DueBoard's hidden frame and press its "Open Pearson" button, which signs the student back in to MyLab. It never types, and reads nothing on that page.
 - Host permission https://mylab.pearson.com/*: only when one of the user's courses links to Pearson MyLab, read the assignment list, due dates and the student's own scores (the same read-only "see score" request the page sends).
 - Host permissions, one per homework platform site (https://*.aleks.com/*, https://*.wileyplus.com/*, https://*.wwnorton.com/*, https://*.webassign.com/*, https://*.macmillanlearning.com/*, https://*.mheducation.com/*, https://*.cengage.com/*, https://*.zybooks.com/* and the other platform sites listed in the extension's permissions): read the due date on the student's own assignment pages and, for past-due work, whether the page shows it handed in (a labeled score or a status such as "Submitted"). The same permissions let the due-date reader run in the hidden frames that show these pages.
