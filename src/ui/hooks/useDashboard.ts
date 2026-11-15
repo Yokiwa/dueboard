@@ -19,6 +19,11 @@ export function useDashboard(): DashboardState {
   const now = useNow(60_000);
 
   useEffect(() => {
+    // Back from signing in (?start=1): the page starts a full sync itself (Onboarding or the dashboard), not this one.
+    if (new URL(location.href).searchParams.has('start')) {
+      setSyncing(false);
+      return;
+    }
     let alive = true;
     sendToBackground({ type: 'syncIfStale' })
       .catch(() => undefined)

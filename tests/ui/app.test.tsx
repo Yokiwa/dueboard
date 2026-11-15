@@ -134,4 +134,57 @@ describe('dashboard App: site access', () => {
     await waitFor(() => expect(screen.getByText('DueBoard found ALEKS in your courses. Allow it to read their due dates?')).toBeTruthy());
     expect(screen.getByText(/^DueBoard can't reach .*Gradescope.*Pearson.*\. Allow access to keep syncing\.$/)).toBeTruthy();
   });
+  describe('Brightspace signed out after another platform synced (onboarding no longer shows)', () => {
+    async function seedSignedOut() {
+      await saveSnapshot('gradescope', {
+        syncedAt: new Date().toISOString(),
+        courses: [{ source: 'gradescope', sourceCourseId: '9', name: 'FA26', code: 'CHM 11510', url: 'https://www.gradescope.com/courses/9' }],
+        items: [],
+        links: [],
+        partial: [],
+      });
+      await patchStore({ syncMeta: { gradescope: { lastSuccess: new Date().toISOString() }, brightspace: { lastError: { at: new Date().toISOString(), reason: 'not_logged_in' } } } });
+    }
+
+    it('the banner Sign in uses the login that comes back to DueBoard, not a plain new tab', async () => {
+      await seedSignedOut();
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      vi.mocked(sendToBackground).mockClear();
+      vi.mocked(sendToBackground).mockImplementation(async (m) => (m.type === 'beginLogin' ? { signedIn: false } : null) as never);
+      render(<App />);
+      await waitFor(() => screen.getByText('Brightspace needs you to sign in again'));
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'beginLogin' }));
+      expect(open).not.toHaveBeenCalled();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(vi.mocked(sendToBackground).mock.calls.filter(([m]) => m.type === 'sync')).toHaveLength(0);
+      open.mockRestore();
+      vi.mocked(sendToBackground).mockImplementation(async () => null);
+    });
+
+    it('already signed in: the banner Sign in reads the courses right away', async () => {
+      await seedSignedOut();
+      vi.mocked(sendToBackground).mockClear();
+      vi.mocked(sendToBackground).mockImplementation(async (m) => (m.type === 'beginLogin' ? { signedIn: true } : null) as never);
+      render(<App />);
+      await waitFor(() => screen.getByText('Brightspace needs you to sign in again'));
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+      await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'sync', trigger: 'manual' }));
+      vi.mocked(sendToBackground).mockImplementation(async () => null);
+    });
+
+    it('back from signing in (?start=1): the dashboard reads the courses at once, once, and removes the parameter', async () => {
+      await seedSignedOut();
+      history.replaceState(null, '', '/dashboard.html?start=1');
+      vi.mocked(sendToBackground).mockClear();
+      vi.mocked(sendToBackground).mockImplementation(async () => null);
+      render(<App />);
+      await waitFor(() => expect(sendToBackground).toHaveBeenCalledWith({ type: 'sync', trigger: 'manual' }));
+      expect(location.search).toBe('');
+      await new Promise((r) => setTimeout(r, 20));
+      const calls = vi.mocked(sendToBackground).mock.calls.map(([m]) => m.type);
+      expect(calls.filter((t) => t === 'sync')).toHaveLength(1);
+      expect(calls).not.toContain('syncIfStale');
+    });
+  });
 });
