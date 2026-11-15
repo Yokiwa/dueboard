@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.1 — 2026-11
+
+- **Signing in to Brightspace brings you back to DueBoard again** (#37): the banner's "Sign in" now takes the tab to Brightspace and, once you are signed in, back to the dashboard, which reads your courses at once. Before, it only did this on the first-run screen, which was skipped when Gradescope had synced first, so the banner's button opened a sign-in tab that never came back
+- **Banners readable in every theme** (#36): with Dusk Lullaby or Nightowl on a computer in light mode (or Morning Dew or Noon Cafe in dark mode), the "needs you to sign in again" and site-access banners had text the same color as their background. They now follow the theme
+- **The sync status names what failed** (#38): "Synced · just now" no longer hides a platform that could not be read; it adds "· Brightspace signed out" or "· Gradescope failed", with an orange dot
+- **The Brightspace banner says why it matters** (#39): "Homework platforms and syllabi update after you sign in", since DueBoard reads them only after Brightspace
+- No new permissions
+
 ## 1.6.0 — 2026-11
 
 Includes everything from the 1.5.0 trial (it was never published on the stores).
