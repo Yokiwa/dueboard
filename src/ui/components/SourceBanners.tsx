@@ -34,7 +34,11 @@ export function SourceBanners({ store, now, busy = false }: { store: StoreShape;
         <div key={src} role="alert" className="db-rise flex flex-wrap items-center justify-between gap-3 rounded-xl border border-db-alert-border bg-db-alert-bg py-2 pr-2 pl-4">
           <span className="flex items-center gap-2 body-5 text-db-urgent-fg">
             <WarningCircle aria-hidden="true" size={18} weight="fill" className="shrink-0" />
-            {launched ? t('source.reopen', { name }) : t('source.relogin', { name })}
+            <span className="flex flex-col">
+              {launched ? t('source.reopen', { name }) : t('source.relogin', { name })}
+              {/* Everything else is read through Brightspace, so a sync stops after it: say so. */}
+              {src === 'brightspace' && <span className="caption-4">{t('source.brightspaceFirst')}</span>}
+            </span>
           </span>
           <button type="button" onClick={() => window.open(target, '_blank', 'noopener')} className={primaryBtn}>
             {launched ? t('source.openPlatform', { name }) : t('source.loginButton')}

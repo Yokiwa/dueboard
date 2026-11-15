@@ -49,6 +49,7 @@ const messages = {
   'chips.week': (v: Vars) => `${v.n} this week`,
   'source.relogin': (v: Vars) => `${v.name} needs you to sign in again`,
   'source.loginButton': 'Sign in',
+  'source.brightspaceFirst': 'Homework platforms and syllabi update after you sign in.',
   'source.reopen': (v: Vars) => `${v.name} session expired — open it once from Brightspace`,
   'source.openPlatform': (v: Vars) => `Open ${v.name}`,
   'source.stale': (v: Vars) => `${v.name} sync failed · showing data from ${v.ago}`,

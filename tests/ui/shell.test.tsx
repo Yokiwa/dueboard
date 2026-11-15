@@ -106,6 +106,17 @@ describe('ViewTabs', () => {
 });
 
 describe('SourceBanners', () => {
+  it('Brightspace signed out: the banner says the other platforms wait for it', () => {
+    const store = migrate({ syncMeta: { brightspace: { lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    render(<SourceBanners store={store} now={now} />);
+    expect(screen.getByText('Brightspace needs you to sign in again')).toBeTruthy();
+    expect(screen.getByText('Homework platforms and syllabi update after you sign in.')).toBeTruthy();
+  });
+  it('another platform signed out: no Brightspace hint', () => {
+    const store = migrate({ snapshots: linkedTo('Gradescope', 'https://www.gradescope.com/courses/9'), syncMeta: { gradescope: { lastSuccess: minsAgo(120), lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
+    render(<SourceBanners store={store} now={now} />);
+    expect(screen.queryByText(/update after you sign in/)).toBeNull();
+  });
   it('shows relogin button when lastError.reason is not_logged_in', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     const store = migrate({ snapshots: linkedTo('Gradescope', 'https://www.gradescope.com/courses/9'), syncMeta: { gradescope: { lastSuccess: minsAgo(120), lastError: { at: minsAgo(1), reason: 'not_logged_in' } } } });
