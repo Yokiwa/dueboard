@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.2 — 2026-11
+
+Includes everything from 1.6.1 (it was never published on the stores).
+
+- **The Open button in the next-deadline card works everywhere on it** (#41): the card's decorative ring was drawn over Open and Done and took most clicks on Open; in the light themes it also showed as a white band across the button. The ring is now behind the buttons and ignores clicks
+- New store screenshots and description for the 1.6 look (#42)
+- No new permissions
+
 ## 1.6.1 — 2026-11
 
 - **Signing in to Brightspace brings you back to DueBoard again** (#37): the banner's "Sign in" now takes the tab to Brightspace and, once you are signed in, back to the dashboard, which reads your courses at once. Before, it only did this on the first-run screen, which was skipped when Gradescope had synced first, so the banner's button opened a sign-in tab that never came back
