@@ -24,7 +24,7 @@ Follows the timeline in the design document. Tick each step when done.
 - [ ] Fix beta issues; add the most-requested features and the most-used platforms from the form
 - [ ] Assets:
   - [ ] a 30-second demo video or GIF: click the toolbar icon → open the dashboard → open the next deadline
-  - [ ] three screenshots (`store/screenshots/`; re-capture if the UI changed)
+  - [ ] four screenshots (`store/screenshots/`; re-capture if the UI changed)
   - [ ] a short description (the store listing works)
 - [ ] Check the website at https://yokiwa.github.io/dueboard/
 - [ ] Read Purdue IT's Acceptable Use Policy; if needed, email IT to explain what DueBoard does
